@@ -29,9 +29,28 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 4. **Verify** — `just verify` runs all gates: lint, test, coverage, mutation, security, dead code, build
 5. **Review** — Stage 1: spec-compliance (right thing?), Stage 2: quality agents (right way?), then sync codebase docs
 
+For UI features, add `/ui-spec` between Specify and Plan for design contracts, brand identity, and competitive research.
+
 For existing projects, start with `/assess` (gap analysis) and `/map` (codebase understanding).
 
 For small changes (bug fixes, tweaks), use `/quick` — compressed workflow with TDD + verify + proportional review.
+
+## Commands
+
+| Command | Phase | Purpose |
+|---------|-------|---------|
+| `/init` | Setup | Scaffold project configs, Justfile, linter settings, `.verified/` directory |
+| `/assess` | Setup | Analyze existing codebase against verification standards, produce gap report |
+| `/map` | Setup | Deep codebase analysis, produce living context docs in `.verified/codebase/` |
+| `/specify <feature>` | Phase 1 | Create feature spec with acceptance scenarios and requirements |
+| `/ui-spec <feature>` | Phase 1.5 | Create UI design contract with brand, screens, components (optional) |
+| `/plan <feature>` | Phase 2 | Create ordered task list with file paths and test-first sequencing |
+| `/implement <feature>` | Phase 3 | Execute plan with strict TDD (RED-GREEN-REFACTOR per task) |
+| `/verify` | Phase 4 | Run `just verify` — all mechanical gates must pass |
+| `/review` | Phase 5 | Two-stage review: spec-compliance, then targeted quality agents |
+| `/quick "description"` | All-in-one | Compressed workflow for small changes with proportional review |
+| `/progress` | Any time | Show current status and suggest next action |
+| `/session-report` | End of session | Summarize work, outcomes, and carry-forward context |
 
 ## Core Principles
 
@@ -42,6 +61,61 @@ For small changes (bug fixes, tweaks), use `/quick` — compressed workflow with
 - **No tautological tests** — tests encode expected outputs, never reimplement logic
 - **No vaporware** — every package imported by non-test code, every table touched by DML
 - **Two-stage review** — spec-compliance first, then targeted quality agents
+
+## Project Structure (what gets created in your project)
+
+```
+your-project/
+├── .verified/
+│   ├── project.md                    # Project vision, constraints, tech stack
+│   ├── config.json                   # Thresholds, workflow toggles
+│   ├── state.md                      # Current feature, phase, status
+│   ├── assessment.md                 # Gap analysis (from /assess)
+│   ├── design-system.md              # Brand tokens — colors, typography (from /ui-spec)
+│   ├── codebase/                     # Living project context (from /map)
+│   │   ├── ARCHITECTURE.md
+│   │   ├── CONVENTIONS.md
+│   │   ├── STACK.md
+│   │   ├── STRUCTURE.md
+│   │   ├── TESTING.md
+│   │   ├── INTEGRATIONS.md
+│   │   └── CONCERNS.md
+│   ├── decisions/                    # Architecture Decision Records
+│   │   └── DEC-001-*.md
+│   └── features/
+│       └── {feature-name}/
+│           ├── spec.md               # Acceptance scenarios, requirements
+│           ├── ui-spec.md            # Screen specs, components (optional)
+│           ├── plan.md               # Ordered tasks with file paths
+│           ├── summary.md            # Implementation outcomes
+│           └── review.md             # Review findings
+├── Justfile                          # Verification pipeline targets
+├── .golangci.yml                     # 43 linters configured
+├── revive.toml                       # Complexity and idiom rules
+└── codecov.yml                       # CI coverage gates
+```
+
+Codebase docs are created by `/map` and kept current — the doc-review agent updates them after each feature review.
+
+## Review Agents (13)
+
+Two-stage review: spec-compliance must pass before quality agents run.
+
+| Agent | Model | What It Reviews |
+|-------|-------|----------------|
+| **spec-compliance-review** | sonnet | Stage 1 gate: scenario coverage, requirement satisfaction, scope |
+| test-review | sonnet | Tautological tests, boundary gaps, property tests, test structure |
+| security-review | opus | Injection, auth, data exposure, hardcoded creds, dependencies |
+| complexity-review | haiku | Cyclomatic/cognitive complexity, function length, nesting |
+| error-handling-review | sonnet | Error wrapping, dropped errors, nil returns, error style |
+| concurrency-review | sonnet | Goroutine lifecycle, data races, channel patterns, mutexes |
+| dead-code-review | haiku | Unreachable functions, phantom packages, noop implementations |
+| interface-design-review | haiku | Accept-interfaces-return-structs, consumer-site definition, DI |
+| doc-review | sonnet | README accuracy, comment drift, codebase doc staleness |
+| domain-review | opus | Abstraction leaks, boundary violations, domain language |
+| refactoring-review | sonnet | Post-GREEN opportunities: duplication, naming, extraction |
+| a11y-review | sonnet | WCAG 2.1 AA: contrast, ARIA, keyboard nav, semantic HTML |
+| adr | sonnet | Captures architectural decisions in structured format |
 
 ## Go Stack (first implementation)
 
@@ -88,7 +162,8 @@ These tools must be installed:
 ```
 verified-development/
 ├── .claude-plugin/
-│   └── plugin.json
+│   ├── plugin.json                        # Plugin manifest
+│   └── marketplace.json                   # Marketplace metadata
 ├── skills/
 │   ├── verified-development/              # Universal workflow & principles
 │   ├── go-verified-development/           # Go toolchain & standards
@@ -117,13 +192,14 @@ verified-development/
 │   ├── concurrency-review.md              # Goroutine safety
 │   ├── dead-code-review.md                # Unreachable code & vaporware
 │   ├── interface-design-review.md         # Go interface patterns
-│   ├── doc-review.md                      # Documentation accuracy
+│   ├── doc-review.md                      # Documentation accuracy & codebase doc sync
 │   ├── domain-review.md                   # Abstraction leaks & boundaries
 │   ├── refactoring-review.md              # Post-GREEN opportunities
 │   ├── a11y-review.md                     # WCAG 2.1 AA accessibility
 │   └── adr.md                             # Architecture decision records
 └── hooks/
-    └── hooks.json
+    ├── hooks.json                         # Verify reminder + stop advisory
+    └── statusline.js                      # Feature, phase, status in status bar
 ```
 
 ## Future Stacks
