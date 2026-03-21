@@ -168,7 +168,20 @@ These tools must be installed:
 
 ### From Claude Code marketplace
 
-Search for `verified-development` in the Claude Code plugin marketplace.
+```bash
+# Add the marketplace source
+claude plugin marketplace add https://github.com/mikemyl/verified-development
+
+# Install the plugin
+claude plugin install verified-development
+```
+
+To scope to a single project instead of all projects:
+
+```bash
+claude plugin marketplace add --scope project https://github.com/mikemyl/verified-development
+claude plugin install --scope project verified-development
+```
 
 ### From source (development / testing)
 
