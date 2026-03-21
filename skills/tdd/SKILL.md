@@ -243,6 +243,6 @@ Phase 3 (Implement) loop:
     5. Next task
 
   When all tasks complete:
-    -> Phase 4 (Verify): just verify
+    -> Phase 4 (Verify): run verify command
     -> Phase 5 (Review): /review
 ```

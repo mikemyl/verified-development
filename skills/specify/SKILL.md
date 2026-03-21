@@ -76,7 +76,7 @@ Write `.verified/features/{feature-name}/spec.md` following the template:
 Always include these standard success criteria:
 - Every acceptance scenario has a corresponding test
 - Mutation score >= 60% on feature package
-- All verification gates pass (`just verify`)
+- All verification gates pass (the project's verify command)
 
 ### 6. Quality Check
 

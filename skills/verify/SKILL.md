@@ -11,11 +11,17 @@ Run the project's verification pipeline. This is the single pass/fail gate for c
 
 ## Process
 
-1. Check that a `Justfile` exists in the project root. If not, inform the user they need to run `/init` first.
+1. Detect the project's verify command:
+   - Read `.verified/config.json` for language and custom verify command
+   - If `Justfile` exists with a `verify` target → `just verify`
+   - If `Makefile` exists with a `verify` target → `make verify`
+   - If `package.json` has a `verify` script → `npm run verify`
+   - If `pom.xml` exists → `mvn verify`
+   - If none found, inform the user they need to run `/init` first
 
 2. Run the full verification pipeline:
    ```bash
-   just verify
+   {detected verify command}
    ```
 
 3. If any target fails:
@@ -30,20 +36,18 @@ Run the project's verification pipeline. This is the single pass/fail gate for c
 
 ## Options
 
-The user may request individual targets:
-- `just lint` — linting only
-- `just test` — tests only
-- `just coverage` — coverage check only
-- `just mutation` — mutation testing only
-- `just security` — security scan only
-- `just deadcode` — dead code detection only
-- `just build-check` — compilation and dependency check
+The user may request individual verification layers:
+- Linting only
+- Tests only
+- Coverage check only
+- Mutation testing only
+- Security scan only
 
-If the user says "just run the tests" or similar, run only the relevant target, not the full pipeline.
+Detect the individual targets from the project's build file (Justfile, Makefile, package.json scripts) and run the appropriate one.
 
 ## Important
 
 - Never skip failing targets or suggest lowering thresholds
-- If a linter rule fails and the user asks to ignore it, explain why the rule exists before adding a nolint directive
-- Coverage and mutation thresholds are defined in the Justfile — read them from there, don't hardcode
-- If `gremlins` is not installed, warn the user but continue with other targets
+- If a linter rule fails and the user asks to suppress it, explain why the rule exists first
+- Thresholds are defined in the project's build config — read them from there, don't hardcode
+- If a verification tool is not installed, warn the user but continue with other targets

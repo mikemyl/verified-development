@@ -85,7 +85,7 @@ Write `.verified/features/{feature-name}/plan.md`:
 - (depends on TXXX) = Must complete after specified task
 
 ## Verification
-- Run `just verify` after all tasks complete
+- Run the project's verify command after all tasks complete
 - Run `/review` for two-stage code review
 
 ## Decisions
@@ -155,6 +155,6 @@ Next: Run /implement {feature-name} to start TDD execution.
 ## Important
 
 - The plan IS the executable prompt — be concrete, not vague
-- "Create the authentication handler" is bad. "Create AuthHandler in pkg/auth/handler.go with LoginEndpoint accepting POST /auth/login" is good.
+- "Create the authentication handler" is bad. "Create AuthHandler in src/auth/handler with LoginEndpoint accepting POST /auth/login" is good.
 - Don't plan more than ~20 tasks per feature. If it's bigger, the feature should be split.
 - Test tasks and implementation tasks are separate — this enforces TDD discipline

@@ -43,13 +43,10 @@ For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidanc
 **For test tasks (odd-numbered typically):**
 
 1. **RED** — Write the failing test
-   - Use Actor-based BDD patterns where applicable
-   - Table-driven tests with boundary values
-   - Property-based tests for invariants
-2. Run the test, show it fails:
-   ```bash
-   go test -run TestName ./path/...
-   ```
+   - Follow the project's test conventions (read `.verified/codebase/TESTING.md`)
+   - Boundary values that kill mutants
+   - Property-based tests for invariants where applicable
+2. Run the test using the project's test command — show it fails
 3. Show the failing output as evidence
 
 **For implementation tasks (even-numbered typically):**
@@ -57,10 +54,7 @@ For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidanc
 1. **GREEN** — Write minimum code to pass the test
    - Only what's needed to satisfy the failing test
    - No anticipatory code
-2. Run the test, show it passes:
-   ```bash
-   go test -run TestName ./path/...
-   ```
+2. Run the test — show it passes
 3. Show passing output as evidence
 4. **REFACTOR** — Improve structure if needed
    - Run tests again after refactoring
@@ -76,10 +70,7 @@ After each task:
 ### 5. Phase Transitions
 
 When all tasks in a plan phase complete:
-- Run full test suite to verify nothing broke:
-  ```bash
-  go test ./...
-  ```
+- Run the full test suite to verify nothing broke
 - Show progress: "Phase {N} complete. {M} tasks remaining."
 - Continue to next phase
 
@@ -87,10 +78,7 @@ When all tasks in a plan phase complete:
 
 When all tasks done:
 
-1. Run full test suite with race detection:
-   ```bash
-   go test -race -shuffle=on -count=1 ./...
-   ```
+1. Run the full test suite (use the project's test command with all safety flags enabled):
 
 2. Update state:
    ```yaml

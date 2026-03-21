@@ -132,7 +132,7 @@ Always include:
 ```
 - SC-N: Every acceptance scenario has a corresponding test
 - SC-N+1: Mutation score >= 60% on feature package
-- SC-N+2: All verification gates pass (just verify)
+- SC-N+2: All verification gates pass (the project's verify command)
 ```
 
 These are the mechanical criteria that the verification pipeline checks.

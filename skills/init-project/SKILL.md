@@ -20,7 +20,7 @@ If language argument provided, use it. Otherwise:
 - Check for `Cargo.toml` -> Rust
 - If ambiguous, ask the user
 
-Currently supported: **Go**. For other languages, create `.verified/` structure and config but skip language-specific toolchain scaffolding.
+Supported stacks: **Go** (full toolchain scaffolding). For other languages, create `.verified/` structure and config, then provide guidance on what verification tools to set up.
 
 ### 2. Check for Existing Assessment
 
@@ -82,36 +82,36 @@ Write `.verified/project.md`:
 - Two-stage review before merge
 ```
 
-### 6. Scaffold Language-Specific Configs (Go)
+### 6. Scaffold Language-Specific Configs
 
-Load the `go-verified-development` skill and read reference files.
+Based on the detected language, load the appropriate language skill and scaffold verification toolchain configs.
 
-Check which files already exist and only create missing ones:
+**Go:** Load `go-verified-development` skill. Scaffold (if not already present):
+- `Justfile` — from `references/justfile-template.md`
+- `.golangci.yml` — from `references/golangci-yml.md`
+- `revive.toml` — from `references/revive-toml.md`
+- `codecov.yml` — from `references/codecov-yml.md`
+- Check tool installation: just, golangci-lint, revive, gremlins, gosec, govulncheck, deadcode
 
-| File | Source | Skip if exists? |
-|------|--------|----------------|
-| `Justfile` | `references/justfile-template.md` | Yes |
-| `.golangci.yml` | `references/golangci-yml.md` | Yes |
-| `revive.toml` | `references/revive-toml.md` | Yes |
-| `codecov.yml` | `references/codecov-yml.md` | Yes |
+**Java:** Suggest verification setup:
+- Build tool: Maven (`mvn verify`) or Gradle
+- Linting: SpotBugs, Checkstyle, PMD
+- Mutation: PIT (pitest)
+- Security: OWASP dependency-check
+- Coverage: JaCoCo (>= 80%)
 
-Extract the config content from the reference markdown files (the content is in code blocks).
+**TypeScript:** Suggest verification setup:
+- Build tool: package.json scripts
+- Linting: ESLint with strict config
+- Mutation: Stryker
+- Security: npm audit, eslint-plugin-security
+- Coverage: vitest --coverage (>= 80%)
+
+**Other languages:** Create `.verified/` structure and config. Ask the user what verification tools they use and document them in config.json.
 
 ### 7. Verify Tool Installation
 
-For Go, check that required tools are installed:
-
-```bash
-which golangci-lint && echo "golangci-lint: installed" || echo "golangci-lint: MISSING"
-which revive && echo "revive: installed" || echo "revive: MISSING"
-which gremlins && echo "gremlins: installed" || echo "gremlins: MISSING"
-which gosec && echo "gosec: installed" || echo "gosec: MISSING"
-which govulncheck && echo "govulncheck: installed" || echo "govulncheck: MISSING"
-which deadcode && echo "deadcode: installed" || echo "deadcode: MISSING"
-which just && echo "just: installed" || echo "just: MISSING"
-```
-
-Report any missing tools with install instructions.
+Check that required tools for the detected language are installed. Report any missing tools with install instructions.
 
 ### 8. Create Initial State
 

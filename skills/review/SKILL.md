@@ -24,11 +24,11 @@ Orchestrate the two-stage review process. This is Phase 5 of the verified develo
 ### 1. Pre-Flight Checks
 
 Before running review agents:
-1. Check that `just verify` passes (or was recently run). If not, tell the user to run `/verify` first.
+1. Check that the project's verify command passes (or was recently run). If not, tell the user to run `/verify` first.
 2. Check that tests pass. Review is pointless on broken code.
 3. Identify the changed files:
    ```bash
-   git diff --name-only main -- '*.go'
+   git diff --name-only main
    ```
 
 ### 2. Stage 1: Spec Compliance (always runs first)
@@ -54,12 +54,11 @@ Select agents based on what changed. Run applicable agents in parallel:
 
 | Changed Files | Agents to Run |
 |--------------|---------------|
-| Any Go code | complexity-review |
-| Go code with error handling | error-handling-review |
-| Go code with goroutines/channels/mutexes | concurrency-review |
-| Any code | test-review |
+| Any source code | complexity-review, test-review |
+| Error handling patterns | error-handling-review |
+| Concurrent/async code | concurrency-review |
 | Security-sensitive code (auth, crypto, SQL) | security-review |
-| Code with interfaces | interface-design-review |
+| Code with interfaces/abstractions | interface-design-review |
 | README, docs, comments changed | doc-review |
 | Domain/business logic | domain-review |
 | After GREEN phase | refactoring-review |

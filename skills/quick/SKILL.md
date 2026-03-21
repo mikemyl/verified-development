@@ -37,16 +37,10 @@ Proceed with /quick anyway?
 Load the `tdd` skill. Follow RED-GREEN-REFACTOR:
 
 **RED:** Write a test that exposes the bug or describes the new behavior.
-```bash
-go test -run TestName ./path/...
-```
-Show the failing output.
+Run it using the project's test command. Show the failing output.
 
 **GREEN:** Write the minimum fix/change.
-```bash
-go test -run TestName ./path/...
-```
-Show the passing output.
+Run the test again. Show the passing output.
 
 **REFACTOR:** Improve if needed. Run tests again.
 
@@ -54,9 +48,10 @@ For documentation-only changes (README, comments), skip TDD — there's nothing 
 
 ### 4. Verify
 
-Run the full verification pipeline:
+Run the full verification pipeline (detected from Justfile, Makefile, package.json, or pom.xml):
+
 ```bash
-just verify
+{project's verify command}
 ```
 
 This is never skipped, even for a one-line fix. A small change can break linting, coverage thresholds, or introduce a security issue.

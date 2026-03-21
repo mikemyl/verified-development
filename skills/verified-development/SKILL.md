@@ -18,7 +18,7 @@ A specification-first development methodology with layered verification gates an
 1. **Acceptance scenarios before implementation** - Given/When/Then defined before any code is written
 2. **Layered verification** - lint, test, coverage, mutation, security, dead code — all must pass
 3. **Numeric thresholds** - coverage >=80%, mutation >=60%, complexity <=10 — no exceptions
-4. **Single verify command** - `just verify` runs everything; all must pass, no warnings tolerated
+4. **Single verify command** - the project's verify command runs everything; all must pass, no warnings tolerated
 5. **No tautological tests** - tests encode expected outputs, never reimplement function logic
 6. **No vaporware** - every package imported by non-test code, every table touched by DML
 7. **Two-stage review** - spec-compliance first (right thing?), then quality (right way?)
@@ -81,7 +81,7 @@ Rules:
 
 Run the mechanical verification pipeline.
 
-- Execute `just verify` — the single pass/fail gate
+- Execute the project's verify command — the single pass/fail gate
 - All layers must pass: lint, test, coverage, mutation, security, dead code, build
 - All thresholds must be met (no "close enough")
 - Fix any failures before proceeding

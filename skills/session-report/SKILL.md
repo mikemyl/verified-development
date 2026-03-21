@@ -40,7 +40,7 @@ Categorize what happened:
 - Lines changed (approximate)
 
 **Verification results:**
-- Did `just verify` pass? When was it last run?
+- Did the verify command pass? When was it last run?
 - Any review findings addressed?
 
 **Decisions made:**
@@ -70,7 +70,7 @@ Present the report directly (don't write to a file unless the user asks):
 - {N} tests added
 
 ### Verification
-- Last `just verify`: {PASS/FAIL/not run}
+- Last the verify command: {PASS/FAIL/not run}
 - Review: {completed/in-progress/not started}
 
 ### Decisions
