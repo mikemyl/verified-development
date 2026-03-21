@@ -1,0 +1,19 @@
+{
+  "name": "verified-development",
+  "version": "0.1.0",
+  "description": "Specification-first, verified development with ATDD, layered quality gates, and review agents. Language-aware, starting with Go.",
+  "author": {
+    "name": "Mike Mylonakis"
+  },
+  "license": "MIT",
+  "keywords": [
+    "verification",
+    "tdd",
+    "atdd",
+    "bdd",
+    "specification",
+    "review",
+    "go",
+    "quality-gates"
+  ]
+}

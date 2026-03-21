@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "The user is about to run a bash command. If the command is `git commit` or `git push` and there is a `.verified/config.json` with `require_verify: true`, check if `just verify` has been run recently in this session. If not, add a reminder: 'Consider running /verify before committing.' This is advisory only — do not block the command."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before completing, check if there is a `.verified/state.md` file. If it exists and the current phase is 'implement', remind the user about uncommitted work and suggest running /progress to check status. This is advisory only."
+          }
+        ]
+      }
+    ]
+  }
+}
