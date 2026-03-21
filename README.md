@@ -166,6 +166,12 @@ These tools must be installed:
 
 ## Installation
 
+### From Claude Code marketplace
+
+```
+/install-plugin verified-development
+```
+
 ### From source (development / testing)
 
 ```bash
