@@ -168,9 +168,7 @@ These tools must be installed:
 
 ### From Claude Code marketplace
 
-```
-/install-plugin verified-development
-```
+Search for `verified-development` in the Claude Code plugin marketplace.
 
 ### From source (development / testing)
 
