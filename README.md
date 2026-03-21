@@ -164,6 +164,50 @@ These tools must be installed:
 | Function arguments | <= 5 |
 | Return values | <= 3 |
 
+## Installation
+
+### From source (development / testing)
+
+```bash
+# Clone the repo
+git clone https://github.com/your-user/verified-development.git
+cd verified-development
+
+# Option 1: Symlink for persistent use across all projects
+ln -s "$(pwd)" ~/.claude/plugins/verified-development
+
+# Option 2: Run Claude Code with the plugin for a single session
+claude --plugin-dir /path/to/verified-development
+```
+
+### Test locally without installing
+
+```bash
+# Navigate to any project
+cd ~/your-project
+
+# Start Claude Code pointing at the plugin directory
+claude --plugin-dir ~/path/to/verified-development
+
+# Verify it loaded — you should see the skills when you type /
+# Try: /assess, /progress, /init
+```
+
+### Getting started in a project
+
+```bash
+# New project
+/init                          # Scaffold configs, Justfile, .verified/
+/install-hooks                 # Set up enforcement (lint on write, verify on commit)
+/specify my-feature            # Start your first feature
+
+# Existing project
+/assess                        # Gap analysis — what verification layers are missing
+/map                           # Deep codebase analysis — produces .verified/codebase/ docs
+/init                          # Scaffold only what's missing
+/install-hooks                 # Set up enforcement
+```
+
 ## Plugin Structure
 
 ```
