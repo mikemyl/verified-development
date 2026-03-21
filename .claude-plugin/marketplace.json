@@ -1,0 +1,42 @@
+{
+  "title": "Verified Development",
+  "description": "Specification-first development workflow with ATDD, layered verification gates, and two-stage review agents. Enforces TDD, mechanical quality gates (lint, test, coverage, mutation, security, dead code), and AI-powered code review. Language-aware, starting with Go.",
+  "category": "workflow",
+  "tags": [
+    "verification",
+    "tdd",
+    "atdd",
+    "bdd",
+    "code-review",
+    "testing",
+    "go",
+    "quality",
+    "specification",
+    "security"
+  ],
+  "features": [
+    "5-phase workflow: specify, plan, implement, verify, review",
+    "Two-stage review: spec-compliance gate, then 12 quality agents",
+    "Go verification pipeline: golangci-lint (43 linters), gremlins mutation testing, gosec, govulncheck",
+    "Specification-first: acceptance scenarios before implementation",
+    "TDD enforcement with Actor-based BDD testing patterns",
+    "UI specification with design system, competitive research, and a11y review",
+    "Codebase mapping and living context docs",
+    "Architecture Decision Records (ADR) capture",
+    "Compressed /quick workflow for bug fixes with proportional review",
+    "Justfile-based verification pipeline with configurable thresholds"
+  ],
+  "prerequisites": {
+    "go": {
+      "tools": [
+        "just",
+        "golangci-lint",
+        "revive",
+        "gremlins",
+        "gosec",
+        "govulncheck",
+        "deadcode"
+      ]
+    }
+  }
+}

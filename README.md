@@ -106,7 +106,8 @@ verified-development/
 │   ├── ui-spec/                           # /ui-spec — create UI design contract
 │   ├── map/                               # /map — analyze codebase, produce context docs
 │   ├── quick/                             # /quick — compressed workflow for small changes
-│   └── progress/                          # /progress — show workflow status
+│   ├── progress/                          # /progress — show workflow status
+│   └── session-report/                    # /session-report — work summary and outcomes
 ├── agents/
 │   ├── spec-compliance-review.md          # Stage 1: spec compliance gate
 │   ├── test-review.md                     # Test quality & mutation gaps
