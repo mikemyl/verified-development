@@ -51,6 +51,7 @@ For small changes (bug fixes, tweaks), use `/quick` — compressed workflow with
 | `/quick "description"` | All-in-one | Compressed workflow for small changes with proportional review |
 | `/progress` | Any time | Show current status and suggest next action |
 | `/session-report` | End of session | Summarize work, outcomes, and carry-forward context |
+| `/install-hooks` | Setup | Install project-specific enforcement hooks (post-write lint, pre-commit gate) |
 
 ## Core Principles
 
@@ -182,7 +183,8 @@ verified-development/
 │   ├── map/                               # /map — analyze codebase, produce context docs
 │   ├── quick/                             # /quick — compressed workflow for small changes
 │   ├── progress/                          # /progress — show workflow status
-│   └── session-report/                    # /session-report — work summary and outcomes
+│   ├── session-report/                    # /session-report — work summary and outcomes
+│   └── install-hooks/                     # /install-hooks — project-specific enforcement hooks
 ├── agents/
 │   ├── spec-compliance-review.md          # Stage 1: spec compliance gate
 │   ├── test-review.md                     # Test quality & mutation gaps
@@ -198,7 +200,7 @@ verified-development/
 │   ├── a11y-review.md                     # WCAG 2.1 AA accessibility
 │   └── adr.md                             # Architecture decision records
 └── hooks/
-    ├── hooks.json                         # Verify reminder + stop advisory
+    ├── hooks.json                         # Plugin hooks (minimal)
     └── statusline.js                      # Feature, phase, status in status bar
 ```
 
