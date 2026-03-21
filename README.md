@@ -4,7 +4,13 @@ A Claude Code plugin for specification-first, verified development with ATDD, la
 
 ## Problem
 
-AI agents produce code faster than humans can review. Without automated verification, mistakes compound — untested code, weak assertions, dead code, security gaps. The review bottleneck doesn't scale with the output.
+AI agents produce code faster than humans can review. Without structure, several things break down:
+
+- **Verification gap** — untested code, weak assertions, dead code, security gaps compound faster than review capacity scales
+- **Context rot** — LLM output quality degrades as context windows fill with accumulated conversation; without fresh context management, later work is worse than earlier work
+- **State loss** — work-in-progress disappears between sessions; decisions made yesterday are re-debated today; there's no persistent memory of what was built, why, and what's next
+- **Specification drift** — without specs as source of truth, the implementation diverges from intent; features get built that nobody asked for while requirements get missed
+- **No mechanical enforcement** — coding standards exist as suggestions the LLM can ignore; nothing prevents committing unverified code
 
 ## Solution
 
