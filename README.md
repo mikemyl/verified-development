@@ -216,13 +216,21 @@ claude --plugin-dir ~/path/to/verified-development
 # New project
 /init                          # Scaffold configs, Justfile, .verified/
 /install-hooks                 # Set up enforcement (lint on write, verify on commit)
-/specify my-feature            # Start your first feature
 
 # Existing project
 /assess                        # Gap analysis — what verification layers are missing
 /map                           # Deep codebase analysis — produces .verified/codebase/ docs
 /init                          # Scaffold only what's missing
 /install-hooks                 # Set up enforcement
+
+
+# Start working 
+/speficy my-feature
+/ui-spec my-feature # optional - if it's ui related
+/plan my-feature
+/implement my-feature
+/veirfy
+/review
 ```
 
 ## Plugin Structure

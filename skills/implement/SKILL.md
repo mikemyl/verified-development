@@ -11,7 +11,13 @@ Execute an implementation plan using strict TDD. This is Phase 3 of the verified
 
 ## Process
 
-### 1. Load Context
+### 1. Determine Feature
+
+- If feature name provided as argument → use it
+- If no argument → read `.verified/state.md` for the current feature
+- If no argument and no state → ask the user which feature to implement
+
+### 2. Load Context
 
 - Read `.verified/features/{feature-name}/plan.md` — MUST exist
 - Read `.verified/features/{feature-name}/spec.md` — for acceptance scenarios
@@ -26,7 +32,7 @@ Execute an implementation plan using strict TDD. This is Phase 3 of the verified
 
 If plan.md doesn't exist, tell the user to run `/plan` first.
 
-### 2. Resume or Start
+### 3. Resume or Start
 
 If state.md shows implementation already in progress:
 - Find the last completed task in plan.md (marked with [x])
@@ -36,7 +42,7 @@ If state.md shows implementation already in progress:
 If starting fresh:
 - Show: "Starting implementation: {N} tasks across {M} phases"
 
-### 3. Execute Tasks
+### 4. Execute Tasks
 
 For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidance.
 
@@ -60,21 +66,21 @@ For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidanc
    - Run tests again after refactoring
 5. Ask user before committing
 
-### 4. Task Completion
+### 5. Task Completion
 
 After each task:
 - Mark task as complete in plan.md: `- [x] T{NNN} ...`
 - Update state.md with current position
 - Commit if user approves
 
-### 5. Phase Transitions
+### 6. Phase Transitions
 
 When all tasks in a plan phase complete:
 - Run the full test suite to verify nothing broke
 - Show progress: "Phase {N} complete. {M} tasks remaining."
 - Continue to next phase
 
-### 6. Implementation Complete
+### 7. Implementation Complete
 
 When all tasks done:
 

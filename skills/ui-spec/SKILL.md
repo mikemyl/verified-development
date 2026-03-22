@@ -12,13 +12,18 @@ Create a UI specification for a feature. This is an optional step between Specif
 
 ## Process
 
-### 1. Check Prerequisites
+### 1. Determine Feature
+
+- If feature name provided as argument → use it
+- If no argument → read `.verified/state.md` for the current feature
+- If no argument and no state → ask the user which feature needs a UI spec
+
+### 2. Check Prerequisites
 
 - Read `.verified/features/{feature-name}/spec.md` — the functional spec MUST exist first
 - If no spec exists, tell the user to run `/specify` first
-- Read `.verified/state.md` to confirm current feature
 
-### 2. Check for Existing Design System
+### 3. Check for Existing Design System
 
 Look for an existing design system:
 - `.verified/design-system.md` — project-wide design tokens
@@ -27,7 +32,7 @@ Look for an existing design system:
 
 If a design system exists, reference it. Don't re-ask brand questions.
 
-### 3. Design System Discovery (first time only)
+### 4. Design System Discovery (first time only)
 
 If no design system exists, guide the user through discovery. Load the `ui-specification` skill for the question framework.
 
@@ -57,7 +62,7 @@ If the user provides competitor URLs, use WebFetch to analyze their design patte
 
 Save the design system to `.verified/design-system.md` for reuse across features.
 
-### 4. Screen Specification
+### 5. Screen Specification
 
 For each screen in the feature:
 
@@ -71,18 +76,18 @@ For each screen in the feature:
 
 Present each screen spec to the user for feedback before moving to the next.
 
-### 5. Component Inventory
+### 6. Component Inventory
 
 Compile the full list:
 - shadcn components used as-is
 - shadcn components needing customization
 - Custom components to build
 
-### 6. Write UI Spec
+### 7. Write UI Spec
 
 Write `.verified/features/{feature-name}/ui-spec.md` following the template from the ui-specification skill.
 
-### 7. Quality Check
+### 8. Quality Check
 
 Run through the checklist:
 - [ ] Every screen has purpose, entry point, and user state
@@ -93,7 +98,7 @@ Run through the checklist:
 - [ ] Design tokens defined (or referenced from design-system.md)
 - [ ] Accessibility requirements per screen
 
-### 8. Update State
+### 9. Update State
 
 ```yaml
 ---
@@ -104,7 +109,7 @@ last_activity: {YYYY-MM-DD} - UI specification complete
 ---
 ```
 
-### 9. Suggest Next Step
+### 10. Suggest Next Step
 
 ```
 UI specification complete: .verified/features/{feature-name}/ui-spec.md

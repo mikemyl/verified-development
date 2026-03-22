@@ -11,7 +11,13 @@ Create an implementation plan for a feature. This is Phase 2 of the verified dev
 
 ## Process
 
-### 1. Load Context
+### 1. Determine Feature
+
+- If feature name provided as argument → use it
+- If no argument → read `.verified/state.md` for the current feature
+- If no argument and no state → ask the user which feature to plan
+
+### 2. Load Context
 
 - Read `.verified/features/{feature-name}/spec.md` — MUST exist
 - Read `.verified/features/{feature-name}/ui-spec.md` — if it exists (UI features)
@@ -28,7 +34,7 @@ Create an implementation plan for a feature. This is Phase 2 of the verified dev
 If spec.md doesn't exist, tell the user to run `/specify` first.
 If codebase docs don't exist, suggest running `/map` but don't block planning.
 
-### 2. Analyze Specification
+### 3. Analyze Specification
 
 Break down the spec into implementation units:
 - Each acceptance scenario -> one or more tasks
@@ -36,7 +42,7 @@ Break down the spec into implementation units:
 - Each edge case -> boundary test cases
 - UI screens -> component tasks (if ui-spec exists)
 
-### 3. Research (if needed)
+### 4. Research (if needed)
 
 If the implementation requires unfamiliar libraries, patterns, or APIs:
 - Research the specific question (don't do broad exploration)
@@ -45,7 +51,7 @@ If the implementation requires unfamiliar libraries, patterns, or APIs:
 
 Ask the user: "I need to research {topic} before planning. Should I proceed, or do you already know the approach?"
 
-### 4. Create Task List
+### 5. Create Task List
 
 Write `.verified/features/{feature-name}/plan.md`:
 
@@ -92,7 +98,7 @@ Write `.verified/features/{feature-name}/plan.md`:
 {Any architectural decisions made during planning — capture as ADR if significant}
 ```
 
-### 5. Task Rules
+### 6. Task Rules
 
 Every task must:
 - **Be specific** — exact file paths, not "create the handler"
@@ -108,13 +114,13 @@ Task phases should be ordered so:
 4. Integration and wiring
 5. UI components (if applicable)
 
-### 6. Ask About Decisions
+### 7. Ask About Decisions
 
 After drafting the plan, ask:
 - "Any architectural decisions worth recording? (I can create ADRs)"
 - If yes, trigger the ADR agent for each significant decision
 
-### 7. Quality Check
+### 8. Quality Check
 
 Verify the plan:
 - Every acceptance scenario has at least one task
@@ -123,7 +129,7 @@ Verify the plan:
 - Dependencies are explicit and acyclic
 - No task is too large (if it needs multiple commits, split it)
 
-### 8. Present and Confirm
+### 9. Present and Confirm
 
 Show the plan to the user. Ask:
 - "Does this plan look right?"
@@ -132,7 +138,7 @@ Show the plan to the user. Ask:
 
 Iterate until approved.
 
-### 9. Update State
+### 10. Update State
 
 ```yaml
 ---
@@ -143,7 +149,7 @@ last_activity: {YYYY-MM-DD} - Plan complete ({N} tasks)
 ---
 ```
 
-### 10. Suggest Next Step
+### 11. Suggest Next Step
 
 ```
 Plan complete: .verified/features/{feature-name}/plan.md
