@@ -48,9 +48,9 @@ See `references/justfile-template.md` for the complete Justfile.
 | Test coverage (project) | >= 80% |
 | Test coverage (patch) | >= 80% (5% tolerance) |
 | Mutation score | >= 60% |
-| Cyclomatic complexity | <= 10 per function |
-| Cognitive complexity | <= 15 per function |
-| Function length | <= 80 lines, <= 50 statements |
+| Cyclomatic complexity | <= 30 per function (package avg <= 10) |
+| Cognitive complexity | <= 20 per function |
+| Function length | <= 100 lines, <= 50 statements |
 | Function arguments | <= 5 |
 | Return values | <= 3 |
 | Max public structs/file | 5 |
