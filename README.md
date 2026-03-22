@@ -183,31 +183,32 @@ claude plugin marketplace add --scope project https://github.com/mikemyl/verifie
 claude plugin install --scope project verified-development
 ```
 
-### From source (development / testing)
+### From a local clone
 
 ```bash
-# Clone the repo
-git clone https://github.com/your-user/verified-development.git
-cd verified-development
+# Add local path as marketplace source
+claude plugin marketplace add /path/to/verified-development
 
-# Option 1: Symlink for persistent use across all projects
-ln -s "$(pwd)" ~/.claude/plugins/verified-development
-
-# Option 2: Run Claude Code with the plugin for a single session
-claude --plugin-dir /path/to/verified-development
+# Install the plugin
+claude plugin install verified-development
 ```
 
-### Test locally without installing
+### Development setup (testing changes to the plugin itself)
+
+Clone the repo and symlink the component directories into the project's `.claude/`:
 
 ```bash
-# Navigate to any project
-cd ~/your-project
+cd your-project
+ln -s /path/to/verified-development/agents .claude/agents
+ln -s /path/to/verified-development/skills .claude/skills
+ln -s /path/to/verified-development/hooks .claude/hooks
+```
 
-# Start Claude Code pointing at the plugin directory
-claude --plugin-dir ~/path/to/verified-development
+This lets Claude Code load the plugin components while you develop. Changes to the plugin files are picked up on the next Claude Code session.
 
-# Verify it loaded — you should see the skills when you type /
-# Try: /assess, /progress, /init
+To clean up:
+```bash
+rm .claude/agents .claude/skills .claude/hooks
 ```
 
 ### Getting started in a project
@@ -226,9 +227,9 @@ claude --plugin-dir ~/path/to/verified-development
 
 # Start working 
 /speficy my-feature
-/ui-spec my-feature # optional - if it's ui related
-/plan my-feature
-/implement my-feature
+/ui-spec 
+/plan 
+/implement 
 /veirfy
 /review
 ```
