@@ -163,7 +163,35 @@ Read the existing `.claude/settings.local.json` (if it exists) and merge the new
 
 **Important:** If `.claude/settings.local.json` already has hooks, MERGE — don't overwrite. Read existing hooks, append ours, write back.
 
-### 5. Verify Installation
+### 5. Install Global Statusline
+
+The statusline shows model, directory, current feature/phase, and context usage percentage. It's a global setting (applies to all projects).
+
+1. Create the hooks directory if it doesn't exist:
+   ```bash
+   mkdir -p ~/.claude/hooks
+   ```
+
+2. Copy `statusline.js` from the plugin to a stable path (no version in path):
+   ```bash
+   cp ${CLAUDE_PLUGIN_ROOT}/hooks/statusline.js ~/.claude/hooks/vd-statusline.js
+   ```
+
+3. Read `~/.claude/settings.json` and add the `statusLine` entry if not already present:
+   ```json
+   {
+     "statusLine": {
+       "type": "command",
+       "command": "node ~/.claude/hooks/vd-statusline.js"
+     }
+   }
+   ```
+   MERGE with existing settings — don't overwrite.
+
+4. If a different statusLine is already configured, ask the user:
+   "There's already a statusline configured. Replace it with verified-development's statusline?"
+
+### 6. Verify Installation
 
 Test that hooks work:
 
@@ -175,7 +203,7 @@ echo '{"tool_input":{"file_path":"test.go"}}' | bash .verified/hooks/post-write-
 echo '{"tool_input":{"command":"git commit -m test"}}' | bash .verified/hooks/pre-commit-gate.sh
 ```
 
-### 6. Summary
+### 7. Summary
 
 ```
 Hooks installed for verified development.
@@ -188,8 +216,12 @@ Hooks installed for verified development.
                        Blocks commits if verification fails
                        Timeout: {N}s
 
-  Hook scripts:        .verified/hooks/
-  Settings:            .claude/settings.local.json
+  Statusline:          ~/.claude/hooks/vd-statusline.js
+                       Shows model, directory, feature:phase, context %
+
+  Project hooks:       .verified/hooks/
+  Project settings:    .claude/settings.local.json
+  Global settings:     ~/.claude/settings.json (statusline)
 
 To remove hooks: delete the entries from .claude/settings.local.json
 To update commands: edit .verified/config.json and re-run /install-hooks
@@ -203,3 +235,5 @@ To update commands: edit .verified/config.json and re-run /install-hooks
 - Pre-commit hook is blocking (exit 2) — it prevents committing unverified code
 - If the user wants to bypass the commit gate temporarily, they need to edit settings.local.json
 - Re-running `/install-hooks` updates the scripts with new commands from config
+- Re-running also re-copies statusline.js (picks up plugin updates)
+- Statusline lives at `~/.claude/hooks/vd-statusline.js` — stable path, no version dependency
