@@ -5,7 +5,7 @@ description: >-
   dispatching parallel implementation work during /implement. Each executor
   handles a subset of tasks following TDD, updates plan.md with completed
   tasks, and produces test evidence.
-model: sonnet
+model: opus
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

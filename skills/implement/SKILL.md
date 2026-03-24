@@ -83,9 +83,21 @@ When all tasks in a plan phase complete:
 - Show progress: "Phase {N} complete. {M} tasks remaining."
 - Continue to next phase
 
-### 7. Implementation Complete
+### 7. Verify All Tasks Complete
 
-When all tasks done:
+Before declaring implementation done, read plan.md and count:
+- Total tasks (lines matching `- [ ]` or `- [x]`)
+- Completed tasks (lines matching `- [x]`)
+- Blocked tasks (lines matching `- [!]`)
+
+If uncompleted tasks remain:
+- List them: "Tasks still open: T010, T011, T013"
+- Ask: "Continue implementing, or descope these with /update-plan?"
+- Do NOT proceed to step 8 until all tasks are either `[x]` or `[!]`
+
+### 8. Implementation Complete
+
+When all tasks are done (checked off or explicitly blocked/descoped):
 
 1. Run the full test suite (use the project's test command with all safety flags enabled):
 

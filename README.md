@@ -124,7 +124,7 @@ Two-stage review: spec-compliance must pass before quality agents run.
 | refactoring-review | sonnet | Post-GREEN opportunities: duplication, naming, extraction |
 | a11y-review | sonnet | WCAG 2.1 AA: contrast, ARIA, keyboard nav, semantic HTML |
 | adr | sonnet | Captures architectural decisions in structured format |
-| executor | sonnet | Parallel task execution during /implement with TDD and evidence |
+| executor | opus | Parallel task execution during /implement with TDD and evidence |
 
 ## Go Stack (first implementation)
 
@@ -278,8 +278,10 @@ verified-development/
 │   ├── a11y-review.md                     # WCAG 2.1 AA accessibility
 │   └── adr.md                             # Architecture decision records
 └── hooks/
-    ├── hooks.json                         # Plugin hooks (minimal)
-    └── statusline.js                      # Feature, phase, status in status bar
+    ├── hooks.json                         # Setup + PostToolUse hooks
+    ├── setup-statusline.sh                # Auto-install statusline on plugin enable
+    ├── statusline.js                      # Feature, phase, context % in status bar
+    └── context-monitor.js                 # Warns when context window is filling up
 ```
 
 ## Future Stacks

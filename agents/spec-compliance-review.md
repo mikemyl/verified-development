@@ -92,7 +92,8 @@ For each success criterion (SC-xxx):
 
 - You MUST read the spec.md before reviewing any code
 - Every UNCOVERED scenario or UNMET requirement is a FAIL
-- PARTIAL coverage is acceptable only if the gap is documented
+- PARTIAL coverage is a FAIL unless the gap has been explicitly descoped via /update-plan with a documented reason in spec.md
 - Scope creep is a warning, not a failure — but flag it clearly
 - Do NOT assess code quality (that's Stage 2) — only spec compliance
 - If no spec.md exists, FAIL with "No specification found"
+- Check plan.md for uncompleted tasks — if tasks remain unchecked, FAIL with "Implementation incomplete: T{NNN} not done"

@@ -166,11 +166,25 @@ last_activity: {YYYY-MM-DD - what happened}
 
 ## Working Rules for AI Agents
 
+### Workflow Order (NEVER skip or reorder)
+1. **Specify** → 2. **Plan** → 3. **Implement** → 4. **Verify** → 5. **Review** → 6. **Commit**
+
+NEVER commit code without completing /verify AND /review first. This is the most important rule.
+
+### During Implementation
 1. **Read state.md first** in every session to know where you are
 2. **Never skip phases** — specify before plan, plan before implement
 3. **Fresh test output is evidence** — never claim tests pass without showing output
-4. **Commits capture outcomes** — atomic, one per task, message describes the what
-5. **Ask before committing** — verify with the user, never auto-commit
+4. **No speculative code** — every line must be driven by a failing test
+5. **No hallucinated imports** — verify every dependency exists before using it
 6. **Small increments** — each step leaves codebase working with all tests passing
-7. **No speculative code** — every line must be driven by a failing test
-8. **No hallucinated imports** — verify every dependency exists before using it
+7. **Use verified-development agents only** — never use agents from other plugins (gsd-executor, etc.)
+8. **Update plan.md** — mark tasks `[x]` as completed, keep state.md current
+9. **Check for uncompleted tasks** — before declaring implementation done, verify ALL tasks in plan.md are checked off
+
+### After Implementation
+10. **Run /verify** — the single mechanical gate. ALL targets must pass.
+11. **Run /review** — two-stage review. Spec compliance first, then quality agents.
+12. **Fix review findings** — correction loop, max 2 iterations
+13. **THEN commit** — only after verify + review both pass
+14. **Never prompt to commit** during or right after implementation — prompt to run /verify instead
