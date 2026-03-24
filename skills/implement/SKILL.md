@@ -70,8 +70,9 @@ For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidanc
 
 After each task:
 - Mark task as complete in plan.md: `- [x] T{NNN} ...`
-- Update state.md with current position
-- Commit if user approves
+- Update state.md with current position and task count
+- Continue to next task — do NOT suggest committing yet
+- Commits happen after ALL tasks complete, /verify passes, and /review passes
 
 ### 6. Phase Transitions
 
@@ -119,9 +120,12 @@ When all tasks done:
    ```
    Implementation complete: {N} tasks done
 
-   Next:
-     /verify — Run full verification pipeline
-     /review — Run two-stage code review
+   NEXT STEPS (in order — do NOT skip):
+     1. /verify — Run full verification pipeline
+     2. /review — Run two-stage code review
+     3. Then: human review and commit
+
+   Do NOT commit until /verify and /review have both passed.
    ```
 
 ## Deviation Handling
@@ -138,7 +142,9 @@ If during implementation you discover the plan is wrong:
 
 - Never write production code without a failing test first
 - Never claim tests pass without showing actual output
-- Never commit without user approval
+- Never suggest committing during implementation — commits happen AFTER /verify and /review pass
 - If a task is too large during implementation, split it on the fly (update plan.md)
 - If you discover a missing scenario, note it but don't add scope — flag for the user
-- Each task should result in exactly one commit
+- Update state.md after each task completion to track progress
+- When all tasks are done, the workflow is: /verify → /review → human review → commit
+- Do NOT prompt the user to commit after completing tasks — prompt them to run /verify instead

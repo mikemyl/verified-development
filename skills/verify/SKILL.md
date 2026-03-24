@@ -33,6 +33,12 @@ Run the project's verification pipeline. This is the single pass/fail gate for c
 4. If all targets pass:
    - Report the results summary (coverage %, mutation %, any warnings)
    - Confirm the codebase is verified
+   - Check `.verified/state.md` — if a feature is in the implement or verify phase:
+     ```
+     Verification passed. Next step: /review
+     Do NOT commit until review is complete.
+     ```
+   - Update state.md phase to `verify` with status `complete`
 
 ## Options
 
