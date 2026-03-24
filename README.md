@@ -56,6 +56,7 @@ For small changes (bug fixes, tweaks), use `/quick` — compressed workflow with
 | `/review` | Phase 5 | Two-stage review: spec-compliance, then targeted quality agents |
 | `/quick "description"` | All-in-one | Compressed workflow for small changes with proportional review |
 | `/progress` | Any time | Show current status and suggest next action |
+| `/update-plan` | Any phase | Revise spec or plan when implementation reveals changes needed |
 | `/session-report` | End of session | Summarize work, outcomes, and carry-forward context |
 | `/install-hooks` | Setup | Install project-specific enforcement hooks (post-write lint, pre-commit gate) |
 
@@ -123,6 +124,7 @@ Two-stage review: spec-compliance must pass before quality agents run.
 | refactoring-review | sonnet | Post-GREEN opportunities: duplication, naming, extraction |
 | a11y-review | sonnet | WCAG 2.1 AA: contrast, ARIA, keyboard nav, semantic HTML |
 | adr | sonnet | Captures architectural decisions in structured format |
+| executor | sonnet | Parallel task execution during /implement with TDD and evidence |
 
 ## Go Stack (first implementation)
 

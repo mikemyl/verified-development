@@ -46,6 +46,8 @@ If starting fresh:
 
 For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidance.
 
+**Parallel execution:** When multiple tasks are independent (marked `[P]` or in different plan phases with no dependencies), dispatch them using the `executor` agent (subagent_type: `verified-development:executor`). Each executor gets a subset of tasks. Do NOT use agents from other plugins (gsd-executor, etc.) — always use the verified-development executor.
+
 **For test tasks (odd-numbered typically):**
 
 1. **RED** — Write the failing test
