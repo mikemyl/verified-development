@@ -1,3 +1,16 @@
 {
-  "hooks": {}
+  "hooks": {
+    "Setup": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/setup-statusline.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
 }
