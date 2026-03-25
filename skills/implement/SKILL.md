@@ -42,41 +42,59 @@ If state.md shows implementation already in progress:
 If starting fresh:
 - Show: "Starting implementation: {N} tasks across {M} phases"
 
-### 4. Execute Tasks
+### 4. Execute Tasks — Thin Orchestrator Pattern
 
-For each task in plan.md, follow the TDD cycle. Load the `tdd` skill for guidance.
+**You (the main agent) are the orchestrator. You do NOT write code yourself.** You:
+- Analyze task dependencies
+- Group tasks into waves (independent tasks run in parallel)
+- Spawn `executor` agents to do the actual implementation
+- Collect results and handle failures
+- Update state
 
-**Parallel execution:** When multiple tasks are independent (marked `[P]` or in different plan phases with no dependencies), dispatch them using the `executor` agent (subagent_type: `verified-development:executor`). Each executor gets a subset of tasks. Do NOT use agents from other plugins (gsd-executor, etc.) — always use the verified-development executor.
+This keeps your context clean for orchestration decisions while executors get fresh context for each wave of work.
 
-**For test tasks (odd-numbered typically):**
+#### Wave Analysis
 
-1. **RED** — Write the failing test
-   - Follow the project's test conventions (read `.verified/codebase/TESTING.md`)
-   - Boundary values that kill mutants
-   - Property-based tests for invariants where applicable
-2. Run the test using the project's test command — show it fails
-3. Show the failing output as evidence
+Read plan.md and group tasks into waves based on dependencies:
 
-**For implementation tasks (even-numbered typically):**
+```
+Wave 1: T001, T002, T005 [P] — no dependencies, run in parallel
+Wave 2: T003 (depends on T001), T004 (depends on T001-T003) — sequential
+Wave 3: T006-T009 [P] — independent, run in parallel
+...
+```
 
-1. **GREEN** — Write minimum code to pass the test
-   - Only what's needed to satisfy the failing test
-   - No anticipatory code
-2. Run the test — show it passes
-3. Show passing output as evidence
-4. **REFACTOR** — Improve structure if needed
-   - Run tests again after refactoring
-5. Ask user before committing
+Tasks marked `[P]` or in the same plan phase with no `(depends on)` can be parallelized.
 
-### 5. Task Completion
+#### Spawning Executors
 
-After each task:
-- Mark task as complete in plan.md: `- [x] T{NNN} ...`
-- Update state.md with current position and task count
-- Continue to next task — do NOT suggest committing yet
-- Commits happen after ALL tasks complete, /verify passes, and /review passes
+For each wave, spawn `executor` agents (subagent_type: `verified-development:executor`):
 
-### 6. Phase Transitions
+- **Parallel wave**: Spawn one executor per task (or group related tasks into one executor if they share files)
+- **Sequential wave**: Spawn one executor for the sequential chain
+- Always use `verified-development:executor` — never use agents from other plugins
+
+Each executor receives:
+- Its assigned tasks (T-numbers, descriptions, file paths)
+- The spec.md (for acceptance scenario context)
+- Instruction to read `.verified/codebase/TESTING.md` and `CONVENTIONS.md` for project patterns
+- Instruction to follow TDD: RED → GREEN → REFACTOR (except for config/schema/generated code)
+- Instruction to mark tasks `[x]` in plan.md when complete
+
+#### Collecting Results
+
+After each wave completes:
+- Read plan.md to verify tasks were marked `[x]`
+- Run the full test suite to verify nothing broke
+- If an executor reported BLOCKED tasks, decide: fix the blocker and re-dispatch, or flag for user
+- Show progress: "Wave {N} complete. {completed}/{total} tasks done. {remaining} remaining."
+- Update state.md with current position
+
+#### When NOT to Spawn Agents
+
+For very small implementations (1-3 tasks, simple changes), you may implement directly instead of spawning. Use your judgment — the overhead of spawning isn't worth it for trivial tasks.
+
+### 5. Phase Transitions
 
 When all tasks in a plan phase complete:
 - Run the full test suite to verify nothing broke
