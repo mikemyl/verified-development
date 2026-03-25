@@ -140,14 +140,18 @@ Iterate until approved.
 
 ### 10. Update State
 
+Set status to `in-progress` while the user is still reviewing:
+
 ```yaml
 ---
 feature: {feature-name}
 phase: plan
-status: complete
-last_activity: {YYYY-MM-DD} - Plan complete ({N} tasks)
+status: in-progress
+last_activity: {YYYY-MM-DD} - Plan draft ({N} tasks), awaiting approval
 ---
 ```
+
+Only set status to `complete` AFTER the user explicitly approves the plan (e.g., "looks good", "let's move on", "approved").
 
 ### 11. Suggest Next Step
 
@@ -164,3 +168,7 @@ Next: Run /implement {feature-name} to start TDD execution.
 - "Create the authentication handler" is bad. "Create AuthHandler in src/auth/handler with LoginEndpoint accepting POST /auth/login" is good.
 - Don't plan more than ~20 tasks per feature. If it's bigger, the feature should be split.
 - Test tasks and implementation tasks are separate — this enforces TDD discipline
+- Don't over-read the codebase — gather enough context to plan, then STOP reading and START writing. If you've read more than 15 files without writing, you have enough context.
+- Never make up commands — verify build/run/generate commands by reading package.json, Justfile, or Makefile before referencing them in the plan
+- Understand existing patterns before adding new ones — read how similar things are done in the project, don't invent new conventions
+- Status stays `in-progress` until user explicitly approves

@@ -154,7 +154,11 @@ If during implementation you discover the plan is wrong:
 
 ## Important
 
-- Never write production code without a failing test first
+- Write a failing test before production code — EXCEPT for:
+  - Config/schema changes (CMS collections, database schemas, codegen configs)
+  - Generated code (running codegen tools, type generation)
+  - Build/infra changes (Justfile recipes, CI config, Dockerfile)
+  These don't need TDD — they're validated by the tools that consume them.
 - Never claim tests pass without showing actual output
 - Never suggest committing during implementation — commits happen AFTER /verify and /review pass
 - If a task is too large during implementation, split it on the fly (update plan.md)

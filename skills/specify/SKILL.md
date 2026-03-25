@@ -101,16 +101,18 @@ Iterate based on feedback until the user approves.
 
 ### 8. Update State
 
-Create or update `.verified/state.md`:
+Create or update `.verified/state.md`. Only set `complete` AFTER the user explicitly approves the spec:
 
 ```yaml
 ---
 feature: {feature-name}
 phase: specify
 status: complete
-last_activity: {YYYY-MM-DD} - Specification complete
+last_activity: {YYYY-MM-DD} - Specification approved
 ---
 ```
+
+While still iterating, use `status: in-progress`.
 
 If `.verified/config.json` doesn't exist, create it with defaults:
 
