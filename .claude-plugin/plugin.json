@@ -1,6 +1,6 @@
 {
   "name": "verified-development",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Specification-first, verified development with ATDD, layered quality gates, and review agents. Language-aware, starting with Go.",
   "author": {
     "name": "Mike Mylonakis"
