@@ -143,7 +143,32 @@ After review passes (no remaining errors), check if `.verified/codebase/` docs n
 
 If `.verified/codebase/` doesn't exist yet, ask: "This is a good time to map the codebase. Run `/map` to create project context docs?"
 
-### 8. Final Report
+### 8. Capture Learnings
+
+After review and doc sync, systematically capture knowledge from this feature:
+
+1. **Gotchas discovered** — things that were surprising, non-obvious, or caused debugging time
+   - Example: "CMS migrations must be created explicitly, push:false means no auto-sync"
+   - Example: "NULL CMS fields default safely in Go via derefFloatOr pattern"
+
+2. **Patterns established** — new patterns introduced that future features should follow
+   - Example: "Use data attributes on root element to pass server data to client JS"
+   - Example: "Modal follows apartment-map.js pattern: backdrop + header + scrollable body"
+
+3. **Decisions made** — significant choices not already captured as ADRs
+   - If any are significant enough, create ADRs via the `adr` agent
+
+4. **Where to save:**
+   - Project-specific learnings → Claude Code memory (`.claude/projects/` memory files)
+   - Codebase patterns → `.verified/codebase/CONVENTIONS.md`
+   - Risks/gotchas → `.verified/codebase/CONCERNS.md`
+   - Architecture decisions → `.verified/decisions/` via ADR agent
+
+Ask the user: "Anything surprising or worth remembering from this feature? Any gotchas, patterns, or decisions to capture?"
+
+If the user has nothing to add, check the review findings — any fixes that revealed non-obvious behavior should be captured as learnings.
+
+### 9. Final Report
 
 ```
 Review complete for: {feature-name}
@@ -155,6 +180,7 @@ Review complete for: {feature-name}
     Suggestions: 3
 
   Codebase docs: {updated ARCHITECTURE.md, STACK.md / no changes needed}
+  Learnings captured: {N} memories, {N} ADRs
 
   Report: .verified/features/{feature-name}/review.md
 

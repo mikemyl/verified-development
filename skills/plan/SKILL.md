@@ -20,7 +20,11 @@ Create an implementation plan for a feature. This is Phase 2 of the verified dev
 ### 2. Load Context
 
 - Read `.verified/features/{feature-name}/spec.md` — MUST exist
-- Read `.verified/features/{feature-name}/ui-spec.md` — if it exists (UI features)
+- Read `.verified/features/{feature-name}/ui-spec.md` — if it exists, this is CRITICAL:
+  - The UI spec defines exact components, data attributes, test IDs, CSS classes, ARIA attributes
+  - Plan tasks MUST reference specific elements from the UI spec (e.g., `data-testid="terms-modal"`)
+  - Tests MUST assert UI spec details (layout, responsive behavior, accessibility)
+  - Do NOT design UI from scratch if a ui-spec exists — follow it precisely
 - Read `.verified/project.md` — project principles and tech stack
 - Read `.verified/config.json` — thresholds and settings
 - Read `.verified/codebase/` docs if they exist — these inform planning:
