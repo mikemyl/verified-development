@@ -1,14 +1,14 @@
 ---
-name: tdd
+name: tdd-go
 description: >-
-  Test-Driven Development workflow for verified development. Use when implementing
-  features, fixing bugs, writing tests, or any code change. Triggers on: "write code",
-  "implement", "fix bug", "add feature", "RED GREEN REFACTOR", "failing test",
-  "test first", or when in the Implement phase of verified development.
+  Go-specific TDD patterns for verified development. Use when implementing Go code
+  with TDD. Triggers on: Go test files, .go files, testdsl, Actor-based BDD,
+  table-driven tests, rapid property tests, or Go test patterns.
+  For TypeScript TDD, use the citypaul tdd skill instead.
 version: 0.1.0
 ---
 
-# Test-Driven Development
+# Test-Driven Development (Go)
 
 Every line of production code must be written in response to a failing test. TDD is the implementation discipline within verified development — Phase 3 (Implement) runs entirely through this cycle.
 

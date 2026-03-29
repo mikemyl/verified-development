@@ -34,7 +34,7 @@ Proceed with /quick anyway?
 
 ### 3. TDD Cycle
 
-Load the `tdd` skill. Follow RED-GREEN-REFACTOR:
+Load the appropriate TDD skill (`tdd-go` for Go, `tdd` for TypeScript). Follow RED-GREEN-REFACTOR:
 
 **RED:** Write a test that exposes the bug or describes the new behavior.
 Run it using the project's test command. Show the failing output.

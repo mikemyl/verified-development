@@ -248,7 +248,7 @@ verified-development/
 │   ├── go-verified-development/           # Go toolchain & standards
 │   │   └── references/                    # Justfile, golangci-yml, revive, codecov
 │   ├── specification/                     # How to write specs
-│   ├── tdd/                               # Test-driven development
+│   ├── tdd-go/                            # Go-specific TDD (Actor-based BDD, testdsl)
 │   ├── ui-specification/                  # UI design contracts
 │   ├── verify/                            # /verify — run verification pipeline
 │   ├── specify/                           # /specify — create feature spec
