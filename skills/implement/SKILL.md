@@ -45,9 +45,12 @@ If starting fresh:
 ### 4. Execute Tasks — Thin Orchestrator Pattern
 
 **You (the main agent) are the orchestrator. You do NOT write code yourself.** You:
+- Detect the project language and load the appropriate TDD skill:
+  - Go projects (go.mod): load `tdd-go` skill
+  - TypeScript projects (tsconfig.json): load `tdd` skill (citypaul's)
 - Analyze task dependencies
 - Group tasks into waves (independent tasks run in parallel)
-- Spawn `executor` agents to do the actual implementation
+- Spawn `executor` agents to do the actual implementation — tell each executor which TDD skill to follow
 - Collect results and handle failures
 - Update state
 

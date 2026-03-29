@@ -24,6 +24,12 @@ You will receive:
 - `.verified/codebase/ARCHITECTURE.md` — where code fits in the system
 - `.verified/codebase/STACK.md` — available dependencies
 
+## Setup
+
+On start, detect the project language and load the appropriate TDD skill:
+- Go projects (`go.mod`): follow `tdd-go` patterns (Actor-based BDD, testdsl, table-driven tests)
+- TypeScript projects (`tsconfig.json`): follow `tdd` patterns (vitest, Testing Library, describe/it)
+
 ## Process
 
 For each task assigned to you:
