@@ -11,20 +11,24 @@ Show the current state of verified development and suggest the next action.
 
 ## Process
 
-### 1. Read State
+### 1. Read State (Source of Truth)
 
-Read `.verified/state.md`. If it doesn't exist, report:
+Read `.verified/state.md`. The `feature` field in state.md IS the current feature. This is non-negotiable — do not override it based on what other features look like.
+
+If state.md doesn't exist, report:
 ```
 No verified development state found.
 Run /init to set up this project, or /assess to evaluate an existing codebase.
 ```
 
-### 2. Gather Context
+### 2. Read Current Feature Context
 
-Read additional files based on state:
+Read the CURRENT feature's artifacts (the one from state.md):
+- `.verified/features/{feature}/plan.md` — check task completion status
+- `.verified/features/{feature}/spec.md` — for context on what's being built
 - `.verified/config.json` — project configuration
-- `.verified/features/` — list all features and their artifacts
-- Current feature's directory — check which artifacts exist
+
+Do NOT read other features' files at this stage. Focus on the current one.
 
 ### 3. Display Progress
 
@@ -80,6 +84,8 @@ Other Features:
 
 ## Important
 
-- Read state.md first — it's the source of truth
-- If state.md is out of sync with actual files, trust the files and suggest updating state
+- **state.md is the source of truth** for which feature is current. NEVER override this.
+- The `feature` field in state.md tells you THE current feature. Other features are secondary.
+- If state.md says `feature: X` but X's plan has unchecked tasks, that's useful info — report it. Don't switch to a different feature that looks "more current."
 - Keep output concise — the user wants a quick status check, not a report
+- If state.md seems wrong (e.g., feature doesn't exist), flag it but don't silently pick a different one
