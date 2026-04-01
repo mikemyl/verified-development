@@ -37,7 +37,13 @@ mkdir -p .verified/features/{feature-name}
 
 ### 4. Gather Context
 
-If the user provided a description, use it as starting context. Then ask targeted questions to fill gaps. Focus on:
+If the user provided a description, use it as starting context. Then ask targeted questions to fill gaps.
+
+**HARD GATE: Do NOT write the spec until you understand the feature well enough to propose approaches. No shortcuts for "simple" features — simple features are where unexamined assumptions cause the most wasted work.**
+
+**One question at a time.** Do not dump a list of questions. Ask one, wait for the answer, adapt your next question based on what the user said. Prefer multiple-choice when possible.
+
+Focus areas (adapt order based on what's most unclear):
 
 1. **Who uses this?** (user role, system, scheduled job)
 2. **What triggers it?** (user action, API call, event, timer)
@@ -46,9 +52,26 @@ If the user provided a description, use it as starting context. Then ask targete
 5. **What are the boundaries?** (limits, thresholds, constraints)
 6. **How do you know it works?** (observable outcomes, measurable criteria)
 
-Ask questions conversationally — not a rigid checklist. Adapt based on what the user says. Stop when you have enough to write scenarios.
+Stop when you have enough to propose approaches.
 
-### 5. Write Specification
+### 5. Propose Approaches
+
+Before writing the spec, present 2-3 approaches with trade-offs:
+- Lead with your recommended option and explain why
+- Each approach should be 2-4 sentences covering: what it does, key trade-off, when you'd choose it
+- Get user approval on the approach before writing
+
+```
+Approach A (recommended): {description}
+  Trade-off: {what you gain vs what you give up}
+
+Approach B: {description}
+  Trade-off: {what you gain vs what you give up}
+
+Which approach, or something different?
+```
+
+### 6. Write Specification
 
 Load the specification skill for guidance on format and quality.
 
@@ -78,19 +101,25 @@ Always include these standard success criteria:
 - Mutation score >= 60% on feature package
 - All verification gates pass (the project's verify command)
 
-### 6. Quality Check
+### 7. Spec Self-Review
 
-Run through the spec quality checklist:
-- Every scenario is independent
-- No implementation details
-- Every requirement is testable
-- Edge cases cover boundaries (zero, empty, negative, maximum)
-- Success criteria are measurable
-- Maximum 3 [NEEDS CLARIFICATION] markers
+Before presenting to the user, review the spec with fresh eyes:
 
-If issues found, fix them before presenting to the user.
+1. **Placeholder scan** — search for "TBD", "TODO", "later", incomplete sections, vague requirements. Fix them.
+2. **Internal consistency** — do any sections contradict each other? Does the architecture implied by requirements match the edge cases?
+3. **Ambiguity check** — could any requirement be interpreted two different ways? If so, pick one and make it explicit.
+4. **Scope check** — is this focused enough for a single implementation plan? If it covers multiple independent subsystems, suggest decomposing.
+5. **Completeness checklist:**
+   - Every scenario is independent
+   - No implementation details
+   - Every requirement is testable
+   - Edge cases cover boundaries (zero, empty, negative, maximum)
+   - Success criteria are measurable
+   - Maximum 3 [NEEDS CLARIFICATION] markers
 
-### 7. Present and Confirm
+Fix any issues inline before presenting. Don't ask the user to fix what you can fix yourself.
+
+### 8. Present and Confirm
 
 Show the complete spec to the user. Ask:
 - "Does this capture what you want to build?"
@@ -99,7 +128,7 @@ Show the complete spec to the user. Ask:
 
 Iterate based on feedback until the user approves.
 
-### 8. Update State
+### 9. Update State
 
 Create or update `.verified/state.md`. Only set `complete` AFTER the user explicitly approves the spec:
 
@@ -133,7 +162,7 @@ If `.verified/config.json` doesn't exist, create it with defaults:
 }
 ```
 
-### 9. Suggest Next Step
+### 10. Suggest Next Step
 
 ```
 Specification complete: .verified/features/{feature-name}/spec.md

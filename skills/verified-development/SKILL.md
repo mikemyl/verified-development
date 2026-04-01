@@ -171,20 +171,59 @@ last_activity: {YYYY-MM-DD - what happened}
 
 NEVER commit code without completing /verify AND /review first. This is the most important rule.
 
+### Evidence Before Assertions (Iron Law)
+
+**NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.**
+
+Before claiming anything works, passes, or is done:
+1. Identify what command proves the claim
+2. Run it (fresh, complete — not a cached result)
+3. Read the full output
+4. Only then make the claim WITH the evidence
+
+Using "should pass", "looks correct", "probably works" = lying, not verifying. Run the command.
+
+| Claim | Requires | NOT Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test output: 0 failures | Previous run, "should pass" |
+| Lint clean | Linter output: 0 errors | Partial check |
+| Build succeeds | Build output: exit 0 | "Linter passed" |
+| Bug fixed | Regression test: red → green | "Code changed" |
+| Task complete | All of the above | "Looks done" |
+
 ### During Implementation
 1. **Read state.md first** in every session to know where you are
 2. **Never skip phases** — specify before plan, plan before implement
-3. **Fresh test output is evidence** — never claim tests pass without showing output
-4. **No speculative code** — every line must be driven by a failing test
-5. **No hallucinated imports** — verify every dependency exists before using it
-6. **Small increments** — each step leaves codebase working with all tests passing
-7. **Use verified-development agents only** — never use agents from other plugins (gsd-executor, etc.)
-8. **Update plan.md** — mark tasks `[x]` as completed, keep state.md current
-9. **Check for uncompleted tasks** — before declaring implementation done, verify ALL tasks in plan.md are checked off
+3. **No speculative code** — every line must be driven by a failing test
+4. **No hallucinated imports** — verify every dependency exists before using it
+5. **Small increments** — each step leaves codebase working with all tests passing
+6. **Use verified-development agents only** — never use agents from other plugins (gsd-executor, superpowers, etc.)
+7. **Update plan.md** — mark tasks `[x]` as completed, keep state.md current
+8. **Check for uncompleted tasks** — before declaring implementation done, verify ALL tasks in plan.md are checked off
 
 ### After Implementation
-10. **Run /verify** — the single mechanical gate. ALL targets must pass.
-11. **Run /review** — two-stage review. Spec compliance first, then quality agents.
-12. **Fix review findings** — correction loop, max 2 iterations
-13. **THEN commit** — only after verify + review both pass
-14. **Never prompt to commit** during or right after implementation — prompt to run /verify instead
+9. **Run /verify** — the single mechanical gate. ALL targets must pass.
+10. **Run /review** — two-stage review. Spec compliance first, then quality agents.
+11. **Fix review findings** — correction loop, max 2 iterations
+12. **THEN commit** — only after verify + review both pass
+13. **Never prompt to commit** during or right after implementation — prompt to run /verify instead
+
+### When Debugging
+
+**NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.**
+
+If you encounter a bug, test failure, or unexpected behavior:
+1. **Read error messages carefully** — they often contain the exact solution
+2. **Reproduce consistently** — can you trigger it reliably?
+3. **Check recent changes** — git diff, what changed?
+4. **Form a single hypothesis** — "I think X because Y"
+5. **Test minimally** — smallest possible change, one variable at a time
+6. **If fix doesn't work** — form NEW hypothesis, don't stack more fixes
+
+**If 3+ fixes have failed: STOP.** Question whether the approach/architecture is fundamentally wrong. Discuss with the user before attempting more fixes. Three failed fixes = architectural problem, not a bug.
+
+Red flags — if you catch yourself thinking these, STOP and return to step 1:
+- "Quick fix for now, investigate later"
+- "Just try changing X and see if it works"
+- "I don't fully understand but this might work"
+- "One more fix attempt" (after 2+ failures)

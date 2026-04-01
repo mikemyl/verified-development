@@ -176,3 +176,25 @@ Next: Run /implement {feature-name} to start TDD execution.
 - Never make up commands — verify build/run/generate commands by reading package.json, Justfile, or Makefile before referencing them in the plan
 - Understand existing patterns before adding new ones — read how similar things are done in the project, don't invent new conventions
 - Status stays `in-progress` until user explicitly approves
+
+### No Placeholders Rule
+
+These are **plan failures** — never write them:
+- "TBD", "TODO", "implement later", "fill in details"
+- "Add appropriate error handling" / "add validation" / "handle edge cases"
+- "Write tests for the above" (without specifying WHAT to test)
+- "Similar to Task N" (repeat the specifics — executors may read tasks independently)
+- Steps that describe what to do without showing how
+- References to types, functions, or methods not defined in any task
+
+Every task must contain the actual detail an executor needs to implement it. If you can't be specific, you don't understand the problem well enough — go back and research.
+
+### Plan Self-Review
+
+After writing the plan, review it:
+1. **Spec coverage** — skim each requirement in spec.md. Can you point to a task that implements it? List gaps.
+2. **Placeholder scan** — search for any "No Placeholders" violations above. Fix them.
+3. **Type consistency** — do names used in later tasks match what you defined in earlier tasks?
+4. **Command verification** — are all commands (test, build, generate) verified from actual project files?
+
+Fix issues inline. If you find a spec requirement with no task, add the task.
