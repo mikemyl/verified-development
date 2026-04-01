@@ -123,7 +123,19 @@ Save the report to `.verified/features/{feature-name}/review.md`.
 If errors or warnings found:
 1. Present the findings to the user
 2. Ask: "Would you like me to fix the errors and warnings?"
-3. If yes, fix the issues (following TDD — new tests for new behavior)
+3. If yes, fix the issues following these rules:
+
+**Before implementing any review fix:**
+- **Verify the finding is correct** for THIS codebase — don't blindly apply
+- **If any finding is unclear**, clarify ALL unclear items before fixing ANY
+- **YAGNI check** — if a reviewer suggests adding a "proper" implementation, grep the codebase first. If nothing uses it, question whether it's needed
+- **Push back with reasoning** if a finding is technically wrong — don't implement incorrect suggestions
+
+**When implementing fixes:**
+- One fix at a time, test after each
+- Follow TDD for behavioral changes (new test for new behavior)
+- Don't bundle unrelated improvements into review fixes
+
 4. Re-run ONLY the agents that found issues (not the full review)
 5. Maximum 2 correction iterations. After that, present remaining issues for human decision.
 
