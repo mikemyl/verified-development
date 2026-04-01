@@ -1,9 +1,10 @@
 ---
 name: specify
 description: >-
-  Create a feature specification with acceptance scenarios, requirements, and
-  success criteria. Use when the user invokes /specify or asks to define a feature,
-  write requirements, create acceptance scenarios, or start a new feature.
+  You MUST use this before any feature work in a verified-development project.
+  Creates acceptance scenarios, requirements, and success criteria.
+  Triggers on: /specify, "define a feature", "new feature", "what should we build",
+  "add functionality", or any request to build something new in a project with .verified/.
 version: 0.1.0
 ---
 

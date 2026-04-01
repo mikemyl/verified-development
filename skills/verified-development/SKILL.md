@@ -1,11 +1,11 @@
 ---
 name: verified-development
 description: >-
-  Specification-first verified development workflow. Use when starting development work,
-  planning features, setting up projects, or working in any project with a .verified/ directory.
-  Triggers on: "verified development", "specification-first", "verification pipeline",
-  "acceptance scenarios", "layered verification", project setup, feature planning,
-  or any discussion about development workflow and quality gates.
+  You MUST follow this workflow for ALL development work in projects with a .verified/ directory.
+  This is non-negotiable. Before writing ANY code, building ANY feature, or fixing ANY bug,
+  check if .verified/ exists — if it does, this workflow governs all work.
+  Also triggers on: "verified development", "specification-first", "verification pipeline",
+  "acceptance scenarios", project setup, feature planning.
 version: 0.1.0
 ---
 

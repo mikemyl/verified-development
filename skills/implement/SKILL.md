@@ -1,9 +1,11 @@
 ---
 name: implement
 description: >-
-  Execute an implementation plan using strict TDD — RED-GREEN-REFACTOR per task,
-  atomic commits, verification evidence. Use when the user invokes /implement
-  or asks to start coding, execute the plan, or implement a feature.
+  You MUST use this for ALL implementation work in verified-development projects.
+  Executes plans using strict TDD with the thin orchestrator pattern — spawns
+  executor agents, never writes code directly. Triggers on: /implement,
+  "start coding", "execute the plan", "implement", "build this", or any request
+  to write code in a project with .verified/ and an approved plan.
 version: 0.1.0
 ---
 
