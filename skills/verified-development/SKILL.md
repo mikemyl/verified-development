@@ -173,6 +173,16 @@ last_activity: {YYYY-MM-DD - what happened}
 
 NEVER commit code without completing /verify AND /review first. This is the most important rule.
 
+### New Work Detection (CRITICAL)
+
+When the user asks to build something, BEFORE writing any code:
+1. Read `.verified/state.md` — what feature and plan are we currently on?
+2. Read the current `plan.md` — is this request covered by an existing task?
+3. If YES → proceed with that task via the implement workflow
+4. If NO → this is new work. Ask the user:
+   - "This isn't in the current plan. Should I: (a) `/update-plan` to add it as a new task, (b) `/specify` it as a separate feature, or (c) `/quick` if it's a small standalone fix?"
+5. NEVER dive into implementation of unplanned work. Even if it seems small.
+
 ### Evidence Before Assertions (Iron Law)
 
 **NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.**

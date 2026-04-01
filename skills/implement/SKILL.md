@@ -34,7 +34,16 @@ Execute an implementation plan using strict TDD. This is Phase 3 of the verified
 
 If plan.md doesn't exist, tell the user to run `/plan` first.
 
-### 3. Resume or Start
+### 3. Verify Work Matches Plan
+
+Before starting any implementation:
+- If the user described specific work to do, check if it matches a task in plan.md
+- If the work IS in the plan → proceed
+- If the work is NOT in the plan → STOP. Tell the user:
+  "This work isn't in the current plan. Options: (a) /update-plan to add it, (b) /specify as a new feature, (c) /quick for a small standalone fix."
+- NEVER implement unplanned work inline, even if it seems small
+
+### 4. Resume or Start
 
 If state.md shows implementation already in progress:
 - Find the last completed task in plan.md (marked with [x])
