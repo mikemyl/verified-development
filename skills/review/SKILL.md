@@ -182,15 +182,24 @@ After review and doc sync, systematically capture knowledge from this feature:
 3. **Decisions made** — significant choices not already captured as ADRs
    - If any are significant enough, create ADRs via the `adr` agent
 
-4. **Where to save:**
-   - Project-specific learnings → Claude Code memory (`.claude/projects/` memory files)
-   - Codebase patterns → `.verified/codebase/CONVENTIONS.md`
-   - Risks/gotchas → `.verified/codebase/CONCERNS.md`
-   - Architecture decisions → `.verified/decisions/` via ADR agent
+4. **Where to save — prefer `.verified/` over memory:**
 
-Ask the user: "Anything surprising or worth remembering from this feature? Any gotchas, patterns, or decisions to capture?"
+   `.verified/` is committed to git, shared with the team, and read by future sessions. Memory is local and personal. Default to `.verified/` unless the learning is purely about personal workflow preferences.
 
-If the user has nothing to add, check the review findings — any fixes that revealed non-obvious behavior should be captured as learnings.
+   | Learning Type | Save To | Why |
+   |---|---|---|
+   | Gotchas, pitfalls, non-obvious behavior | `.verified/codebase/CONCERNS.md` | Any developer needs to know |
+   | New coding patterns established | `.verified/codebase/CONVENTIONS.md` | Future code should follow |
+   | Architecture/technology decisions | `.verified/decisions/DEC-NNN-*.md` via ADR agent | Rationale matters for the team |
+   | New test patterns or infrastructure | `.verified/codebase/TESTING.md` | Future tests should follow |
+   | New dependencies or integrations | `.verified/codebase/STACK.md` or `INTEGRATIONS.md` | Factual project state |
+   | Personal workflow preferences | Claude Code memory (`.claude/`) | Only relevant to this user |
+
+   **Rule of thumb:** If a new developer joining the project would benefit from knowing this, it goes in `.verified/`. If it's only about how YOU like to work, it goes in memory.
+
+5. **Capture without asking** — don't wait for the user to tell you what to save. Review the work done, identify learnings yourself, and save them. Then tell the user what you captured and ask if anything is missing.
+
+If the review findings revealed non-obvious behavior (e.g., a tautological test fix that exposed a pointer copy bug), capture that as a gotcha in CONCERNS.md.
 
 ### 9. Final Report
 
