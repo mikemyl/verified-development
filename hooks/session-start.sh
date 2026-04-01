@@ -10,6 +10,6 @@ if [ -f "$STATE_FILE" ]; then
   LAST=$(grep -m1 '^last_activity:' "$STATE_FILE" | sed 's/last_activity: *//')
 
   if [ -n "$FEATURE" ] && [ "$FEATURE" != "none" ]; then
-    echo "{\"additionalContext\": \"VERIFIED DEVELOPMENT: Read .verified/state.md before doing anything. Current state: feature=${FEATURE}, phase=${PHASE}, status=${STATUS}. Last activity: ${LAST}. Tell the user where things stand and what the next step is.\"}"
+    echo "{\"additionalContext\": \"STOP. Before responding to the user, you MUST report this status first:\\n\\nVerified Development Status:\\n  Feature: ${FEATURE}\\n  Phase: ${PHASE}\\n  Status: ${STATUS}\\n  Last: ${LAST}\\n\\nRead .verified/state.md and .verified/features/${FEATURE}/plan.md to understand the full context. Tell the user the current state and suggest the next step BEFORE doing anything else. Do NOT skip this.\"}"
   fi
 fi
