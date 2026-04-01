@@ -226,9 +226,11 @@ rm .claude/agents .claude/skills .claude/hooks
 /init                          # Scaffold only what's missing
 /install-hooks                 # Set up enforcement
 
+# Start working
+/specify my-feature            # Start a new feature
 
-# Start working 
-/speficy my-feature
+# Resuming work (start of every new session)
+/progress                      # Shows current feature, phase, status, and next step
 /ui-spec 
 /plan 
 /implement 
