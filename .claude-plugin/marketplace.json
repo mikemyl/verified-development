@@ -11,7 +11,7 @@
       "name": "verified-development",
       "source": "./",
       "description": "Specification-first development workflow with ATDD, layered verification gates, and two-stage review agents. Enforces TDD, mechanical quality gates (lint, test, coverage, mutation, security, dead code), and AI-powered code review. Language-aware, starting with Go.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "author": {
         "name": "Mike Mylonakis"
       },

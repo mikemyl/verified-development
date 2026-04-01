@@ -2,10 +2,12 @@
 name: verified-development
 description: >-
   You MUST follow this workflow for ALL development work in projects with a .verified/ directory.
-  This is non-negotiable. Before writing ANY code, building ANY feature, or fixing ANY bug,
-  check if .verified/ exists — if it does, this workflow governs all work.
+  This is non-negotiable. At the START of every session, read .verified/state.md to know the
+  current feature, phase, and status — then tell the user where things stand before doing
+  anything else. Before writing ANY code, building ANY feature, or fixing ANY bug, check if
+  .verified/ exists — if it does, this workflow governs all work.
   Also triggers on: "verified development", "specification-first", "verification pipeline",
-  "acceptance scenarios", project setup, feature planning.
+  "acceptance scenarios", project setup, feature planning, "continue", "let's keep going".
 version: 0.1.0
 ---
 
