@@ -26,10 +26,22 @@ Orchestrate the two-stage review process. This is Phase 5 of the verified develo
 Before running review agents:
 1. Check that the project's verify command passes (or was recently run). If not, tell the user to run `/verify` first.
 2. Check that tests pass. Review is pointless on broken code.
-3. Identify the changed files:
+3. Establish the git review range:
    ```bash
-   git diff --name-only main
+   # Find the base (where this feature branched from, or first feature commit)
+   BASE_SHA=$(git merge-base main HEAD)
+   HEAD_SHA=$(git rev-parse HEAD)
+   
+   # List changed files
+   git diff --name-only $BASE_SHA..$HEAD_SHA
+   
+   # Get full diff stats
+   git diff --stat $BASE_SHA..$HEAD_SHA
+   
+   # Get commit history for this feature
+   git log --oneline $BASE_SHA..$HEAD_SHA
    ```
+4. Pass the git range to all review agents so they review exactly the feature's changes, not stale diffs.
 
 ### 2. Stage 1: Spec Compliance (always runs first)
 
