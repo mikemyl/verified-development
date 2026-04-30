@@ -15,6 +15,15 @@ Every phase skill is interruptible at any tool-use boundary.
 - **`state.md` schema v2** — adds `active_phase` (set while a phase is mid-execution), `next_action` (slash command or recommendation), `next_phases` (branch options). Lazy upgrade: legacy v1 files are read without error and bumped on next write.
 - **Statusline** distinguishes scenes: in-flight (magenta `:phase`), idle-with-next-action (`↪/cmd`), legacy idle.
 
+### Adversarial critique (v1.3.0+)
+
+Two stress-test gates inside the workflow.
+
+- **Spec-time challenge (in `/specify`)** — Socratic Q&A interrogating the *problem* before `spec.md` is written. Six categories: ambiguity, surface area, alternatives, edge cases, dependencies, out-of-scope. Max 8 questions, one at a time. Audit trail at `.verified/features/<feature>/discussion.md` (preserves rejected options, not just chosen). Opt out with `--no-challenge` or `.verified/config.json` `workflows.challenge: false`.
+- **Plan-time critics (in `/plan`)** — four agents (`plan-critic-acceptance`, `plan-critic-design`, `plan-critic-strategic`, plus `plan-critic-ux` only when `ui-spec.md` exists) dispatched in parallel before user approval. Severity policy: `error` auto-fixes the plan, `warning` surfaces to user (max 10 visible), `suggestion` is recorded only. Audit trail at `.verified/features/<feature>/concerns.md`. Opt out with `--no-critics` or `workflows.plan_critics: false`.
+
+The four critics share a finding schema (`{critic, severity, description, tied_to, recommendation?}`) and the same severity rubric — defined once in `skills/specify/references/challenge.md` and re-used verbatim in each critic agent. If you change the rubric, update all five files (`tests/adversarial-critique.test.cjs` will catch drift).
+
 ### Hook output envelopes
 
 Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare `{"additionalContext": "..."}` is silently dropped. All our hooks (`session-start.sh`, `context-monitor.js`) emit:

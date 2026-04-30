@@ -13,6 +13,7 @@ Create an implementation plan for a feature. This is Phase 2 of the verified dev
 - If feature name provided as argument → use it
 - If no argument → read `.verified/state.md` for the current feature
 - If no argument and no state → ask the user which feature to plan
+- `--no-critics` flag: skip the plan-time critic gate (default is on)
 
 ### 2. Load Context
 
@@ -140,12 +141,60 @@ Verify the plan:
 - Dependencies are explicit and acyclic
 - No task is too large (if it needs multiple commits, split it)
 
+### 8a. Plan Critics — Plan-Time Stress Test (default on)
+
+Before presenting the plan to the user, dispatch four critic agents in parallel to stress-test it. Skip if `--no-critics` was passed or `.verified/config.json` has `"workflows": { "plan_critics": false }`.
+
+#### Which critics to spawn
+
+Always spawn:
+- `verified-development:plan-critic-acceptance` — does every spec scenario / requirement / edge case have a task?
+- `verified-development:plan-critic-design` — architecture smells, hidden decisions, missing ADRs, abstraction drift
+- `verified-development:plan-critic-strategic` — scope, priorities, dependency cycles, sizing, sequencing
+
+Conditionally spawn (only if `.verified/features/{feature-name}/ui-spec.md` exists):
+- `verified-development:plan-critic-ux` — UI/UX coverage
+
+If `ui-spec.md` does not exist, do NOT spawn the UX critic — record `ux: skipped (no ui-spec.md)` in concerns.md and proceed with the other three.
+
+#### How to spawn
+
+In a SINGLE message, emit multiple `Task` tool uses (one per applicable critic). They run in parallel. Each receives:
+- The feature name
+- Paths: `.verified/features/{feature-name}/spec.md`, `plan.md`, optionally `ui-spec.md`
+- Pointers to `.verified/codebase/` docs if they exist
+
+Each critic returns a JSON-shaped findings list (≤ 10 findings) with `{critic, severity, description, tied_to, recommendation?}`.
+
+#### Aggregate findings → severity policy
+
+```
+severity:
+  error       → AUTO-RESOLVE: re-draft plan.md to address. Record in concerns.md as auto-resolved.
+                 Examples: missing task for spec scenario, undeclared dependency, type mismatch.
+  warning     → SURFACE TO USER: include in the Present-and-Confirm step. Max 10 visible total
+                 across all critics, ranked severity-then-critic-order. Record in concerns.md as surfaced.
+  suggestion  → RECORD ONLY: write to concerns.md, do NOT show user.
+```
+
+Errors are auto-fixed by re-drafting plan.md before showing it to the user. Each auto-fix is logged to concerns.md with a description of what changed (e.g. "added task TXX for scenario S3 per acceptance critic"). Warnings carry forward to step 9. Suggestions are recorded but never shown.
+
+#### concerns.md
+
+Write `.verified/features/{feature-name}/concerns.md` per the template at `plans/adversarial-critique/templates/concerns.template.md`. Sections: critics-that-ran (with status), findings summary by severity, auto-resolved list, surfaced list (with disposition placeholder), recorded-only list, critic errors. This file is preserved after `/plan` completes — it's evidence the gate ran.
+
+#### Critic failure handling
+
+If a critic agent returns an error, times out, or returns malformed output: log it in concerns.md with `status: error` and the message. Surface to the user as part of step 9. A single critic failure does NOT halt the flow — proceed with the remaining critics' results.
+
 ### 9. Present and Confirm
 
 Show the plan to the user. Ask:
 - "Does this plan look right?"
 - "Any tasks missing or in wrong order?"
 - "Anything too large that should be split?"
+
+If step 8a ran and produced surfaced warnings, ALSO show them as a numbered list below the plan, severity-ordered, max 10 visible. For each: the critic, the description, and the recommendation. Ask the user to address each by editing the plan, dismissing (with one-line rationale, recorded back into concerns.md), or asking for clarification.
 
 Iterate until approved.
 

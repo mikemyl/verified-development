@@ -1,8 +1,6 @@
 ---
 name: dead-code-review
-description: >-
-  Detects unreachable code, unused assignments, noop interface implementations,
-  phantom imports, and unconnected packages. Catches vaporware.
+description: "Detect unreachable code, unused assignments, noop impls, phantom imports."
 model: haiku
 tools: Read, Grep, Glob, Bash
 ---

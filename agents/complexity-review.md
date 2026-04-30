@@ -1,8 +1,6 @@
 ---
 name: complexity-review
-description: >-
-  Reviews code complexity: function length, cyclomatic/cognitive complexity,
-  nesting depth, argument count. Lightweight mechanical check.
+description: "Review code complexity: function length, cyclomatic/cognitive depth, nesting, args."
 model: haiku
 tools: Read, Grep, Glob, Bash
 ---

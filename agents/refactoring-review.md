@@ -1,8 +1,6 @@
 ---
 name: refactoring-review
-description: >-
-  Identifies post-GREEN refactoring opportunities: duplication, naming improvements,
-  extraction candidates, and structural improvements. Runs after tests pass.
+description: "Post-GREEN refactor opportunities: duplication, naming, extraction, structure."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

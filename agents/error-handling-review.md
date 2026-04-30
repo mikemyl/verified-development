@@ -1,8 +1,6 @@
 ---
 name: error-handling-review
-description: >-
-  Reviews Go error handling patterns: error wrapping with context, nil checks,
-  sentinel errors, error type assertions, and dropped errors.
+description: "Go error handling: wrapping, nil checks, sentinels, type assertions, dropped errors."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

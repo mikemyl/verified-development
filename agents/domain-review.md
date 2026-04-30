@@ -1,9 +1,6 @@
 ---
 name: domain-review
-description: >-
-  Reviews domain modeling: abstraction leaks, boundary violations, package coupling,
-  ubiquitous language consistency, and domain logic placement. Use for code with
-  rich business rules or domain modeling.
+description: "Domain modeling review: leaks, boundary violations, coupling, ubiquitous language."
 model: opus
 tools: Read, Grep, Glob, Bash
 ---

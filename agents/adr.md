@@ -1,9 +1,6 @@
 ---
 name: adr
-description: >-
-  Captures architectural decisions in structured ADR format. Use when making
-  significant technical choices: technology selection, pattern decisions,
-  trade-offs, or "why X over Y" moments during plan or implement phases.
+description: "Capture significant technical decisions as ADRs (technology, patterns, trade-offs)."
 model: sonnet
 tools: Read, Write, Grep, Glob, Bash
 ---

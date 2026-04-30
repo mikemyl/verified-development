@@ -1,9 +1,6 @@
 ---
 name: test-review
-description: >-
-  Reviews test quality: coverage gaps, assertion strength, tautological tests,
-  mutation-killing boundary values, test structure, and Actor-based BDD patterns.
-  Use after spec-compliance passes to assess test effectiveness.
+description: "Test quality review: coverage, assertion strength, tautologies, boundary values, BDD."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

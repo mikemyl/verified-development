@@ -1,11 +1,6 @@
 ---
 name: doc-review
-description: >-
-  Reviews documentation accuracy and keeps project context docs current.
-  Checks README alignment with code, comment drift, API doc consistency,
-  and .verified/codebase/ staleness. Also updates codebase docs after
-  features are completed. Use during review phase or when documentation
-  might be stale.
+description: "Review docs (README/comments/API/codebase/) for drift; updates on feature completion."
 model: sonnet
 tools: Read, Write, Grep, Glob, Bash
 ---

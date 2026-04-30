@@ -1,9 +1,6 @@
 ---
 name: security-review
-description: >-
-  Reviews code for security vulnerabilities: injection, authentication, authorization,
-  data exposure, hardcoded credentials, and dependency vulnerabilities. Use for
-  security-sensitive changes or as part of the two-stage review.
+description: "Security review: injection, auth, data exposure, hardcoded creds, dependency CVEs."
 model: opus
 tools: Read, Grep, Glob, Bash
 ---

@@ -12,6 +12,7 @@ Create a specification for a new feature. This is Phase 1 of the verified develo
 
 - First argument: feature name (kebab-case, e.g., `user-authentication`)
 - Remaining text: optional brief description of the feature
+- `--no-challenge` flag: skip the spec-time stress test (default is on)
 - If no arguments provided, ask the user what feature they want to specify
 
 ### 2. Load Project Context
@@ -74,6 +75,16 @@ Focus areas (adapt order based on what's most unclear):
 6. **How do you know it works?** (observable outcomes, measurable criteria)
 
 Stop when you have enough to propose approaches.
+
+### 4a. Challenge — Spec-Time Stress Test (default on)
+
+Before proposing approaches, interrogate the problem framing. This is non-skippable unless the user opted out via `--no-challenge` or `.verified/config.json` has `"workflows": { "challenge": false }`. Check both before proceeding.
+
+**If opted out**: skip this step entirely (do not write `discussion.md`); jump to step 5.
+
+**If on**: load `skills/specify/references/challenge.md` for the question framework, the Socratic-mode rules, the stop conditions, and the `discussion.md` template. Walk the six categories selectively (skip ones already nailed down in the user's description). One question at a time, max 8 questions, stop early when the user signals enough.
+
+When the Q&A is done, write `.verified/features/{feature-name}/discussion.md` per the template in challenge.md. Preserve options that were considered and rejected, not just the chosen direction. The discussion.md is the audit trail — future-you reads it to understand why the spec looks the way it does.
 
 ### 5. Propose Approaches
 
@@ -206,10 +217,11 @@ If `.verified/config.json` doesn't exist, create it with defaults:
 
 ### 12. Suggest Next Step
 
-The next action was decided in step 9. Echo it back:
+The next action was decided in step 9. Echo it back, mention discussion.md if it was written:
 
 ```
 Specification complete: .verified/features/{feature-name}/spec.md
+{discussion.md was created with the audit trail of options considered.}
 
 Next: {next_action from step 9}
 ```

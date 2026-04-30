@@ -1,10 +1,6 @@
 ---
 name: executor
-description: >-
-  Executes implementation tasks from a verified-development plan. Use when
-  dispatching parallel implementation work during /implement. Each executor
-  handles a subset of tasks following TDD, updates plan.md with completed
-  tasks, and produces test evidence.
+description: "Execute verified-development plan tasks via strict TDD; spawned by /implement in waves."
 model: opus
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---

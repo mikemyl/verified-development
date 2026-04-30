@@ -1,9 +1,6 @@
 ---
 name: spec-compliance-review
-description: >-
-  First-gate review agent. Validates that implementation matches the feature specification.
-  Runs BEFORE quality review agents. Checks acceptance scenario coverage, requirement
-  satisfaction, and scope adherence. Use when reviewing code against a spec.md.
+description: "First-gate review: validates implementation matches spec.md (scenarios, requirements, scope)."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

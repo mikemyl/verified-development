@@ -27,6 +27,7 @@ const MAX_LENGTH = 100;
 const ROOT = path.join(__dirname, '..');
 const SKILL_DIRS = ['skills'];
 const COMMAND_DIRS = ['commands'];
+const AGENT_DIRS = ['agents'];
 
 function findSkillFiles(dir) {
   const out = [];
@@ -90,7 +91,9 @@ function getFiles() {
   if (process.argv.length > 2) return process.argv.slice(2);
   const skills = SKILL_DIRS.flatMap(findSkillFiles);
   const commands = COMMAND_DIRS.flatMap(findCommandFiles);
-  return [...skills, ...commands];
+  // Agents are flat .md files in agents/ (same shape as commands).
+  const agents = AGENT_DIRS.flatMap(findCommandFiles);
+  return [...skills, ...commands, ...agents];
 }
 
 const files = getFiles();

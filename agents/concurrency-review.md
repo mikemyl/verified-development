@@ -1,8 +1,6 @@
 ---
 name: concurrency-review
-description: >-
-  Reviews Go concurrency patterns: goroutine safety, channel usage, mutex patterns,
-  race conditions, context propagation, and graceful shutdown.
+description: "Go concurrency review: goroutines, channels, mutexes, races, context, shutdown."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

@@ -1,8 +1,6 @@
 ---
 name: interface-design-review
-description: >-
-  Reviews Go interface design: consumer-site definition, interface size,
-  accept-interfaces-return-structs pattern, and dependency injection.
+description: "Go interface design: consumer-site definition, sizing, accept-interfaces pattern."
 model: haiku
 tools: Read, Grep, Glob, Bash
 ---

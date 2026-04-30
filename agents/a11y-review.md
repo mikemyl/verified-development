@@ -1,9 +1,6 @@
 ---
 name: a11y-review
-description: >-
-  Reviews UI code for WCAG 2.1 AA accessibility compliance: color contrast,
-  ARIA attributes, keyboard navigation, semantic HTML, focus management, and
-  screen reader support. Works across React, Go templates, HTMX, and plain HTML.
+description: "WCAG 2.1 AA review: contrast, ARIA, keyboard nav, semantic HTML, focus, screen readers."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
