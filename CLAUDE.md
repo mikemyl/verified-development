@@ -24,6 +24,15 @@ Two stress-test gates inside the workflow.
 
 The four critics share a finding schema (`{critic, severity, description, tied_to, recommendation?}`) and the same severity rubric — defined once in `skills/specify/references/challenge.md` and re-used verbatim in each critic agent. If you change the rubric, update all five files (`tests/adversarial-critique.test.cjs` will catch drift).
 
+### Process retro (v1.3.1+)
+
+`/review` step 8c writes a small **process-level** retro per feature, separate from the existing code-level capture. Two artifacts:
+
+- `.verified/features/<feature>/retro.md` — four sections (What worked / What didn't / Workflow tuning signals / Top process learning). Sections may be empty.
+- `.verified/learnings.md` — append-only digest, one line per feature, format `- YYYY-MM-DD **feature** — top learning`. Cross-feature trend signal — grep this to spot patterns.
+
+Process retro is for "what did we learn about HOW we worked on this feature." Code-level findings (gotchas, conventions, ADRs, dependencies) stay in their existing destinations (`.verified/codebase/`, `.verified/decisions/`). The skill explicitly documents the line; the prompt-anchor test enforces it survives future edits.
+
 ### Hook output envelopes
 
 Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare `{"additionalContext": "..."}` is silently dropped. All our hooks (`session-start.sh`, `context-monitor.js`) emit:

@@ -210,6 +210,49 @@ After review and doc sync, systematically capture knowledge from this feature:
 
 If the review findings revealed non-obvious behavior (e.g., a tautological test fix that exposed a pointer copy bug), capture that as a gotcha in CONCERNS.md.
 
+### 8c. Process Retro (workflow reflection, not code learnings)
+
+The capture above is **code-level**: gotchas about the codebase, conventions, ADRs, dependencies. Now capture **process-level** signals — what we learned about HOW we worked on this feature, distinct from what we learned about the codebase.
+
+**This step is not optional, but its content can be empty.** "No notable process surprises" is a valid retro and itself a useful signal over many features.
+
+#### What belongs in process retro (and what doesn't)
+
+In retro:
+- Workflow signals: a gate that paid off, a gate that produced noise, a step that felt redundant
+- Plan-vs-reality drift: where the actual implementation diverged from plan.md and why
+- Time signals: phase took much longer/shorter than expected, threshold was unrealistic
+- Tooling tuning: a critic's rubric needs adjustment, a verification target was too strict for this feature, a hook was unhelpful
+- Spec/plan quality: spec missed an edge case that came up in implement; plan critic warning was a false positive
+
+NOT in retro (these stay in their existing destinations):
+- Gotchas about the codebase → `.verified/codebase/CONCERNS.md`
+- New coding patterns → `.verified/codebase/CONVENTIONS.md`
+- Architectural decisions → ADR via `adr` agent
+- New dependencies/integrations → `STACK.md` / `INTEGRATIONS.md`
+
+#### Write `retro.md`
+
+Write `.verified/features/{feature-name}/retro.md` per `plans/process-retro/templates/retro.template.md`. Sections:
+- **What worked** — process moves that paid off
+- **What didn't** — friction, wasted time, misleading gate output
+- **Workflow tuning signals** — concrete proposals to change the workflow
+- **Top process learning** — single sentence, the most important takeaway
+
+Each section may be empty (`_(none)_`). Keep total content tight — typically 2–5 bullets per section, often fewer.
+
+#### Append digest to `learnings.md`
+
+Append exactly ONE line to `.verified/learnings.md` (create the file if it doesn't exist). Format:
+
+```
+- {YYYY-MM-DD} **{feature-name}** — {top-process-learning verbatim from retro.md}
+```
+
+Do NOT modify existing entries in `learnings.md`. This is append-only — it's the cross-feature trend signal. After many features, scanning / grepping this file reveals patterns that no individual retro can show.
+
+If the top learning is "no notable process surprises", still append the line — absence of signal is itself a signal over time.
+
 ### 9. Final Report
 
 ```
