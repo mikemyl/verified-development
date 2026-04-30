@@ -1,9 +1,6 @@
 ---
 name: review
-description: >-
-  Run two-stage code review — spec-compliance first, then targeted quality agents.
-  Use when the user invokes /review or asks for code review, quality check, or
-  wants to run review agents against their changes.
+description: "Two-stage code review: spec-compliance gate first, then targeted quality agents."
 version: 0.1.0
 ---
 

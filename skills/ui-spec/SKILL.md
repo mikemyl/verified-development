@@ -1,10 +1,6 @@
 ---
 name: ui-spec
-description: >-
-  Create a UI design contract with brand identity, design system, screen
-  specifications, and competitive research. Use when the user invokes /ui-spec
-  or asks to design screens, create a design system, define brand colors,
-  or specify UI for a feature.
+description: "Create a UI design contract: brand, design system, screen specs, competitive research."
 version: 0.1.0
 ---
 

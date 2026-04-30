@@ -1,9 +1,6 @@
 ---
 name: map
-description: >-
-  Analyze a codebase and produce structured context documents in .verified/codebase/.
-  Use when the user invokes /map or asks to map the codebase, analyze project structure,
-  document architecture, or understand an existing project deeply.
+description: "Analyze the codebase and produce structured context docs in .verified/codebase/."
 version: 0.1.0
 ---
 

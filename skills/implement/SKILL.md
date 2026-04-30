@@ -1,11 +1,6 @@
 ---
 name: implement
-description: >-
-  You MUST use this for ALL implementation work in verified-development projects.
-  Executes plans using strict TDD with the thin orchestrator pattern — spawns
-  executor agents, never writes code directly. Triggers on: /implement,
-  "start coding", "execute the plan", "implement", "build this", or any request
-  to write code in a project with .verified/ and an approved plan.
+description: "Required for code in .verified/ projects. Strict TDD via thin-orchestrator executor agents."
 version: 0.1.0
 ---
 

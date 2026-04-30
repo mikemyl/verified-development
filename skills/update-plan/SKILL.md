@@ -1,10 +1,6 @@
 ---
 name: update-plan
-description: >-
-  Update a feature's spec or plan based on new information discovered during
-  implementation. Use when the user invokes /update-plan or says "update the spec",
-  "revise the plan", "change requirements", "lower the threshold", or when
-  implementation reveals the original spec/plan needs adjustment.
+description: "Revise a feature's spec or plan when implementation reveals it was wrong or incomplete."
 version: 0.1.0
 ---
 

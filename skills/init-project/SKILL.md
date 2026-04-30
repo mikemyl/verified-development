@@ -1,9 +1,6 @@
 ---
 name: init
-description: >-
-  Initialize a project with verified development — scaffold configs, Justfile,
-  linter settings, and .verified directory. Use when the user invokes /init or
-  asks to set up verified development, scaffold a project, or configure quality gates.
+description: "Scaffold a project for verified development: configs, Justfile, linters, .verified/ directory."
 version: 0.1.0
 ---
 

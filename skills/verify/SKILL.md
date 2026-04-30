@@ -1,9 +1,6 @@
 ---
 name: verify
-description: >-
-  Run the full verification pipeline (lint, test, coverage, mutation, security,
-  dead code, build). Use when the user invokes /verify or asks to run verification,
-  check quality gates, or run linters/tests/coverage.
+description: "Run the verification pipeline: lint, test, coverage, mutation, security, dead-code, build."
 version: 0.1.0
 ---
 

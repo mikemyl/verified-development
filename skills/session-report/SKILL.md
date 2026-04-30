@@ -1,9 +1,6 @@
 ---
 name: session-report
-description: >-
-  Generate a session report with work summary, outcomes, and decisions made.
-  Use when the user invokes /session-report or asks for a session summary,
-  "what did we do?", "wrap up", or is ending a work session.
+description: "Summarize the current session: work done, outcomes, decisions."
 version: 0.1.0
 ---
 

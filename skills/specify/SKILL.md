@@ -1,10 +1,6 @@
 ---
 name: specify
-description: >-
-  You MUST use this before any feature work in a verified-development project.
-  Creates acceptance scenarios, requirements, and success criteria.
-  Triggers on: /specify, "define a feature", "new feature", "what should we build",
-  "add functionality", or any request to build something new in a project with .verified/.
+description: "Required before feature work in .verified/ projects. Produces acceptance scenarios + requirements."
 version: 0.1.0
 ---
 

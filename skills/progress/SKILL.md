@@ -1,9 +1,6 @@
 ---
 name: progress
-description: >-
-  Show current workflow progress, feature status, and suggest next action.
-  Use when the user invokes /progress or asks "where are we?", "what's the status?",
-  "what should I do next?", or wants to see workflow state.
+description: "Show current verified-development state and suggest the next action."
 version: 0.1.0
 ---
 

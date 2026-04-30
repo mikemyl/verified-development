@@ -1,9 +1,6 @@
 ---
 name: plan
-description: >-
-  Create an implementation plan from a feature specification — ordered tasks,
-  file paths, test-first sequencing. Use when the user invokes /plan or asks
-  to plan implementation, break down a feature, or create a task list.
+description: "Create an implementation plan from a feature spec — ordered, test-first, file-pathed tasks."
 version: 0.1.0
 ---
 

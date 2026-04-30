@@ -18,6 +18,10 @@ process.stdin.on('end', () => {
     const session = data.session_id || '';
     if (!session) { process.exit(0); }
 
+    // session_id is used to construct a /tmp path. Reject path-traversal
+    // sequences to prevent escaping the temp directory.
+    if (/[/\\]|\.\./.test(session)) { process.exit(0); }
+
     const remaining = data.context_window?.remaining_percentage;
     if (remaining == null) { process.exit(0); }
 
@@ -59,8 +63,15 @@ process.stdin.on('end', () => {
     );
 
     if (shouldWarn) {
-      // Output as JSON with additionalContext for the LLM to see
-      const output = JSON.stringify({ additionalContext: message });
+      // Claude Code requires the hookSpecificOutput envelope; bare
+      // {additionalContext} is silently dropped.
+      // https://code.claude.com/docs/en/hooks.md
+      const output = JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PostToolUse',
+          additionalContext: message,
+        },
+      });
       process.stdout.write(output);
     }
   } catch (e) {

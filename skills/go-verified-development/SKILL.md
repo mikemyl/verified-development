@@ -1,10 +1,6 @@
 ---
 name: go-verified-development
-description: >-
-  Go-specific verified development toolchain. Use when working on Go projects
-  with verified development. Triggers on: Go code, .go files, Justfile with Go targets,
-  golangci-lint, revive, gremlins, gosec, govulncheck, Go testing patterns,
-  table-driven tests, property-based tests with rapid, or any Go verification task.
+description: "Go toolchain for verified development: golangci-lint, revive, gremlins, gosec, govulncheck."
 version: 0.1.0
 ---
 

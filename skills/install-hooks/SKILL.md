@@ -1,10 +1,6 @@
 ---
 name: install-hooks
-description: >-
-  Install project-specific enforcement hooks for verified development.
-  Creates PostToolUse lint hook and PreToolUse commit gate in the project's
-  .claude/settings.local.json. Use when the user invokes /install-hooks or
-  asks to set up enforcement, install quality gates, or automate linting.
+description: "Install enforcement hooks (PostToolUse lint, PreToolUse commit gate) in .claude/settings.local.json."
 version: 0.1.0
 ---
 

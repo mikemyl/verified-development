@@ -1,11 +1,6 @@
 ---
 name: ui-specification
-description: >-
-  How to create UI design contracts for verified development. Use when specifying
-  features with user interfaces, creating design systems, defining brand identity,
-  or researching competitor designs. Triggers on: "UI spec", "design system",
-  "brand colors", "screen design", "component inventory", "ui-spec", or when
-  creating files in .verified/features/*/ui-spec.md.
+description: "How to write UI design contracts: brand, design system, screen specs, competitor research."
 version: 0.1.0
 ---
 

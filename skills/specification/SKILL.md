@@ -1,11 +1,6 @@
 ---
 name: specification
-description: >-
-  How to write feature specifications for verified development. Use when creating
-  acceptance scenarios, defining requirements, writing Given/When/Then criteria,
-  or working on spec.md files. Triggers on: "write a spec", "acceptance scenarios",
-  "feature specification", "Given/When/Then", "requirements", "what should we build",
-  or when creating files in .verified/features/.
+description: "How to write feature specs: acceptance scenarios, Given/When/Then, requirements."
 version: 0.1.0
 ---
 

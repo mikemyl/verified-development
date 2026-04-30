@@ -1,9 +1,6 @@
 ---
 name: assess
-description: >-
-  Analyze an existing codebase against verified development standards and produce
-  a gap analysis. Use when the user invokes /assess or asks to evaluate their
-  project's verification state, audit quality gates, or check readiness.
+description: "Audit a project against verified-development standards and produce a gap analysis."
 version: 0.1.0
 ---
 

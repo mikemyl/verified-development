@@ -1,10 +1,6 @@
 ---
 name: quick
-description: >-
-  Execute a small change (bug fix, tweak, minor feature) with a compressed workflow.
-  Still enforces TDD, verification, and proportional review — but skips spec/plan
-  ceremony. Use when the user invokes /quick or asks for a quick fix, small change,
-  one-liner, hotfix, or minor bug fix.
+description: "Compressed verified-development workflow for small changes. Keeps TDD; trims spec/plan ceremony."
 version: 0.1.0
 ---
 

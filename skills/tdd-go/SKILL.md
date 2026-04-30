@@ -1,10 +1,6 @@
 ---
 name: tdd-go
-description: >-
-  Go-specific TDD patterns for verified development. Use when implementing Go code
-  with TDD. Triggers on: Go test files, .go files, testdsl, Actor-based BDD,
-  table-driven tests, rapid property tests, or Go test patterns.
-  For TypeScript TDD, use the citypaul tdd skill instead.
+description: "Go TDD patterns: Actor-based BDD, table-driven tests, rapid property tests, testdsl."
 version: 0.1.0
 ---
 
