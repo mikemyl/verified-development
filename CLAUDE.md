@@ -11,7 +11,7 @@ Every phase skill is interruptible at any tool-use boundary.
 - **`.verified/features/<feature>/handoff.json`** — schema-versioned (v1) machine-readable record of where the phase is. Required fields: `feature`, `phase`, `completed_tasks`, `remaining_tasks`, `git_head`, `timestamp`. Optional: `blockers` (with `severity: blocking|advisory`), `decisions_made`, `reason`. Schema at `hooks/schemas/handoff.schema.json`; helper at `hooks/lib/handoff.js` (atomic writes, validation).
 - **`.verified/features/<feature>/continue-here.md`** — narrative companion. If JSON and MD disagree, trust the JSON.
 - **`/pause`** captures handoff + continue-here, then ends the turn. Standalone skill — clear trigger.
-- **`/resume`** reads handoff + state, briefs the user, recommends the next action. Refuses if any `blockers[].severity == "blocking"`.
+- **`/continue`** reads handoff + state, briefs the user, recommends the next action. Refuses if any `blockers[].severity == "blocking"`. (Named `continue` rather than `resume` because the latter collides with Claude Code's built-in `--resume`.)
 - **`state.md` schema v2** — adds `active_phase` (set while a phase is mid-execution), `next_action` (slash command or recommendation), `next_phases` (branch options). Lazy upgrade: legacy v1 files are read without error and bumped on next write.
 - **Statusline** distinguishes scenes: in-flight (magenta `:phase`), idle-with-next-action (`↪/cmd`), legacy idle.
 

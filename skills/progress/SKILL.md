@@ -20,9 +20,9 @@ Run /init to set up this project, or /assess to evaluate an existing codebase.
 
 ### 1a. Detect Mid-Phase Handoff
 
-If `.verified/features/<feature>/handoff.json` exists, the previous session paused mid-phase. Defer to the `resume` skill UX — read handoff + continue-here.md, brief the user, and recommend `/resume`. Do NOT print the legacy "Verified Development Status" block in this case.
+If `.verified/features/<feature>/handoff.json` exists, the previous session paused mid-phase. Defer to the `continue` skill UX — read handoff + continue-here.md, brief the user, and recommend `/continue`. Do NOT print the legacy "Verified Development Status" block in this case.
 
-If `plan.md` exists for the current feature but no handoff and no `summary.md`, this is orphan state (likely a crash). Tell the user and offer `/resume --force` (or future `/forensics`).
+If `plan.md` exists for the current feature but no handoff and no `summary.md`, this is orphan state (likely a crash). Tell the user and offer `/continue --force` (or future `/forensics`).
 
 ### 2. Read Current Feature Context
 

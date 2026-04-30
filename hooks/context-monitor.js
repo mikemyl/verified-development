@@ -43,7 +43,7 @@ process.stdin.on('end', () => {
 
     // If a verified-development feature is mid-flight, prefer /pause —
     // it captures plan-task progress to handoff.json so the next session
-    // can /resume in the right place. /session-report is for session-wide
+    // can /continue in the right place. /session-report is for session-wide
     // narrative, /pause is for in-flight work.
     const cwd = data.cwd || process.cwd();
     let inFlight = false;
@@ -55,7 +55,7 @@ process.stdin.on('end', () => {
     } catch (e) { /* no state.md, no in-flight feature */ }
 
     const pauseHint = inFlight
-      ? ' Run /pause to capture plan-task progress before context exhausts; /resume picks up from there.'
+      ? ' Run /pause to capture plan-task progress before context exhausts; /continue picks up from there.'
       : ' Consider /session-report to capture progress before starting a fresh session.';
 
     if (used >= 80) {

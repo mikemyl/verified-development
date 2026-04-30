@@ -51,7 +51,7 @@ if [ -f "$HANDOFF_PATH" ]; then
   else
     SUMMARY="present"
   fi
-  RESUME_BANNER="HANDOFF DETECTED for ${FEATURE} (${PHASE}): ${SUMMARY}. Run /resume for the brief.\\n\\n"
+  RESUME_BANNER="HANDOFF DETECTED for ${FEATURE} (${PHASE}): ${SUMMARY}. Run /continue for the brief.\\n\\n"
 fi
 
 NEXT_LINE=""

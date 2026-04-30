@@ -1,11 +1,11 @@
 ---
-name: resume
-description: "Resume a paused feature: read handoff.json + continue-here.md, brief the user, route to next action."
+name: continue
+description: "Continue a paused feature: read handoff.json + continue-here.md, brief, route next action."
 argument-hint: "[--force]"
 version: 0.1.0
 ---
 
-You MUST use this when the user types `/resume`, asks to "resume", "continue where we left off", "pick up where we stopped", or when SessionStart detects a fresh handoff.json. Read state, brief the user in ONE message, then route to the next action.
+You MUST use this when the user types `/continue`, asks to "resume", "continue where we left off", "pick up where we stopped", or when SessionStart detects a fresh handoff.json. Read state, brief the user in ONE message, then route to the next action.
 
 ## Process
 
@@ -26,7 +26,7 @@ Parse it. Validate via the helper (`validate` command on stdin) — if validatio
 #### If no handoff exists
 
 This is one of three cases:
-- **Orphan state**: plan.md exists, summary.md does not, no handoff. Likely a crash or unrecorded stop. Tell the user; offer `/resume --force` (proceed without handoff context) or future `/forensics`. Stop unless `--force` was passed.
+- **Orphan state**: plan.md exists, summary.md does not, no handoff. Likely a crash or unrecorded stop. Tell the user; offer `/continue --force` (proceed without handoff context) or future `/forensics`. Stop unless `--force` was passed.
 - **Phase boundary**: state.md `next_action` is set (`/plan`, `/implement`, etc.) and no in-flight artifacts exist. This is a clean handoff between phases — just report the next action and prompt the user to invoke it. Do not invoke it yourself.
 - **Nothing in flight**: `feature: none`. Same as no-feature case above.
 
@@ -34,7 +34,7 @@ This is one of three cases:
 
 Run `git rev-parse --short HEAD`. Compare with `git_head` in handoff.
 
-If they differ, the working tree has moved since the pause. Warn the user, list what changed (`git log --oneline <handoff-head>..HEAD`), and offer: "(a) resume anyway, (b) rewind to handoff sha, (c) `/resume --force`". Do not pick for them. Stop unless they answer.
+If they differ, the working tree has moved since the pause. Warn the user, list what changed (`git log --oneline <handoff-head>..HEAD`), and offer: "(a) continue anyway, (b) rewind to handoff sha, (c) `/continue --force`". Do not pick for them. Stop unless they answer.
 
 ### 4. Refuse if blocking blockers exist
 
@@ -53,7 +53,7 @@ Read `.verified/features/<feature>/continue-here.md`. Treat it as the narrative 
 Format:
 
 ```
-Resuming `<feature>` (`<phase>`).
+Continuing `<feature>` (`<phase>`).
 Completed N/M tasks: <list of completed task IDs>.
 Next: <single concrete next action — task title or slash command>.
 Blockers: <list, or "none">.
@@ -70,7 +70,7 @@ Keep it tight — 6–10 lines. The user wants situational awareness in one glan
 
 ### 7. Recommend the next action
 
-Tell the user the next concrete command to run (`/implement` to continue, or the specific task if mid-`/implement`). Do NOT auto-invoke it. The user should approve before resuming work — they may have stopped for a reason that's still relevant.
+Tell the user the next concrete command to run (`/implement` to continue, or the specific task if mid-`/implement`). Do NOT auto-invoke it. The user should approve before continuing work — they may have stopped for a reason that's still relevant.
 
 ### 8. Update state.md
 
@@ -78,7 +78,7 @@ Set `active_phase` to the current phase (we're now in flight again). Update `las
 
 ## Important
 
-- One brief, one recommendation, then stop. Do not auto-resume. Treat the user as the decision-maker.
+- One brief, one recommendation, then stop. Do not auto-continue. Treat the user as the decision-maker.
 - `--force` skips orphan-state detection and git_head mismatch warning, but NEVER skips `severity: blocking` blockers.
 - If handoff and continue-here disagree, trust the JSON and note the discrepancy in the brief.
 - This skill is read-mostly. The only writes are the state.md `active_phase` + `last_activity` update at the end. Do NOT clear the handoff — that happens when the phase completes.

@@ -51,9 +51,9 @@ module.exports = [
     },
   },
   {
-    name: 'resume skill exists with required anchors',
+    name: 'continue skill exists with required anchors',
     fn: () => {
-      const content = read('resume');
+      const content = read('continue');
       mustContain(
         content,
         [
@@ -65,7 +65,7 @@ module.exports = [
           '--force',
           'do NOT',
         ],
-        'skills/resume/SKILL.md',
+        'skills/continue/SKILL.md',
       );
     },
   },
@@ -82,14 +82,14 @@ module.exports = [
     },
   },
   {
-    name: 'resume skill explicitly does not auto-invoke next phase',
+    name: 'continue skill explicitly does not auto-invoke next phase',
     fn: () => {
-      const content = read('resume');
+      const content = read('continue');
       assert.ok(
-        /not auto[- ]?invoke|do not auto[- ]?resume|user .*decision[- ]maker|approve before/i.test(
+        /not auto[- ]?invoke|do not auto[- ]?continue|user .*decision[- ]maker|approve before/i.test(
           content,
         ),
-        'resume must brief and stop, not auto-invoke',
+        'continue must brief and stop, not auto-invoke',
       );
     },
   },
@@ -133,8 +133,8 @@ module.exports = [
     fn: () => {
       const content = read('progress');
       assert.ok(
-        /handoff\.json/i.test(content) && /resume/i.test(content),
-        'progress must check for handoff.json and route to /resume',
+        /handoff\.json/i.test(content) && /\/continue/.test(content),
+        'progress must check for handoff.json and route to /continue',
       );
     },
   },

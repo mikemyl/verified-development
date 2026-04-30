@@ -8,7 +8,7 @@ Run the project's verification pipeline. This is the single pass/fail gate for c
 
 ## Interruptibility
 
-This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry, write a handoff with `phase: "verify"` and `remaining_tasks` listing the verification stages: `lint`, `test`, `coverage`, `mutation`, `security`, `dead-code`, `build` (skip stages that don't apply to this project — read the project's verify command first to find out which exist). After each stage passes, `update` the handoff. On full pass, `clear` the handoff and set state.md `next_action: "/review"`. If a stage fails, leave the handoff with that stage in `remaining_tasks` and add a `severity: blocking` blocker describing the failure — this prevents `/resume` from skipping past it.
+This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry, write a handoff with `phase: "verify"` and `remaining_tasks` listing the verification stages: `lint`, `test`, `coverage`, `mutation`, `security`, `dead-code`, `build` (skip stages that don't apply to this project — read the project's verify command first to find out which exist). After each stage passes, `update` the handoff. On full pass, `clear` the handoff and set state.md `next_action: "/review"`. If a stage fails, leave the handoff with that stage in `remaining_tasks` and add a `severity: blocking` blocker describing the failure — this prevents `/continue` from skipping past it.
 
 ## Process
 

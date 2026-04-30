@@ -103,8 +103,8 @@ Each executor receives:
 After each wave completes:
 - Read plan.md to verify tasks were marked `[x]`
 - Run the full test suite to verify nothing broke
-- If an executor reported BLOCKED tasks, decide: fix the blocker and re-dispatch, or flag for user. If you cannot resolve a blocker now, add it to handoff `blockers` with `severity: blocking` (so a `/resume` later cannot proceed past it without addressing) or `severity: advisory`.
-- **Update handoff.json**: move just-completed tasks from `remaining_tasks` to `completed_tasks` via `hooks/lib/handoff.js update`. Refresh `git_head` to current short SHA. This is the per-wave checkpoint — if context dies between waves, `/resume` lands here.
+- If an executor reported BLOCKED tasks, decide: fix the blocker and re-dispatch, or flag for user. If you cannot resolve a blocker now, add it to handoff `blockers` with `severity: blocking` (so a `/continue` later cannot proceed past it without addressing) or `severity: advisory`.
+- **Update handoff.json**: move just-completed tasks from `remaining_tasks` to `completed_tasks` via `hooks/lib/handoff.js update`. Refresh `git_head` to current short SHA. This is the per-wave checkpoint — if context dies between waves, `/continue` lands here.
 - Show progress: "Wave {N} complete. {completed}/{total} tasks done. {remaining} remaining."
 - Update state.md `last_activity`.
 

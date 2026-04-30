@@ -71,11 +71,11 @@ Write to `.verified/features/<feature>/continue-here.md`.
 
 ### 7. Update state.md
 
-Set `active_phase: ""` (no longer in flight). Set `next_action: "/resume"`. Update `last_activity` to today.
+Set `active_phase: ""` (no longer in flight). Set `next_action: "/continue"`. Update `last_activity` to today.
 
 ### 8. End the turn
 
-Tell the user one paragraph: "Paused `<feature>` at `<phase>`. N/M tasks done. <count> blockers. Resume with `/resume`." Then stop. Do NOT start any new work. Do NOT run any tools beyond what was needed for steps 1–7.
+Tell the user one paragraph: "Paused `<feature>` at `<phase>`. N/M tasks done. <count> blockers. Continue with `/continue`." Then stop. Do NOT start any new work. Do NOT run any tools beyond what was needed for steps 1–7.
 
 ## Important
 

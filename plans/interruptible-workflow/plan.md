@@ -10,7 +10,7 @@ The change has four layers, ordered by dependency:
 
 1. **Schema** — define the contracts (`handoff.json` schema, `state.md` schema delta, `continue-here.md` template).
 2. **Library** — a small JS helper (`hooks/lib/handoff.js`) that all skills/hooks call. Atomic writes, schema validation, lazy-upgrade reader. One source of truth for state mutations.
-3. **Skills** — `/pause`, `/resume`, plus updates to existing phase skills (`specify`, `ui-spec`, `plan`, `implement`, `verify`, `review`, `progress`, `quick`).
+3. **Skills** — `/pause`, `/continue`, plus updates to existing phase skills (`specify`, `ui-spec`, `plan`, `implement`, `verify`, `review`, `progress`, `quick`).
 4. **Hooks & UX** — SessionStart inject extension, statusline `next_action` rendering.
 
 Build the library first so the skills have something to call. Skills are markdown — they instruct the LLM to invoke the library via `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js …` rather than the LLM hand-rolling JSON each time. This keeps the prompt content slim and the file-write logic auditable.
@@ -34,7 +34,7 @@ skills/
     SKILL.md
   resume/               # NEW
     SKILL.md
-  progress/SKILL.md     # EDIT — detect handoff, route to /resume UX, detect orphan state
+  progress/SKILL.md     # EDIT — detect handoff, route to /continue UX, detect orphan state
   specify/SKILL.md      # EDIT — write handoff incrementally; on completion prompt for next_phases choice
   ui-spec/SKILL.md      # EDIT — handoff incremental writes; clear on completion
   plan/SKILL.md         # EDIT — handoff incremental writes; clear on completion
@@ -126,12 +126,12 @@ Lazy upgrade rule: a reader sees a state.md with no `schema_version` → treat a
 ### Phase B — New skills
 
 - [x] **B1** `skills/pause/SKILL.md` — standalone skill, optional reason arg, ends the turn.
-- [x] **B2** `skills/resume/SKILL.md` — reads handoff/state/continue-here, refuses on `severity: blocking`, `--force` bypasses orphan detection (not blocking blockers).
+- [x] **B2** `skills/continue/SKILL.md` — reads handoff/state/continue-here, refuses on `severity: blocking`, `--force` bypasses orphan detection (not blocking blockers).
 - [x] **B3** `tests/prompt-anchors.test.cjs` — case-insensitive anchor assertions, 4 cases passing.
 
 ### Phase C — Existing skill updates
 
-- [x] **C1** `progress/SKILL.md` — detects handoff.json and routes to `/resume`; detects orphan state.
+- [x] **C1** `progress/SKILL.md` — detects handoff.json and routes to `/continue`; detects orphan state.
 - [x] **C2** `specify/SKILL.md` — handoff on entry; UI/non-UI prompt at completion records `next_action`; clears handoff.
 - [x] **C3** `ui-spec/SKILL.md` — handoff on entry; clear + `next_action: /plan` on completion.
 - [x] **C4** `plan/SKILL.md` — handoff on entry; clear + `next_action: /implement` on completion.
@@ -149,14 +149,14 @@ Lazy upgrade rule: a reader sees a state.md with no `schema_version` → treat a
 
 ### Phase E — Wire-up & verification
 
-- [x] **E1** Shell-level integration test in `tests/integration.test.cjs` exercises full lifecycle: phase entry → mid-phase progress → /pause → /resume → completion. Includes a sub-test for the session-start hook output envelope. Real LLM-driven E2E in `keros-platform` is the user's call (next session).
+- [x] **E1** Shell-level integration test in `tests/integration.test.cjs` exercises full lifecycle: phase entry → mid-phase progress → /pause → /continue → completion. Includes a sub-test for the session-start hook output envelope. Real LLM-driven E2E in `keros-platform` is the user's call (next session).
 - [x] **E2** Bumped to **1.2.0** in plugin.json + marketplace.json.
 - [x] **E3** Updated CLAUDE.md with sections on the interruptible-workflow contract, hook envelope rule, test runner, description budget.
 
 ## Risk register
 
 - **R1** Atomic write race: two skills updating handoff simultaneously. Mitigation: `lib/handoff.js` writes via `fs.renameSync` after a temp file write; the kernel guarantees atomicity on same-filesystem rename. No locks needed at our concurrency level.
-- **R2** Orphaned handoff after manual file deletion / git revert. Mitigation: `/resume` validates `git_head` against current `git rev-parse HEAD`; if mismatched warns the user and offers `--force`.
+- **R2** Orphaned handoff after manual file deletion / git revert. Mitigation: `/continue` validates `git_head` against current `git rev-parse HEAD`; if mismatched warns the user and offers `--force`.
 - **R3** Schema drift. Mitigation: schema is checked-in JSON; tests validate fixtures; `schema_version` bump path is documented in handoff.js.
 - **R4** Skills regressing each other when edited in parallel. Mitigation: `prompt-anchors.test.cjs` catches deletion of key anchors; CI runs on every PR.
 - **R5** State.md size creeping over 100 lines. Mitigation: serializer in `lib/state.js` enforces a hard cap; raises an error if exceeded so the violation is visible immediately.

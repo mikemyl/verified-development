@@ -3,15 +3,15 @@
 /**
  * End-to-end integration test for interruptible-workflow.
  *
- * Drives a fake feature through pause/resume by exercising the helpers
- * exactly as the /pause and /resume skills will. This is the closest we
+ * Drives a fake feature through pause/continue by exercising the helpers
+ * exactly as the /pause and /continue skills will. This is the closest we
  * can get without spinning up an LLM session.
  *
  * Steps simulated:
  *   1. Phase entry (skill writes handoff)
  *   2. Mid-phase progress (skill calls update twice)
  *   3. /pause (skill captures handoff + continue-here)
- *   4. /resume (skill reads handoff, validates, briefs)
+ *   4. /continue (skill reads handoff, validates, briefs)
  *   5. Phase completion (skill clears handoff)
  *   6. State.md transitions: schema_version 2, next_action set
  */
@@ -126,12 +126,12 @@ What's next: T3 (third).
         );
 
         // /pause also clears active_phase (no longer in flight)
-        stateLib.update(root, { active_phase: '', next_action: '/resume' });
+        stateLib.update(root, { active_phase: '', next_action: '/continue' });
         s = stateLib.read(root);
         assert.equal(s.frontmatter.active_phase, '');
-        assert.equal(s.frontmatter.next_action, '/resume');
+        assert.equal(s.frontmatter.next_action, '/continue');
 
-        // (5) /resume in fresh session — read state, then handoff, then continue-here
+        // (5) /continue in fresh session — read state, then handoff, then continue-here
         const resumed = handoff.read(featureDir);
         assert.equal(resumed.completed_tasks.length, 2);
         assert.equal(resumed.remaining_tasks.length, 1);
@@ -139,7 +139,7 @@ What's next: T3 (third).
         const continueMd = fs.readFileSync(path.join(featureDir, 'continue-here.md'), 'utf8');
         assert.ok(continueMd.includes('T1, T2'));
 
-        // /resume sets active_phase back
+        // /continue sets active_phase back
         stateLib.update(root, { active_phase: 'implement', next_action: '' });
 
         // (6) T3 completes — phase done — skill clears handoff
@@ -164,7 +164,7 @@ What's next: T3 (third).
     },
   },
   {
-    name: 'blocking blocker survives pause/resume round-trip',
+    name: 'blocking blocker survives pause/continue round-trip',
     fn: () => {
       const { featureDir, cleanup } = tmpProject();
       try {

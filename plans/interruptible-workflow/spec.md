@@ -81,7 +81,7 @@ Make every workflow phase interruptible at any tool-use boundary, with enough st
 
 **Given** a feature has `plan.md` but no `handoff.json` and no `summary.md`
 **When** I run `/progress`
-**Then** the agent flags this as an orphan state (likely a crash) and offers `/forensics` or `/resume --force`.
+**Then** the agent flags this as an orphan state (likely a crash) and offers `/forensics` or `/continue --force`.
 
 ### S8 — State.md stays under size limit
 
@@ -98,8 +98,8 @@ Make every workflow phase interruptible at any tool-use boundary, with enough st
 - **FR2** New artifact `.verified/features/<feature>/handoff.json` with versioned schema (`schema_version: 1`).
 - **FR3** New artifact `.verified/features/<feature>/continue-here.md` with frontmatter + narrative body.
 - **FR4** New skill `/pause` (optional reason arg) that captures handoff and ends the turn.
-- **FR5** New skill `/resume` that reads handoff + state, summarises position, lists blockers, recommends next action. `--force` flag bypasses orphan detection.
-- **FR6** Existing `/progress` skill detects handoff presence and routes to `/resume` UX when found.
+- **FR5** New skill `/continue` that reads handoff + state, summarises position, lists blockers, recommends next action. `--force` flag bypasses orphan detection.
+- **FR6** Existing `/progress` skill detects handoff presence and routes to `/continue` UX when found.
 - **FR7** Each phase skill (`specify`, `ui-spec`, `plan`, `implement`, `verify`, `review`) updates handoff incrementally on task/sub-task completion, atomically.
 - **FR8** Phase completion deletes the stale handoff and updates `next_action`.
 - **FR9** SessionStart hook reads handoff (if present) and injects a one-line "resuming X" status alongside state injection.
@@ -127,7 +127,7 @@ Make every workflow phase interruptible at any tool-use boundary, with enough st
 
 ## Resolved decisions
 
-- **D1** `/pause` is a standalone skill — clearer trigger boundary than overloading `/progress`.
+- **D1** `/pause` is a standalone skill — clearer trigger boundary than overloading `/progress`. The companion command was originally `/resume`; renamed to `/continue` in v1.3.2 to avoid collision with Claude Code's built-in `--resume`.
 - **D2** `handoff.json` captures only orchestrator plan-task position. Executor agents are stateless and re-spawnable; their progress is reflected in plan-task completion plus git state.
 - **D3** SessionStart auto-summarises on every start when a handoff is present. Staleness is signal, not noise — the user sees the age and decides.
 - **D4** Branching from `specify` (to `ui-spec` or `plan`) is resolved by prompting the user at phase boundary. No spec.md frontmatter flag — too easy to forget. The prompt happens once, at completion of `specify`, and the choice is recorded in `state.md` `next_action`.
