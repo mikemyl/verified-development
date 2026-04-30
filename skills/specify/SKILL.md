@@ -32,6 +32,30 @@ Read `.verified/codebase/` docs if they exist — these inform specification:
 mkdir -p .verified/features/{feature-name}
 ```
 
+### 3a. Open Handoff
+
+This phase is interruptible. Write an initial handoff:
+
+```bash
+echo '{
+  "schema_version": 1,
+  "feature": "{feature-name}",
+  "phase": "specify",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {"id": "S1", "title": "gather-context"},
+    {"id": "S2", "title": "propose-approaches"},
+    {"id": "S3", "title": "write-spec"},
+    {"id": "S4", "title": "self-review"},
+    {"id": "S5", "title": "present-and-confirm"}
+  ],
+  "git_head": "<short-sha>",
+  "timestamp": "<ISO-8601>"
+}' | node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js write .verified/features/{feature-name}
+```
+
+After each numbered step below completes, call `update` with new `completed_tasks`/`remaining_tasks`. Wire format and helper details: see `skills/pause/SKILL.md`. If the user runs `/pause`, defer to that skill.
+
 ### 4. Gather Context
 
 If the user provided a description, use it as starting context. Then ask targeted questions to fill gaps.
@@ -125,9 +149,24 @@ Show the complete spec to the user. Ask:
 
 Iterate based on feedback until the user approves.
 
-### 9. Update State
+### 9. Choose Next Phase (UI or not)
 
-Create or update `.verified/state.md`. Only set `complete` AFTER the user explicitly approves the spec:
+After the user approves the spec, ask **one question**: does this feature have a user-facing UI?
+
+- "yes / has UI / web / mobile" → `next_action: /ui-spec`, add `next_phases: ["ui-spec"]`
+- "no / API / backend / lib" → `next_action: /plan`, add `next_phases: ["plan"]`
+
+Use `AskUserQuestion` if available; otherwise ask conversationally. Record the choice in state.md. The branch is recorded ONCE, here — not on every read.
+
+### 10. Close Handoff and Update State
+
+Clear the handoff (the phase is done):
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/features/{feature-name}
+```
+
+Update `.verified/state.md`. Only set `complete` AFTER the user explicitly approves the spec AND has answered the UI/non-UI question:
 
 ```yaml
 ---
@@ -135,10 +174,16 @@ feature: {feature-name}
 phase: specify
 status: complete
 last_activity: {YYYY-MM-DD} - Specification approved
+active_phase: ""
+next_action: "/ui-spec"   # or "/plan"
+next_phases: ["ui-spec"]  # or ["plan"]
+schema_version: 2
 ---
 ```
 
-While still iterating, use `status: in-progress`.
+While still iterating, use `status: in-progress` and leave the handoff in place.
+
+### 11. Bootstrap Config
 
 If `.verified/config.json` doesn't exist, create it with defaults:
 
@@ -159,13 +204,14 @@ If `.verified/config.json` doesn't exist, create it with defaults:
 }
 ```
 
-### 10. Suggest Next Step
+### 12. Suggest Next Step
+
+The next action was decided in step 9. Echo it back:
 
 ```
 Specification complete: .verified/features/{feature-name}/spec.md
 
-Next: Run /plan {feature-name} to create the implementation plan.
-     Or /ui-spec {feature-name} if this feature has a UI.
+Next: {next_action from step 9}
 ```
 
 ## Important

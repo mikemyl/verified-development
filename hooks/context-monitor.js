@@ -41,12 +41,29 @@ process.stdin.on('end', () => {
     let severity = 'none';
     let message = '';
 
+    // If a verified-development feature is mid-flight, prefer /pause —
+    // it captures plan-task progress to handoff.json so the next session
+    // can /resume in the right place. /session-report is for session-wide
+    // narrative, /pause is for in-flight work.
+    const cwd = data.cwd || process.cwd();
+    let inFlight = false;
+    try {
+      const stateMd = fs.readFileSync(path.join(cwd, '.verified', 'state.md'), 'utf8');
+      const featureMatch = stateMd.match(/^feature:\s*(.+)$/m);
+      const feature = featureMatch ? featureMatch[1].replace(/^["']|["']$/g, '').trim() : '';
+      inFlight = feature && feature !== 'none';
+    } catch (e) { /* no state.md, no in-flight feature */ }
+
+    const pauseHint = inFlight
+      ? ' Run /pause to capture plan-task progress before context exhausts; /resume picks up from there.'
+      : ' Consider /session-report to capture progress before starting a fresh session.';
+
     if (used >= 80) {
       severity = 'critical';
-      message = 'Context nearly exhausted (' + used + '% used). Consider running /session-report to capture progress, then start a fresh session with /progress to resume.';
+      message = 'Context nearly exhausted (' + used + '% used).' + pauseHint;
     } else if (used >= 65) {
       severity = 'warning';
-      message = 'Context window filling up (' + used + '% used). Avoid starting new complex work. Consider wrapping up the current task.';
+      message = 'Context window filling up (' + used + '% used). Avoid starting new complex work.' + (inFlight ? ' /pause is available if you need to stop here.' : '');
     }
 
     // Write state

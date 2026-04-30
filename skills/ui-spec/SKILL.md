@@ -19,6 +19,16 @@ Create a UI specification for a feature. This is an optional step between Specif
 - Read `.verified/features/{feature-name}/spec.md` — the functional spec MUST exist first
 - If no spec exists, tell the user to run `/specify` first
 
+### 2a. Open Handoff
+
+This phase is interruptible. Write an initial handoff (see `skills/pause/SKILL.md` for the wire format):
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js write .verified/features/{feature-name}
+```
+
+With `phase: "ui-spec"` and `remaining_tasks` listing: `brand`, `design-system`, `screens`, `component-inventory`, `quality-check`. After each step completes, call `update` to move it to `completed_tasks`. If `/pause` is invoked, defer to that skill.
+
 ### 3. Check for Existing Design System
 
 Look for an existing design system:
@@ -94,7 +104,11 @@ Run through the checklist:
 - [ ] Design tokens defined (or referenced from design-system.md)
 - [ ] Accessibility requirements per screen
 
-### 9. Update State
+### 9. Close Handoff and Update State
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/features/{feature-name}
+```
 
 ```yaml
 ---
@@ -102,6 +116,10 @@ feature: {feature-name}
 phase: ui-spec
 status: complete
 last_activity: {YYYY-MM-DD} - UI specification complete
+active_phase: ""
+next_action: "/plan"
+next_phases: ["plan"]
+schema_version: 2
 ---
 ```
 

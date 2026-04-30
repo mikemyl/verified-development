@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "feature": "interruptible-workflow",
+  "phase": "implement",
+  "completed_tasks": [
+    {
+      "id": "A1",
+      "title": "tests/runner",
+      "completed_at": "2026-04-30T10:15:00Z"
+    },
+    {
+      "id": "A2",
+      "title": "handoff.schema.json + tests",
+      "completed_at": "2026-04-30T10:32:00Z"
+    }
+  ],
+  "remaining_tasks": [
+    { "id": "A3", "title": "hooks/lib/handoff.js" },
+    { "id": "A4", "title": "hooks/lib/state.js (lazy upgrade)" },
+    { "id": "A5", "title": "templates" }
+  ],
+  "blockers": [
+    {
+      "severity": "advisory",
+      "description": "Verify AskUserQuestion availability inside skills before C2.",
+      "raised_at": "2026-04-30T10:32:00Z"
+    }
+  ],
+  "decisions_made": [
+    "Atomic writes via fs.renameSync; no locks at our concurrency level."
+  ],
+  "git_head": "4be5340",
+  "timestamp": "2026-04-30T10:32:00Z",
+  "reason": "context window approaching critical"
+}

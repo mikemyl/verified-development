@@ -35,6 +35,16 @@ Create an implementation plan for a feature. This is Phase 2 of the verified dev
 If spec.md doesn't exist, tell the user to run `/specify` first.
 If codebase docs don't exist, suggest running `/map` but don't block planning.
 
+### 2a. Open Handoff
+
+This phase is interruptible. Write an initial handoff (see `skills/pause/SKILL.md` for the wire format):
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js write .verified/features/{feature-name}
+```
+
+With `phase: "plan"` and `remaining_tasks` listing: `analyze-spec`, `research`, `draft-tasks`, `task-rules-check`, `decisions-prompt`, `quality-check`, `present-and-confirm`. After each step completes, `update` to move it to `completed_tasks`. If `/pause` is invoked, defer to that skill.
+
 ### 3. Analyze Specification
 
 Break down the spec into implementation units:
@@ -141,7 +151,7 @@ Iterate until approved.
 
 ### 10. Update State
 
-Set status to `in-progress` while the user is still reviewing:
+Set status to `in-progress` while the user is still reviewing — leave the handoff in place:
 
 ```yaml
 ---
@@ -149,10 +159,21 @@ feature: {feature-name}
 phase: plan
 status: in-progress
 last_activity: {YYYY-MM-DD} - Plan draft ({N} tasks), awaiting approval
+schema_version: 2
 ---
 ```
 
-Only set status to `complete` AFTER the user explicitly approves the plan (e.g., "looks good", "let's move on", "approved").
+Only set status to `complete` AFTER the user explicitly approves the plan. On completion, clear the handoff and set `next_action`:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/features/{feature-name}
+```
+
+```yaml
+active_phase: ""
+next_action: "/implement"
+next_phases: ["implement"]
+```
 
 ### 11. Suggest Next Step
 

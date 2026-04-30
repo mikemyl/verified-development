@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verified-development/schemas/handoff.schema.json",
+  "title": "Handoff",
+  "description": "Mid-phase pause/resume artifact for the verified-development workflow.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feature",
+    "phase",
+    "completed_tasks",
+    "remaining_tasks",
+    "git_head",
+    "timestamp"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "feature": { "type": "string", "minLength": 1 },
+    "phase": {
+      "enum": ["specify", "ui-spec", "plan", "implement", "verify", "review", "quick"]
+    },
+    "completed_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "completed_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "remaining_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "description"],
+        "properties": {
+          "severity": { "enum": ["blocking", "advisory"] },
+          "description": { "type": "string", "minLength": 1 },
+          "raised_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "decisions_made": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "git_head": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "reason": { "type": "string" }
+  }
+}

@@ -29,6 +29,14 @@ Execute an implementation plan using strict TDD. This is Phase 3 of the verified
 
 If plan.md doesn't exist, tell the user to run `/plan` first.
 
+### 2a. Open Handoff (or Resume Existing)
+
+This phase is interruptible at every plan-task boundary. Wire format: see `skills/pause/SKILL.md`.
+
+If `.verified/features/{feature-name}/handoff.json` already exists with `phase: "implement"`, read it (`hooks/lib/handoff.js read`) — its `completed_tasks` and `remaining_tasks` are the source of truth for "where am I." Use it to decide which task to start, NOT a fresh scan of plan.md (the plan.md `[x]` marks are also valid; use whichever is more recent — `git log -1 plan.md` vs handoff `timestamp`).
+
+If no handoff exists, write the initial one. Parse plan.md's task list (each `- [ ] T###` line) into `remaining_tasks` with `id` = task number and `title` = task description. `completed_tasks` is empty. Set `phase: "implement"`, current `git_head`, ISO `timestamp`.
+
 ### 3. Verify Work Matches Plan
 
 Before starting any implementation:
@@ -95,9 +103,10 @@ Each executor receives:
 After each wave completes:
 - Read plan.md to verify tasks were marked `[x]`
 - Run the full test suite to verify nothing broke
-- If an executor reported BLOCKED tasks, decide: fix the blocker and re-dispatch, or flag for user
+- If an executor reported BLOCKED tasks, decide: fix the blocker and re-dispatch, or flag for user. If you cannot resolve a blocker now, add it to handoff `blockers` with `severity: blocking` (so a `/resume` later cannot proceed past it without addressing) or `severity: advisory`.
+- **Update handoff.json**: move just-completed tasks from `remaining_tasks` to `completed_tasks` via `hooks/lib/handoff.js update`. Refresh `git_head` to current short SHA. This is the per-wave checkpoint — if context dies between waves, `/resume` lands here.
 - Show progress: "Wave {N} complete. {completed}/{total} tasks done. {remaining} remaining."
-- Update state.md with current position
+- Update state.md `last_activity`.
 
 #### When NOT to Spawn Agents
 
@@ -128,17 +137,27 @@ When all tasks are done (checked off or explicitly blocked/descoped):
 
 1. Run the full test suite (use the project's test command with all safety flags enabled):
 
-2. Update state:
+2. Clear the handoff (the phase is done):
+
+   ```bash
+   node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/features/{feature-name}
+   ```
+
+3. Update state:
    ```yaml
    ---
    feature: {feature-name}
    phase: implement
    status: complete
    last_activity: {YYYY-MM-DD} - Implementation complete ({N} tasks)
+   active_phase: ""
+   next_action: "/verify"
+   next_phases: ["verify"]
+   schema_version: 2
    ---
    ```
 
-3. Write summary to `.verified/features/{feature-name}/summary.md`:
+4. Write summary to `.verified/features/{feature-name}/summary.md`:
    ```markdown
    # Implementation Summary: {Feature Name}
 
@@ -157,7 +176,7 @@ When all tasks are done (checked off or explicitly blocked/descoped):
    - {any decisions captured as ADRs}
    ```
 
-4. Suggest next steps:
+5. Suggest next steps:
    ```
    Implementation complete: {N} tasks done
 

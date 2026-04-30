@@ -28,6 +28,12 @@ Proceed with /quick anyway?
 - Read `.verified/codebase/` docs if they exist — understand conventions, architecture
 - Read `.verified/config.json` — thresholds
 
+### 2a. Open Handoff (compressed)
+
+Quick tasks don't get a feature directory, but interruptibility still applies — context can run out mid-RED, mid-GREEN, mid-verify. Write a single compressed handoff at `.verified/quick/handoff.json` (create the dir if needed). Wire format: see `skills/pause/SKILL.md`.
+
+`phase: "quick"`, `remaining_tasks`: `understand`, `red`, `green`, `refactor`, `verify`, `review`, `commit`. Update after each, clear at the end. If `/pause` is invoked, defer to that skill.
+
 ### 3. TDD Cycle
 
 Load the appropriate TDD skill (`tdd-go` for Go, `tdd` for TypeScript). Follow RED-GREEN-REFACTOR:
@@ -102,7 +108,11 @@ For quick tasks, use conventional commit prefixes:
 - `refactor:` for refactoring
 - `chore:` for maintenance
 
-### 8. Update State
+### 8. Close Handoff and Update State
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/quick
+```
 
 Don't create a feature directory for quick tasks. Just update state.md:
 
@@ -112,6 +122,10 @@ feature: none
 phase: idle
 status: complete
 last_activity: {YYYY-MM-DD} - Quick: {description}
+active_phase: ""
+next_action: ""
+next_phases: []
+schema_version: 2
 ---
 ```
 

@@ -6,6 +6,10 @@ version: 0.1.0
 
 Orchestrate the two-stage review process. This is Phase 5 of the verified development workflow.
 
+## Interruptibility
+
+This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry write a handoff with `phase: "review"` and `remaining_tasks`: `spec-compliance`, `quality-agents`, `fix-loop`, `doc-sync`, `capture-learnings`. After each step completes call `update` to move it to `completed_tasks`. On final completion `clear` the handoff and set state.md `next_action: ""` (review is the terminal phase — human review and merge come next). If `/pause` is invoked, defer to that skill.
+
 ## Process
 
 ### 0. Determine Scope
@@ -136,7 +140,11 @@ If errors or warnings found:
 4. Re-run ONLY the agents that found issues (not the full review)
 5. Maximum 2 correction iterations. After that, present remaining issues for human decision.
 
-### 6. Update State
+### 6. Close Handoff and Update State
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/features/{feature-name}
+```
 
 ```yaml
 ---
@@ -144,6 +152,10 @@ feature: {feature-name}
 phase: review
 status: complete
 last_activity: {YYYY-MM-DD} - Review complete ({N} errors, {N} warnings, {N} suggestions)
+active_phase: ""
+next_action: ""
+next_phases: []
+schema_version: 2
 ---
 ```
 
