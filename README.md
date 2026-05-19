@@ -17,7 +17,7 @@ AI agents produce code faster than humans can review. Without structure, several
 A complete development workflow enforced via Claude Code plugin:
 - **Specifications** define what to build before any code is written
 - **TDD** drives implementation through failing tests
-- **Mechanical gates** verify lint, coverage, mutation, security, dead code
+- **Mechanical gates** verify lint, coverage, security, dead code
 - **Review agents** perform two-stage code review (spec-compliance, then quality)
 - **Human review** as the final gate, focused on behavior — not mechanical compliance
 
@@ -32,7 +32,7 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 1. **Specify** — Acceptance scenarios (Given/When/Then), requirements, success criteria
 2. **Plan** — Ordered tasks with file paths, test-first ordering, parallelization markers
 3. **Implement** — RED-GREEN-REFACTOR per task, atomic commits, verification evidence
-4. **Verify** — `just verify` runs all gates: lint, test, coverage, mutation, security, dead code, build
+4. **Verify** — `just verify` runs all gates: lint, test, coverage, security, dead code, build
 5. **Review** — Stage 1: spec-compliance (right thing?), Stage 2: quality agents (right way?), then sync codebase docs
 
 For UI features, add `/ui-spec` between Specify and Plan for design contracts, brand identity, and competitive research.
@@ -63,8 +63,8 @@ For small changes (bug fixes, tweaks), use `/quick` — compressed workflow with
 ## Core Principles
 
 - **Acceptance scenarios before implementation** — Given/When/Then defined before code
-- **Layered verification** — lint, test, coverage, mutation, security, dead code — all must pass
-- **Numeric thresholds** — coverage >=80%, mutation >=60%, complexity <=10
+- **Layered verification** — lint, test, coverage, security, dead code — all must pass
+- **Numeric thresholds** — coverage >=80%, complexity <=10
 - **Single verify command** — `just verify` runs everything, no warnings tolerated
 - **No tautological tests** — tests encode expected outputs, never reimplement logic
 - **No vaporware** — every package imported by non-test code, every table touched by DML
@@ -137,7 +137,6 @@ These tools must be installed:
 - [just](https://github.com/casey/just) — command runner
 - [golangci-lint](https://golangci-lint.run) — meta-linter (43 linters enabled)
 - [revive](https://github.com/mgechev/revive) — complexity and idiom rules
-- [gremlins](https://github.com/go-gremlins/gremlins) — mutation testing
 - [gosec](https://github.com/securego/gosec) — security scanner
 - [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) — dependency vulnerabilities
 - [deadcode](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) — unreachable function detector
@@ -149,7 +148,6 @@ These tools must be installed:
 | Linting | revive + golangci-lint (43 linters) | Complexity, concurrency bugs, deprecated APIs |
 | Testing | `go test -race -shuffle=on -count=1` | Data races, test order dependencies |
 | Coverage | go tool cover | Untested code (>=80% project, >=80% patch) |
-| Mutation | gremlins | Weak assertions, missing boundary tests (>=60%) |
 | Security | gosec + govulncheck | SQL injection, hardcoded creds, dependency vulns |
 | Dead code | deadcode + ineffassign | Unreachable functions, unused assignments |
 | Build | go build + go mod verify | Compilation and dependency integrity |
@@ -159,7 +157,6 @@ These tools must be installed:
 | Metric | Threshold |
 |--------|-----------|
 | Test coverage (project + patch) | >= 80% |
-| Mutation score | >= 60% |
 | Cyclomatic complexity | <= 10 |
 | Cognitive complexity | <= 15 |
 | Function length | <= 80 lines, <= 50 statements |
@@ -267,7 +264,7 @@ verified-development/
 │   └── install-hooks/                     # /install-hooks — project-specific enforcement hooks
 ├── agents/
 │   ├── spec-compliance-review.md          # Stage 1: spec compliance gate
-│   ├── test-review.md                     # Test quality & mutation gaps
+│   ├── test-review.md                     # Test quality & boundary coverage
 │   ├── security-review.md                 # Vulnerabilities & auth issues
 │   ├── complexity-review.md               # Function complexity thresholds
 │   ├── error-handling-review.md           # Go error patterns
@@ -290,9 +287,9 @@ verified-development/
 
 The plugin architecture supports multiple languages. Each gets its own skill with toolchain-specific configuration:
 
-- **TypeScript** — eslint, Stryker, strict mode, vitest
-- **Java** — spotbugs, pitest, OWASP dependency-check
-- **Rust** — clippy, cargo-mutants, cargo-audit
+- **TypeScript** — eslint, strict mode, vitest
+- **Java** — spotbugs, OWASP dependency-check
+- **Rust** — clippy, cargo-audit
 
 ## Influences
 
@@ -302,4 +299,4 @@ This plugin combines ideas from:
 - [agentic-dev-team](https://github.com/bdfinst/agentic-dev-team) — Review agents, two-stage review, correction context
 - [get-shit-done](https://github.com/glittercowboy/get-shit-done) — Phase workflow, fresh context per agent, file-based state
 - [spec-kit](https://github.com/github/spec-kit) — Specification-first development, template-driven quality
-- [citypaul/.dotfiles](https://github.com/citypaul/.dotfiles) — TDD, testing patterns, mutation testing, functional patterns
+- [citypaul/.dotfiles](https://github.com/citypaul/.dotfiles) — TDD, testing patterns, functional patterns

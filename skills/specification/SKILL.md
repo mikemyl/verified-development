@@ -48,7 +48,6 @@ Then {expected outcome}
 
 - SC-001: {Measurable outcome — e.g., "Response time < 200ms"}
 - SC-002: {Every scenario above has a corresponding test}
-- SC-003: {Mutation score >= 60% on feature package}
 ```
 
 ## Writing Rules
@@ -89,9 +88,9 @@ Becomes a row in a table-driven test:
 {"gold customer 10% discount", "gold", 100.00, 90.00},
 ```
 
-### Edge cases kill mutants
+### Edge cases define boundaries
 
-Edge cases define the boundary values that catch mutations:
+Edge cases pin down the boundary values your tests must exercise:
 
 ```
 EC-001: Zero-value order returns $0.00 regardless of discount
@@ -99,7 +98,7 @@ EC-002: Discount percentage > 100% is clamped to 100%
 EC-003: Negative discount percentage is treated as 0%
 ```
 
-These become the boundary rows in table-driven tests that kill `<` to `<=` mutations.
+These become the boundary rows in table-driven tests — one case at the boundary and one on each side, catching off-by-one and weak-assertion bugs.
 
 ### Mark ambiguities explicitly
 
@@ -126,8 +125,7 @@ MUST vs SHOULD:
 Always include:
 ```
 - SC-N: Every acceptance scenario has a corresponding test
-- SC-N+1: Mutation score >= 60% on feature package
-- SC-N+2: All verification gates pass (the project's verify command)
+- SC-N+1: All verification gates pass (the project's verify command)
 ```
 
 These are the mechanical criteria that the verification pipeline checks.
@@ -151,7 +149,7 @@ Before moving to the Plan phase, verify:
 Writing 30 requirements for a feature that needs 8. More requirements = more tests = more maintenance. Only specify what matters for correctness.
 
 ### Under-specification of edges
-Writing 10 happy-path scenarios and 0 edge cases. The edges are where bugs hide and where mutation testing catches weak assertions.
+Writing 10 happy-path scenarios and 0 edge cases. The edges are where bugs hide — without boundary cases, weak assertions slip through.
 
 ### Implementation leaking in
 "System MUST store user data in PostgreSQL" — that's an implementation decision, not a requirement. "System MUST persist user data durably" is the actual requirement.
@@ -166,7 +164,7 @@ SPECIFY          PLAN              IMPLEMENT
 spec.md    →     plan.md     →     test + code
 scenarios  →     task order  →     table-driven tests
 requirements →   file paths  →     implementation
-edge cases →     boundary    →     mutation-killing
+edge cases →     boundary    →     boundary
                  test tasks        test rows
 ```
 

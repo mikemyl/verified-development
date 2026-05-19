@@ -142,4 +142,4 @@ This change is mostly markdown prompts + a JSON schema + JS hook updates. The ve
 - **Hook smoke tests** — pipe a fake input to `context-monitor` / SessionStart hook and assert envelope output.
 - **Manual end-to-end** — drive a sample feature in a target project (e.g. `keros-platform`) through specify → pause → resume → plan → pause → resume → implement, validate transitions.
 
-No mutation testing or coverage gate applies — this is plugin-config, not application code.
+No automated coverage gate applies — this is plugin-config, not application code.

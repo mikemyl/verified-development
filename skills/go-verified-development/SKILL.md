@@ -1,6 +1,6 @@
 ---
 name: go-verified-development
-description: "Go toolchain for verified development: golangci-lint, revive, gremlins, gosec, govulncheck."
+description: "Go toolchain for verified development: golangci-lint, revive, gosec, govulncheck."
 version: 0.1.0
 ---
 
@@ -15,7 +15,6 @@ These tools must be installed before using the verification pipeline:
 - `just` — command runner (https://github.com/casey/just)
 - `golangci-lint` — meta-linter (https://golangci-lint.run)
 - `revive` — Go linter with complexity rules
-- `gremlins` — mutation testing (https://github.com/go-gremlins/gremlins)
 - `gosec` — security scanner (https://github.com/securego/gosec)
 - `govulncheck` — dependency vulnerability checker
 - `deadcode` — unreachable function detector
@@ -30,7 +29,6 @@ These tools must be installed before using the verification pipeline:
 | `test` | `go test -race -shuffle=on -count=1` | Data races, test order dependencies, cached passes |
 | `coverage` | go tool cover | Untested code (>=80% project) |
 | `patch-coverage` | go tool cover + diff | Untested new code (>=80% changed lines) |
-| `mutation` | gremlins | Weak assertions, missing boundary tests (>=60%) |
 | `security` | gosec + govulncheck | SQL injection, hardcoded creds, dependency vulns |
 | `deadcode` | deadcode + ineffassign | Unreachable functions, unused assignments |
 | `build` | go build + go mod verify | Compilation and dependency integrity |
@@ -43,7 +41,6 @@ See `references/justfile-template.md` for the complete Justfile.
 |--------|-----------|
 | Test coverage (project) | >= 80% |
 | Test coverage (patch) | >= 80% (5% tolerance) |
-| Mutation score | >= 60% |
 | Cyclomatic complexity | <= 30 per function (package avg <= 10) |
 | Cognitive complexity | <= 20 per function |
 | Function length | <= 100 lines, <= 50 statements |
@@ -90,9 +87,9 @@ See `references/justfile-template.md` for the complete Justfile.
 
 ## Test Patterns
 
-### Table-Driven Tests (Kill Mutants)
+### Table-Driven Tests (Cover Every Boundary)
 
-Structure tests with boundary values that catch mutations:
+Structure tests so every branch and limit in the implementation has a case at the exact boundary, plus one on each side. Boundary cases are where weak assertions and off-by-one bugs hide:
 
 ```go
 tests := []struct {
@@ -102,12 +99,12 @@ tests := []struct {
     want     float64
 }{
     {"standard price",      100.0, 20.0,  80.0},
-    {"no discount",         100.0, 0.0,   100.0},  // kills <= mutation
-    {"full discount",       100.0, 100.0, 0.0},    // kills >= mutation
-    {"over 100% clamped",   100.0, 150.0, 0.0},    // kills > to >= mutation
-    {"negative clamped",    100.0, -10.0, 100.0},   // kills < to <= mutation
-    {"boundary: 1%",        100.0, 1.0,   99.0},    // kills constant mutation
-    {"boundary: 99%",       100.0, 99.0,  1.0},     // kills constant mutation
+    {"no discount",         100.0, 0.0,   100.0},  // lower bound of discount
+    {"full discount",       100.0, 100.0, 0.0},    // upper bound of discount
+    {"over 100% clamped",   100.0, 150.0, 0.0},    // above upper bound
+    {"negative clamped",    100.0, -10.0, 100.0},   // below lower bound
+    {"boundary: 1%",        100.0, 1.0,   99.0},    // just inside lower bound
+    {"boundary: 99%",       100.0, 99.0,  1.0},     // just inside upper bound
     {"zero price",          0.0,   50.0,  0.0},     // edge case
 }
 ```

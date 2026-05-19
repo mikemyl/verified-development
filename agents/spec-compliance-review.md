@@ -53,7 +53,7 @@ For each edge case (EC-xxx):
 
 For each success criterion (SC-xxx):
 - Determine if it can be mechanically verified
-- If yes, check it (e.g., "mutation score >= 60%" — check if mutation tests exist)
+- If yes, check it (e.g., "coverage >= 80%" — check the coverage report)
 - If no, note it for human review
 
 ### 5. Scope Check

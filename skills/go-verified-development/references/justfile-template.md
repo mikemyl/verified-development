@@ -16,12 +16,11 @@ mod := `head -1 go.mod | awk '{print $2}'`
 
 # --- Thresholds ---
 coverage_threshold := "80"
-mutation_threshold := "60"
 
 # --- Meta targets ---
 
 # Run full verification pipeline
-verify: lint test coverage mutation security deadcode build-check
+verify: lint test coverage security deadcode build-check
     @echo "All checks passed."
 
 # --- Individual targets ---
@@ -78,10 +77,6 @@ patch-coverage:
         fi
     fi
 
-# Run mutation testing
-mutation:
-    gremlins unleash --threshold-efficacy {{mutation_threshold}} --workers 1 --timeout-coefficient 3
-
 # Run security scanners
 security:
     gosec -quiet ./...
@@ -120,7 +115,6 @@ clean:
 - `-count=1` disables test caching — every run is fresh
 - `-shuffle=on` randomizes test order to catch dependencies
 - `-race` enables the race detector for all tests
-- `gremlins --workers 1` ensures deterministic mutation runs
-- `coverage_threshold` and `mutation_threshold` are configurable at the top
+- `coverage_threshold` is configurable at the top
 - `patch-coverage` compares against `main` branch — adjust if your default branch differs
 - `build-check` includes `go mod tidy -diff` to catch uncommitted dependency changes

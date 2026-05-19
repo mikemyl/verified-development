@@ -130,7 +130,6 @@ Write `.verified/features/{feature-name}/spec.md` following the template:
 
 Always include these standard success criteria:
 - Every acceptance scenario has a corresponding test
-- Mutation score >= 60% on feature package
 - All verification gates pass (the project's verify command)
 
 ### 7. Spec Self-Review
@@ -203,7 +202,6 @@ If `.verified/config.json` doesn't exist, create it with defaults:
   "language": "{detected or asked}",
   "thresholds": {
     "coverage": 80,
-    "mutation": 60,
     "cyclomatic_complexity": 10,
     "cognitive_complexity": 15
   },
@@ -230,5 +228,5 @@ Next: {next_action from step 9}
 
 - Never include implementation details in the spec (no database names, no API frameworks, no specific libraries)
 - If the user describes implementation ("use Redis for caching"), translate to requirement ("cache with max 5 min staleness")
-- Edge cases are critical — they become the boundary tests that kill mutants
+- Edge cases are critical — they become the boundary tests that catch off-by-one and weak-assertion bugs
 - The spec is the source of truth for the spec-compliance review agent in Phase 5

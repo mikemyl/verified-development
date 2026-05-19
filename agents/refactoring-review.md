@@ -40,7 +40,7 @@ Note: Three similar lines is fine. Only flag duplication when it represents the 
 
 ## Priority Classification
 
-- **Critical**: Duplication of business concepts, surviving mutations — fix now
+- **Critical**: Duplication of business concepts — fix now
 - **High**: Unclear names, god functions — fix this session
 - **Medium**: Simplification opportunities — consider
 - **Low**: Structural improvements — nice to have, don't force

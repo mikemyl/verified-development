@@ -33,7 +33,7 @@ For each conditional in the implementation, check if tests exist at the exact bo
 - `==` needs tests at value, value-1, AND value+1
 - `len == 0` needs tests with empty AND single-element
 
-Flag missing boundary tests as "surviving mutants" — a mutation tester would catch these.
+Flag any missing boundary test — these are exactly where off-by-one and weak-assertion bugs slip through.
 
 ### 3. Property-Based Tests
 

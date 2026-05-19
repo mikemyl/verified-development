@@ -140,7 +140,7 @@ Bad:  Test internal helper functions directly
 Bad:  Assert that an internal method was called with specific args
 ```
 
-### Test boundaries that kill mutants
+### Test both sides of every boundary
 
 For every conditional, test both sides of the boundary:
 

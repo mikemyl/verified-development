@@ -39,7 +39,6 @@ Write `.verified/config.json`:
   "language": "{detected}",
   "thresholds": {
     "coverage": 80,
-    "mutation": 60,
     "cyclomatic_complexity": 10,
     "cognitive_complexity": 15
   },
@@ -73,7 +72,6 @@ Write `.verified/project.md`:
 
 ## Verification Standards
 - Test coverage: >= 80%
-- Mutation score: >= 60%
 - All linter rules enforced (no warnings)
 - Acceptance scenarios before implementation
 - Two-stage review before merge
@@ -88,19 +86,17 @@ Based on the detected language, load the appropriate language skill and scaffold
 - `.golangci.yml` — from `references/golangci-yml.md`
 - `revive.toml` — from `references/revive-toml.md`
 - `codecov.yml` — from `references/codecov-yml.md`
-- Check tool installation: just, golangci-lint, revive, gremlins, gosec, govulncheck, deadcode
+- Check tool installation: just, golangci-lint, revive, gosec, govulncheck, deadcode
 
 **Java:** Suggest verification setup:
 - Build tool: Maven (`mvn verify`) or Gradle
 - Linting: SpotBugs, Checkstyle, PMD
-- Mutation: PIT (pitest)
 - Security: OWASP dependency-check
 - Coverage: JaCoCo (>= 80%)
 
 **TypeScript:** Suggest verification setup:
 - Build tool: package.json scripts
 - Linting: ESLint with strict config
-- Mutation: Stryker
 - Security: npm audit, eslint-plugin-security
 - Coverage: vitest --coverage (>= 80%)
 

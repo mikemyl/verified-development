@@ -52,10 +52,6 @@ Check for each verification layer:
 - [ ] Patch coverage configured
 - [ ] CI coverage gates (codecov.yml, etc.)
 
-**Mutation testing:**
-- [ ] Mutation tool configured (gremlins, Stryker, pitest)
-- [ ] Threshold set (target: >=60%)
-
 **Security:**
 - [ ] Security scanner configured (gosec, eslint-plugin-security, etc.)
 - [ ] Dependency vulnerability checker (govulncheck, npm audit, etc.)
@@ -97,7 +93,6 @@ Write the report to `.verified/assessment.md`:
 | Linting | {present/partial/missing} | {rules count, thresholds} |
 | Testing | {present/partial/missing} | {flags, patterns} |
 | Coverage | {present/partial/missing} | {threshold, CI gates} |
-| Mutation | {present/partial/missing} | {tool, threshold} |
 | Security | {present/partial/missing} | {scanners} |
 | Dead code | {present/partial/missing} | {detector} |
 | Specifications | {present/partial/missing} | {spec format} |

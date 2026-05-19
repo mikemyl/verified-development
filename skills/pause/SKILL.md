@@ -26,7 +26,7 @@ If there is no plan.md (e.g. mid-`specify` or mid-`ui-spec`), use the phase's ex
 - **specify**: `["draft-problem", "draft-scenarios", "draft-requirements", "review-with-user"]`
 - **ui-spec**: `["brand", "design-system", "screens", "competitive-research"]`
 - **plan**: `["task-decomposition", "ordering", "test-first-sequencing"]`
-- **verify**: `["lint", "test", "coverage", "mutation", "security", "dead-code", "build"]`
+- **verify**: `["lint", "test", "coverage", "security", "dead-code", "build"]`
 - **review**: `["spec-compliance", "quality-agents", "fix-loop"]`
 
 Mark each as completed/remaining based on what artifacts exist and what the user has actually done so far.
@@ -34,7 +34,7 @@ Mark each as completed/remaining based on what artifacts exist and what the user
 ### 3. Capture decisions and blockers
 
 From the recent conversation, identify:
-- **Decisions made mid-phase** that are NOT yet captured in spec.md/plan.md/code (e.g. "decided to skip mutation testing for this feature"). One line each.
+- **Decisions made mid-phase** that are NOT yet captured in spec.md/plan.md/code (e.g. "decided to defer the rate-limit edge case to a follow-up feature"). One line each.
 - **Blockers** — anything preventing the next task. For each: `severity: blocking` (must be addressed before resuming) or `severity: advisory` (FYI for the resuming agent).
 
 Be honest — if there are no blockers, say so. Do not invent them.

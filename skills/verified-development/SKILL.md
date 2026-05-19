@@ -11,8 +11,8 @@ A specification-first development methodology with layered verification gates an
 ## Core Principles
 
 1. **Acceptance scenarios before implementation** - Given/When/Then defined before any code is written
-2. **Layered verification** - lint, test, coverage, mutation, security, dead code — all must pass
-3. **Numeric thresholds** - coverage >=80%, mutation >=60%, complexity <=10 — no exceptions
+2. **Layered verification** - lint, test, coverage, security, dead code — all must pass
+3. **Numeric thresholds** - coverage >=80%, complexity <=10 — no exceptions
 4. **Single verify command** - the project's verify command runs everything; all must pass, no warnings tolerated
 5. **No tautological tests** - tests encode expected outputs, never reimplement function logic
 6. **No vaporware** - every package imported by non-test code, every table touched by DML
@@ -67,7 +67,7 @@ For each task:
 
 Rules:
 - Never write production code without a failing test
-- Table-driven tests with boundary values that kill mutants
+- Table-driven tests with boundary values on every branch and limit
 - Property-based tests for invariants (e.g., "result is never negative")
 - Atomic commits per task (independently revertable)
 - Verification evidence required: paste actual test output before claiming done
@@ -77,7 +77,7 @@ Rules:
 Run the mechanical verification pipeline.
 
 - Execute the project's verify command — the single pass/fail gate
-- All layers must pass: lint, test, coverage, mutation, security, dead code, build
+- All layers must pass: lint, test, coverage, security, dead code, build
 - All thresholds must be met (no "close enough")
 - Fix any failures before proceeding
 
@@ -147,7 +147,6 @@ last_activity: {YYYY-MM-DD - what happened}
   "language": "go",
   "thresholds": {
     "coverage": 80,
-    "mutation": 60,
     "cyclomatic_complexity": 10,
     "cognitive_complexity": 15
   },
