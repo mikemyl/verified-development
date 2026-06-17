@@ -68,6 +68,21 @@ Verify wiring is tested:
 - Every database table has DML in non-test code
 - No noop interface implementations without real ones
 
+### 7. Farley Score (test-quality signal — non-blocking)
+
+When this change introduces new test files or substantially rewrites existing ones (or
+the user explicitly asks to "score my tests"), compute a **Farley Score** for the
+affected tests using Dave Farley's 8 properties and the weighted formula defined in
+`skills/test-design-reviewer/SKILL.md` (the single source of truth for the rubric):
+Understandable, Maintainable, Repeatable, Atomic, Necessary, Granular, Fast, First —
+each scored 1–10, combined as
+`(U×1.5 + M×1.5 + R×1.25 + A×1.0 + N×1.0 + G×1.0 + F×0.75 + T×1.0) / 9`.
+
+This is an **informational signal only**. It NEVER changes the PASS/WARN/FAIL status —
+that comes solely from the error/warning findings above. A high Farley Score with weak
+assertions is still a warning; report both ("high Farley + weak assertions = brittle
+confidence"). Skip the score entirely for changes that don't touch tests — don't invent one.
+
 ## Output Format
 
 ```markdown
@@ -89,6 +104,11 @@ Verify wiring is tested:
 - Missing property tests: {count}
 - Error paths untested: {count}
 - Vaporware detected: {yes/no}
+
+## Farley Score (only if tests were added/rewritten)
+- Score: {X.X}/10 — {Exemplary | Excellent | Good | Fair | Poor | Critical}
+- Weakest properties: {e.g. Maintainable 4/10, Repeatable 5/10}
+- Non-blocking signal — does NOT affect the Status above.
 ```
 
 ## Rules
@@ -98,3 +118,4 @@ Verify wiring is tested:
 - `suggestion` severity: missing property tests, structure improvements — nice to have
 - Read the IMPLEMENTATION to identify conditionals, then check if tests cover them
 - Don't flag test helpers or fixtures as "untested code"
+- Farley Score (criterion 7) is non-blocking: it informs, it never gates. PASS/WARN/FAIL comes from error/warning findings only. Compute it only when tests were added or rewritten.

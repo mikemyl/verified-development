@@ -70,18 +70,30 @@ If starting fresh:
 
 This keeps your context clean for orchestration decisions while executors get fresh context for each wave of work.
 
-#### Wave Analysis
+#### Wave Analysis (deterministic)
 
-Read plan.md and group tasks into waves based on dependencies:
+Do NOT eyeball the waves. Compute them with the same engine `/plan` used, so the
+schedule is identical and auditable:
 
-```
-Wave 1: T001, T002, T005 [P] — no dependencies, run in parallel
-Wave 2: T003 (depends on T001), T004 (depends on T001-T003) — sequential
-Wave 3: T006-T009 [P] — independent, run in parallel
-...
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/waves.js compute .verified/features/{feature-name}/plan.md
 ```
 
-Tasks marked `[P]` or in the same plan phase with no `(depends on)` can be parallelized.
+The `plan-waves/v1` JSON gives you `waves` (each inner array is one wave that runs
+concurrently), per-task `files`/`depends_on`, `collisions`, and `undeclared`. Dispatch
+wave by wave, in order.
+
+**Collision gate — non-negotiable.** Before dispatching a wave concurrently:
+- Engine exits 2 (cycle / unknown ref / duplicate id) → STOP. The plan is malformed;
+  tell the user to `/update-plan`.
+- `collisions` lists any pair in this wave → do NOT run those two tasks in parallel.
+  Run the wave sequentially, or group the colliding tasks into a single executor.
+- A wave member is in `undeclared` (no declared file surface) → you cannot prove it is
+  independent. Group it conservatively or run it sequentially; never fan it out blind.
+
+Only same-wave tasks with disjoint, declared file surfaces go to separate parallel
+executors. Completed (`[x]`) tasks are skipped — use handoff.json `remaining_tasks`
+to know what's left, but take the wave ORDER from the engine.
 
 #### Spawning Executors
 

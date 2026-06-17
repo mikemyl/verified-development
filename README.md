@@ -262,6 +262,18 @@ verified-development/
 │   ├── progress/                          # /progress — show workflow status
 │   ├── session-report/                    # /session-report — work summary and outcomes
 │   └── install-hooks/                     # /install-hooks — project-specific enforcement hooks
+│   │
+│   │   # ── TypeScript / frontend arm ──
+│   ├── typescript-strict/                 # Strict-mode types, schema-first, branded types
+│   ├── functional/                        # Immutability, pure functions, composition
+│   ├── domain-driven-design/              # DDD patterns (value objects, aggregates, events)
+│   ├── hexagonal-architecture/            # Ports & adapters, dependency inversion
+│   ├── testing/                           # Behavior-driven test patterns & factories
+│   ├── front-end-testing/                 # Vitest Browser Mode, DOM Testing Library
+│   ├── react-testing/                     # React component/hook/form testing
+│   ├── test-design-reviewer/              # Test quality via Dave Farley's 8 properties
+│   ├── mutation-testing/                  # Stryker setup & surviving-mutant analysis
+│   └── ci-debugging/                      # Systematic CI/CD failure diagnosis
 ├── agents/
 │   ├── spec-compliance-review.md          # Stage 1: spec compliance gate
 │   ├── test-review.md                     # Test quality & boundary coverage
@@ -275,7 +287,9 @@ verified-development/
 │   ├── domain-review.md                   # Abstraction leaks & boundaries
 │   ├── refactoring-review.md              # Post-GREEN opportunities
 │   ├── a11y-review.md                     # WCAG 2.1 AA accessibility
-│   └── adr.md                             # Architecture decision records
+│   ├── adr.md                             # Architecture decision records
+│   ├── docs-guardian.md                   # World-class documentation authoring/review
+│   └── use-case-data-patterns.md          # Map use cases to data-access patterns
 └── hooks/
     ├── hooks.json                         # Setup + PostToolUse hooks
     ├── setup-statusline.sh                # Auto-install statusline on plugin enable

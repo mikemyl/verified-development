@@ -4,14 +4,14 @@
     "name": "Mike Mylonakis"
   },
   "metadata": {
-    "description": "Specification-first verified development with ATDD, layered quality gates, and review agents"
+    "description": "Specification-first verified development with ATDD, layered quality gates, and review agents. Polyglot: Go and TypeScript/React."
   },
   "plugins": [
     {
       "name": "verified-development",
       "source": "./",
-      "description": "Specification-first development workflow with ATDD, layered verification gates, and two-stage review agents. Enforces TDD, mechanical quality gates (lint, test, coverage, security, dead code), and AI-powered code review. Language-aware, starting with Go.",
-      "version": "1.4.0",
+      "description": "Specification-first development workflow with ATDD, layered verification gates, and two-stage review agents. Enforces TDD, mechanical quality gates (lint, test, coverage, security, dead code), and AI-powered code review. Language-aware: Go, plus TypeScript/React (strict typing, functional patterns, DDD, hexagonal architecture, front-end testing).",
+      "version": "1.6.0",
       "author": {
         "name": "Mike Mylonakis"
       },

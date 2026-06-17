@@ -20,9 +20,9 @@ Every phase skill is interruptible at any tool-use boundary.
 Two stress-test gates inside the workflow.
 
 - **Spec-time challenge (in `/specify`)** — Socratic Q&A interrogating the *problem* before `spec.md` is written. Six categories: ambiguity, surface area, alternatives, edge cases, dependencies, out-of-scope. Max 8 questions, one at a time. Audit trail at `.verified/features/<feature>/discussion.md` (preserves rejected options, not just chosen). Opt out with `--no-challenge` or `.verified/config.json` `workflows.challenge: false`.
-- **Plan-time critics (in `/plan`)** — four agents (`plan-critic-acceptance`, `plan-critic-design`, `plan-critic-strategic`, plus `plan-critic-ux` only when `ui-spec.md` exists) dispatched in parallel before user approval. Severity policy: `error` auto-fixes the plan, `warning` surfaces to user (max 10 visible), `suggestion` is recorded only. Audit trail at `.verified/features/<feature>/concerns.md`. Opt out with `--no-critics` or `workflows.plan_critics: false`.
+- **Plan-time critics (in `/plan`)** — up to five agents (`plan-critic-acceptance`, `plan-critic-design`, `plan-critic-strategic` always; `plan-critic-ux` only when `ui-spec.md` exists; `plan-critic-parallelization` only when the wave engine reports `parallel: true`) dispatched in parallel before user approval. Severity policy: `error` auto-fixes the plan, `warning` surfaces to user (max 10 visible), `suggestion` is recorded only. Audit trail at `.verified/features/<feature>/concerns.md`. Opt out with `--no-critics` or `workflows.plan_critics: false`.
 
-The four critics share a finding schema (`{critic, severity, description, tied_to, recommendation?}`) and the same severity rubric — defined once in `skills/specify/references/challenge.md` and re-used verbatim in each critic agent. If you change the rubric, update all five files (`tests/adversarial-critique.test.cjs` will catch drift).
+The five critics share a finding schema (`{critic, severity, description, tied_to, recommendation?}`) and the same severity rubric — defined once in `skills/specify/references/challenge.md` and re-used verbatim in each critic agent. If you change the rubric, update all six files (the five critics + `challenge.md`); `tests/adversarial-critique.test.cjs` will catch drift.
 
 ### Process retro (v1.3.1+)
 
@@ -32,6 +32,24 @@ The four critics share a finding schema (`{critic, severity, description, tied_t
 - `.verified/learnings.md` — append-only digest, one line per feature, format `- YYYY-MM-DD **feature** — top learning`. Cross-feature trend signal — grep this to spot patterns.
 
 Process retro is for "what did we learn about HOW we worked on this feature." Code-level findings (gotchas, conventions, ADRs, dependencies) stay in their existing destinations (`.verified/codebase/`, `.verified/decisions/`). The skill explicitly documents the line; the prompt-anchor test enforces it survives future edits.
+
+### Deterministic wave engine (v1.6.0+)
+
+`/implement` no longer eyeballs `[P]` markers to decide what runs in parallel. `hooks/lib/waves.js` (Node, no deps; library + CLI, mirrors `handoff.js`) parses the plan and does ALL the graph math, emitting a versioned JSON contract.
+
+- **Task grammar** — every plan task declares a machine-readable surface: `(files: a, b)` (the files it creates/modifies) plus optional `(depends on T001)` / `(depends on T001-T003)`. The `[P]` marker is now a human hint only; the engine is authoritative.
+- **Contract `plan-waves/v1`** — `waves` (each inner array runs concurrently via separate executors), per-task `depends_on`/`files`/`wave`/`status`, `collisions` (same-wave tasks declaring the same file), `undeclared` (parallel-wave tasks with no declared surface), `parallel`. Algorithm: Kahn level-layering + pairwise file-set intersection.
+- **Exit codes** — `0` ok, `1` usage, `2` malformed plan (cycle / unknown dep / duplicate id, with the offender named). `/plan` (step 8a) computes + renders a `## Waves` table and refuses to present a plan that exits 2 or has collisions; `/implement` re-runs the same engine and gates each wave on `collisions`/`undeclared` before fanning out.
+- **`plan-critic-parallelization`** — the 5th plan critic, fed the engine's `collisions` array. The script proves mechanical file overlap; this critic catches the semantic coupling a script can't (a same-wave task B that consumes an interface task A introduces). Spawned only when `parallel: true`.
+- Tests: `tests/waves.test.cjs` (engine unit tests + skill-wiring anchors). The engine is fully unit-tested model-free — that is the point of moving the schedule out of the LLM.
+
+### Farley Score (v1.6.0+)
+
+A non-blocking test-quality signal, filling the gap left by removing mutation testing as a verification requirement.
+
+- **Single source of truth** — the rubric (Dave Farley's 8 properties, weighted `(U×1.5 + M×1.5 + R×1.25 + A×1.0 + N×1.0 + G×1.0 + F×0.75 + T×1.0) / 9`, score bands) lives in `skills/test-design-reviewer/SKILL.md`. Do not duplicate it; reference it.
+- **Wiring** — the `test-review` agent computes a Farley Score when a change adds or rewrites tests; `/review` surfaces it in the report and `/verify` points at it. It is **informational only** — PASS/WARN/FAIL comes from error/warning findings, never from the score. "High Farley + weak assertions" is still a warning.
+- Tests: `tests/farley-score.test.cjs` locks the formula (a pure-function reimplementation must equal the published formula string — prose and math can't drift) and asserts the non-blocking wiring.
 
 ### Hook output envelopes
 

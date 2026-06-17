@@ -36,6 +36,7 @@ const CRITICS = [
   'plan-critic-design',
   'plan-critic-ux',
   'plan-critic-strategic',
+  'plan-critic-parallelization',
 ];
 
 const RUBRIC_ANCHORS = [
@@ -118,6 +119,22 @@ module.exports = [
     },
   },
 
+  {
+    name: 'parallelization critic documents conditional spawn (only when waves are parallel)',
+    fn: () => {
+      const content = readAgent('plan-critic-parallelization');
+      assert.ok(
+        /spawned only when.*parallel/is.test(content) ||
+          /only.*spawn.*parallel/is.test(content),
+        'plan-critic-parallelization must document that it only runs on parallel waves',
+      );
+      assert.ok(
+        content.includes('parallel: true'),
+        'plan-critic-parallelization must reference the parallel:true signal',
+      );
+    },
+  },
+
   // ----- /specify skill anchors ------------------------------------------
   {
     name: '/specify references challenge.md and discussion.md',
@@ -170,7 +187,7 @@ module.exports = [
 
   // ----- /plan skill anchors ---------------------------------------------
   {
-    name: '/plan references all four critics by name',
+    name: '/plan references all five critics by name',
     fn: () => {
       const content = readSkill('plan');
       for (const critic of CRITICS) {
@@ -200,6 +217,28 @@ module.exports = [
         /ui-spec\.md.*exists/i.test(content) || /exists.*ui-spec/i.test(content),
         '/plan must condition UX critic on ui-spec.md',
       );
+    },
+  },
+  {
+    name: '/plan documents the conditional parallelization spawn rule',
+    fn: () => {
+      const content = readSkill('plan');
+      assert.ok(
+        content.includes('plan-critic-parallelization'),
+        '/plan must reference the parallelization critic',
+      );
+      assert.ok(
+        /parallel.*true/i.test(content) && /(only|skip).*parallel/is.test(content),
+        '/plan must condition the parallelization critic on parallel waves',
+      );
+    },
+  },
+  {
+    name: '/plan computes execution waves via the deterministic engine',
+    fn: () => {
+      const content = readSkill('plan');
+      assert.ok(content.includes('hooks/lib/waves.js'), '/plan must call the wave engine');
+      assert.ok(/plan-waves\/v1|## Waves/i.test(content), '/plan must render the wave schedule');
     },
   },
 

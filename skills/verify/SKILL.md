@@ -34,6 +34,9 @@ This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry,
 4. If all targets pass:
    - Report the results summary (coverage %, any warnings)
    - Confirm the codebase is verified
+   - Test-quality signal (non-blocking): the mechanical gate does not score test
+     quality. `/review` reports a **Farley Score** (Dave Farley's 8 properties) for
+     changed tests — point the user there for a test-quality read. Never gate /verify on it.
    - Clear the handoff: `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/handoff.js clear .verified/features/<feature>`
    - Check `.verified/state.md` — if a feature is in the implement or verify phase:
      ```

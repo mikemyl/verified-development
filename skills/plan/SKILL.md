@@ -76,31 +76,36 @@ Write `.verified/features/{feature-name}/plan.md`:
 ## Tasks
 
 ### Phase 1: Setup
-- [ ] T001 [P] Create package structure at {path}
-- [ ] T002 [P] Define domain types in {path}
+- [ ] T001 [P] Create package structure (files: `{path}`)
+- [ ] T002 [P] Define domain types (files: `{path}`)
 
 ### Phase 2: Core Logic ({Scenario Name})
-- [ ] T003 Write test: {scenario description} in {test-file-path}
-- [ ] T004 Implement: {what} in {file-path} (depends on T003)
-- [ ] T005 Write test: {edge case} in {test-file-path}
-- [ ] T006 Handle edge case in {file-path} (depends on T005)
+- [ ] T003 Write test: {scenario description} (files: `{test-file-path}`)
+- [ ] T004 Implement: {what} (files: `{file-path}`) (depends on T003)
+- [ ] T005 Write test: {edge case} (files: `{test-file-path}`)
+- [ ] T006 Handle edge case (files: `{file-path}`) (depends on T005)
 
 ### Phase 3: {Next Scenario}
-- [ ] T007 Write test: {scenario} in {test-file-path}
-- [ ] T008 Implement: {what} in {file-path} (depends on T007)
+- [ ] T007 Write test: {scenario} (files: `{test-file-path}`)
+- [ ] T008 Implement: {what} (files: `{file-path}`) (depends on T007)
 
 ### Phase 4: Integration
-- [ ] T009 Write integration test: {what} in {test-file-path}
-- [ ] T010 Wire up {component} in {file-path}
+- [ ] T009 Write integration test: {what} (files: `{test-file-path}`)
+- [ ] T010 Wire up {component} (files: `{file-path}`) (depends on T008)
 
 ### Phase 5: UI Components (if applicable)
-- [ ] T011 [P] Create {Component} at {path}
-- [ ] T012 [P] Create {Component} at {path}
-- [ ] T013 Wire up routing/pages in {path}
+- [ ] T011 [P] Create {Component} (files: `{path}`)
+- [ ] T012 [P] Create {Component} (files: `{path}`)
+- [ ] T013 Wire up routing/pages (files: `{path}`) (depends on T011, T012)
 
 ## Task Legend
-- [P] = Parallelizable (no dependencies on other tasks in same phase)
-- (depends on TXXX) = Must complete after specified task
+- `(files: a, b)` = the file surface this task creates/modifies. REQUIRED — the
+  wave engine uses it to detect collisions between same-wave tasks. Declare every
+  file the task touches; omitting a shared file hides a real collision.
+- `(depends on TXXX)` or `(depends on T001-T003)` = must complete after those tasks.
+- `[P]` = human hint that a task is parallelizable. The deterministic wave engine
+  (`hooks/lib/waves.js`, step 8a) is authoritative — it derives the real waves from
+  `depends on` + `files`, not from `[P]`.
 
 ## Verification
 - Run the project's verify command after all tasks complete
@@ -118,6 +123,11 @@ Every task must:
 - **Have clear done criteria** — you know when it's complete
 - **Follow test-first order** — test task always before implementation task
 - **Reference a scenario** — traces back to spec.md
+- **Declare its file surface** — end the task with `(files: path1, path2)` listing
+  every file it creates or modifies, plus `(depends on T0XX)` for ordering. Both
+  trailers are machine-readable: the wave engine (step 8a) parses them to compute the
+  parallel schedule and detect file collisions between same-wave tasks. A task with no
+  `(files: …)` cannot be proven independent and will not be safely parallelized.
 
 Task phases should be ordered so:
 1. Setup and types first
@@ -141,9 +151,35 @@ Verify the plan:
 - Dependencies are explicit and acyclic
 - No task is too large (if it needs multiple commits, split it)
 
-### 8a. Plan Critics — Plan-Time Stress Test (default on)
+### 8a. Compute Execution Waves (deterministic)
 
-Before presenting the plan to the user, dispatch four critic agents in parallel to stress-test it. Skip if `--no-critics` was passed or `.verified/config.json` has `"workflows": { "plan_critics": false }`.
+Before critics or approval, compute the parallel execution schedule from the plan's
+machine-readable metadata. This is deterministic — a script does the graph math, you
+do not eyeball it:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/waves.js compute .verified/features/{feature-name}/plan.md
+```
+
+This emits a `plan-waves/v1` JSON contract: `waves` (each inner array runs
+concurrently), per-task `depends_on`/`files`/`wave`, `collisions` (same-wave tasks
+that touch the same file), `undeclared` (parallel-wave tasks with no declared file
+surface), and `parallel`.
+
+Handle the result:
+- **Exit code 2 (malformed plan)** — a dependency cycle, unknown task reference, or
+  duplicate id. The message names the offender. FIX plan.md and recompute before
+  proceeding. Do not present a plan that doesn't compute.
+- **`collisions` non-empty** — two same-wave tasks declare the same file. Re-draft so
+  they're ordered (`depends on`) or split the file surface, then recompute. Treat like
+  a critic `error` (auto-resolve, record in concerns.md).
+- **Otherwise** — render the schedule into plan.md under a `## Waves` section: a short
+  table of `Wave N → T…, T…` and (optionally) a Mermaid DAG. Render from the JSON;
+  never hand-author the waves. `/implement` re-runs this same script to dispatch.
+
+### 8b. Plan Critics — Plan-Time Stress Test (default on)
+
+Before presenting the plan to the user, dispatch the critic agents in parallel to stress-test it. Skip if `--no-critics` was passed or `.verified/config.json` has `"workflows": { "plan_critics": false }`.
 
 #### Which critics to spawn
 
@@ -152,10 +188,11 @@ Always spawn:
 - `verified-development:plan-critic-design` — architecture smells, hidden decisions, missing ADRs, abstraction drift
 - `verified-development:plan-critic-strategic` — scope, priorities, dependency cycles, sizing, sequencing
 
-Conditionally spawn (only if `.verified/features/{feature-name}/ui-spec.md` exists):
-- `verified-development:plan-critic-ux` — UI/UX coverage
+Conditionally spawn:
+- `verified-development:plan-critic-ux` — UI/UX coverage. ONLY if `.verified/features/{feature-name}/ui-spec.md` exists. If it does not exist, do NOT spawn it — record `ux: skipped (no ui-spec.md)` in concerns.md.
+- `verified-development:plan-critic-parallelization` — are same-wave tasks truly independent? ONLY if step 8a reported `parallel: true` (at least one wave has ≥2 tasks). Pass it the wave engine JSON from step 8a. If the plan is fully sequential, do NOT spawn it — record `parallelization: skipped (no parallel waves)` in concerns.md.
 
-If `ui-spec.md` does not exist, do NOT spawn the UX critic — record `ux: skipped (no ui-spec.md)` in concerns.md and proceed with the other three.
+A fully sequential plan with no ui-spec runs three critics; a parallel UI plan runs all five.
 
 #### How to spawn
 

@@ -80,6 +80,8 @@ Select agents based on what changed. Run applicable agents in parallel:
 
 When in doubt about applicability, include the agent — false positives are cheap, missed issues aren't.
 
+When tests were added or rewritten, `test-review` also emits a **Farley Score** (Dave Farley's 8 properties; rubric in `skills/test-design-reviewer/SKILL.md`). It is a **non-blocking** test-quality signal — surface it in the report, but it never gates merge.
+
 ### 4. Aggregate Results
 
 Combine findings from all agents into a unified review report:
@@ -115,6 +117,7 @@ Combine findings from all agents into a unified review report:
 - Warnings: {count}
 - Suggestions: {count}
 - Agents run: {list}
+- Farley Score (test quality): {X.X/10 — rating, or "n/a — no tests changed"} — non-blocking signal
 ```
 
 Save the report to `.verified/features/{feature-name}/review.md`.
@@ -263,6 +266,7 @@ Review complete for: {feature-name}
     Errors:      0
     Warnings:    2 (fixed)
     Suggestions: 3
+    Farley Score: 8.4/10 (Excellent) — non-blocking test-quality signal
 
   Codebase docs: {updated ARCHITECTURE.md, STACK.md / no changes needed}
   Learnings captured: {N} memories, {N} ADRs
