@@ -1,27 +1,19 @@
 # verified-development
 
-A Claude Code plugin for specification-first, verified development with ATDD, layered quality gates, and review agents. Language-aware, with Go as the first supported stack.
+A Claude Code plugin for specification-first, verified development: ATDD, layered mechanical gates, adversarial critique, and a panel of review agents. Language-aware, with Go as the first fully-supported stack and a TypeScript/frontend arm in progress.
 
-## Problem
+## Why
 
-AI agents produce code faster than humans can review. Without structure, several things break down:
+AI agents produce code faster than humans can review it. Without structure, the failure modes compound:
 
-- **Verification gap** — untested code, weak assertions, dead code, security gaps compound faster than review capacity scales
-- **Context rot** — LLM output quality degrades as context windows fill with accumulated conversation; without fresh context management, later work is worse than earlier work
-- **State loss** — work-in-progress disappears between sessions; decisions made yesterday are re-debated today; there's no persistent memory of what was built, why, and what's next
-- **Specification drift** — without specs as source of truth, the implementation diverges from intent; features get built that nobody asked for while requirements get missed
-- **No mechanical enforcement** — coding standards exist as suggestions the LLM can ignore; nothing prevents committing unverified code
+- **Verification gap** — untested code, weak assertions, dead code, and security holes accumulate faster than review capacity scales.
+- **Specification drift** — with no spec as source of truth, implementations diverge from intent; unrequested features get built while requirements get missed.
+- **State loss** — work-in-progress vanishes between sessions; yesterday's decisions get re-debated today.
+- **No mechanical enforcement** — standards live as suggestions the LLM can ignore; nothing stops unverified code from being committed.
 
-## Solution
+The plugin answers each with an enforced workflow: specs define what to build, TDD drives how, mechanical gates verify, agents review, and a human signs off on behavior — not mechanical compliance.
 
-A complete development workflow enforced via Claude Code plugin:
-- **Specifications** define what to build before any code is written
-- **TDD** drives implementation through failing tests
-- **Mechanical gates** verify lint, coverage, security, dead code
-- **Review agents** perform two-stage code review (spec-compliance, then quality)
-- **Human review** as the final gate, focused on behavior — not mechanical compliance
-
-## The 5-Phase Workflow
+## The workflow
 
 ```
 SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
@@ -29,288 +21,69 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
                                     gates        quality review
 ```
 
-1. **Specify** — Acceptance scenarios (Given/When/Then), requirements, success criteria
-2. **Plan** — Ordered tasks with file paths, test-first ordering, parallelization markers
-3. **Implement** — RED-GREEN-REFACTOR per task, atomic commits, verification evidence
-4. **Verify** — `just verify` runs all gates: lint, test, coverage, security, dead code, build
-5. **Review** — Stage 1: spec-compliance (right thing?), Stage 2: quality agents (right way?), then sync codebase docs
+1. **`/specify`** — acceptance scenarios (Given/When/Then), requirements, success criteria. An adversarial challenge interrogates the problem first.
+2. **`/plan`** — ordered, test-first tasks with file paths. A deterministic engine schedules parallel work; up to five critics stress-test the plan.
+3. **`/implement`** — RED-GREEN-REFACTOR per task, atomic commits, concurrent execution in waves.
+4. **`/verify`** — one command runs every mechanical gate: lint, test, coverage, security, dead code, build.
+5. **`/review`** — spec-compliance gate, then targeted quality agents, then doc sync + process retro.
 
-For UI features, add `/ui-spec` between Specify and Plan for design contracts, brand identity, and competitive research.
+**Code is never committed before `/verify` and `/review` both pass.** That is the central rule.
 
-For existing projects, start with `/assess` (gap analysis) and `/map` (codebase understanding).
+→ Full detail, variants, and the pause/continue model: **[docs/workflow.md](docs/workflow.md)**
 
-For small changes (bug fixes, tweaks), use `/quick` — compressed workflow with TDD + verify + proportional review.
+## Documentation
+
+| Topic | What's covered |
+|-------|----------------|
+| **[Workflow](docs/workflow.md)** | The five phases, `/quick` / `/assess` / `/map` / `/ui-spec`, interruptible pause & continue |
+| **[Planning & the wave engine](docs/planning.md)** | Task grammar, deterministic parallelization, collision detection |
+| **[Review](docs/reviews.md)** | Two-stage review, every review agent, the Farley Score, process retro |
+| **[Adversarial critique](docs/adversarial-critique.md)** | Spec-time challenge and the five plan critics |
+| **[Go stack](docs/go-stack.md)** | Toolchain, verification pipeline, thresholds |
+| **[Configuration & layout](docs/configuration.md)** | `config.json` toggles, `.verified/` structure, plugin layout, contributing |
 
 ## Commands
 
-| Command | Phase | Purpose |
-|---------|-------|---------|
-| `/init` | Setup | Scaffold project configs, Justfile, linter settings, `.verified/` directory |
-| `/assess` | Setup | Analyze existing codebase against verification standards, produce gap report |
-| `/map` | Setup | Deep codebase analysis, produce living context docs in `.verified/codebase/` |
-| `/specify <feature>` | Phase 1 | Create feature spec with acceptance scenarios and requirements |
-| `/ui-spec <feature>` | Phase 1.5 | Create UI design contract with brand, screens, components (optional) |
-| `/plan <feature>` | Phase 2 | Create ordered task list with file paths and test-first sequencing |
-| `/implement <feature>` | Phase 3 | Execute plan with strict TDD (RED-GREEN-REFACTOR per task) |
-| `/verify` | Phase 4 | Run `just verify` — all mechanical gates must pass |
-| `/review` | Phase 5 | Two-stage review: spec-compliance, then targeted quality agents |
-| `/quick "description"` | All-in-one | Compressed workflow for small changes with proportional review |
-| `/progress` | Any time | Show current status and suggest next action |
-| `/update-plan` | Any phase | Revise spec or plan when implementation reveals changes needed |
-| `/session-report` | End of session | Summarize work, outcomes, and carry-forward context |
-| `/install-hooks` | Setup | Install project-specific enforcement hooks (post-write lint, pre-commit gate) |
-
-## Core Principles
-
-- **Acceptance scenarios before implementation** — Given/When/Then defined before code
-- **Layered verification** — lint, test, coverage, security, dead code — all must pass
-- **Numeric thresholds** — coverage >=80%, complexity <=10
-- **Single verify command** — `just verify` runs everything, no warnings tolerated
-- **No tautological tests** — tests encode expected outputs, never reimplement logic
-- **No vaporware** — every package imported by non-test code, every table touched by DML
-- **Two-stage review** — spec-compliance first, then targeted quality agents
-
-## Project Structure (what gets created in your project)
-
-```
-your-project/
-├── .verified/
-│   ├── project.md                    # Project vision, constraints, tech stack
-│   ├── config.json                   # Thresholds, workflow toggles
-│   ├── state.md                      # Current feature, phase, status
-│   ├── assessment.md                 # Gap analysis (from /assess)
-│   ├── design-system.md              # Brand tokens — colors, typography (from /ui-spec)
-│   ├── codebase/                     # Living project context (from /map)
-│   │   ├── ARCHITECTURE.md
-│   │   ├── CONVENTIONS.md
-│   │   ├── STACK.md
-│   │   ├── STRUCTURE.md
-│   │   ├── TESTING.md
-│   │   ├── INTEGRATIONS.md
-│   │   └── CONCERNS.md
-│   ├── decisions/                    # Architecture Decision Records
-│   │   └── DEC-001-*.md
-│   └── features/
-│       └── {feature-name}/
-│           ├── spec.md               # Acceptance scenarios, requirements
-│           ├── ui-spec.md            # Screen specs, components (optional)
-│           ├── plan.md               # Ordered tasks with file paths
-│           ├── summary.md            # Implementation outcomes
-│           └── review.md             # Review findings
-├── Justfile                          # Verification pipeline targets
-├── .golangci.yml                     # 43 linters configured
-├── revive.toml                       # Complexity and idiom rules
-└── codecov.yml                       # CI coverage gates
-```
-
-Codebase docs are created by `/map` and kept current — the doc-review agent updates them after each feature review.
-
-## Review Agents (13)
-
-Two-stage review: spec-compliance must pass before quality agents run.
-
-| Agent | Model | What It Reviews |
-|-------|-------|----------------|
-| **spec-compliance-review** | sonnet | Stage 1 gate: scenario coverage, requirement satisfaction, scope |
-| test-review | sonnet | Tautological tests, boundary gaps, property tests, test structure |
-| security-review | opus | Injection, auth, data exposure, hardcoded creds, dependencies |
-| complexity-review | haiku | Cyclomatic/cognitive complexity, function length, nesting |
-| error-handling-review | sonnet | Error wrapping, dropped errors, nil returns, error style |
-| concurrency-review | sonnet | Goroutine lifecycle, data races, channel patterns, mutexes |
-| dead-code-review | haiku | Unreachable functions, phantom packages, noop implementations |
-| interface-design-review | haiku | Accept-interfaces-return-structs, consumer-site definition, DI |
-| doc-review | sonnet | README accuracy, comment drift, codebase doc staleness |
-| domain-review | opus | Abstraction leaks, boundary violations, domain language |
-| refactoring-review | sonnet | Post-GREEN opportunities: duplication, naming, extraction |
-| a11y-review | sonnet | WCAG 2.1 AA: contrast, ARIA, keyboard nav, semantic HTML |
-| adr | sonnet | Captures architectural decisions in structured format |
-| executor | opus | Parallel task execution during /implement with TDD and evidence |
-
-## Go Stack (first implementation)
-
-Based on the methodology at https://imti.co/go-ai-verified-development/
-
-### Prerequisites
-
-These tools must be installed:
-
-- [just](https://github.com/casey/just) — command runner
-- [golangci-lint](https://golangci-lint.run) — meta-linter (43 linters enabled)
-- [revive](https://github.com/mgechev/revive) — complexity and idiom rules
-- [gosec](https://github.com/securego/gosec) — security scanner
-- [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) — dependency vulnerabilities
-- [deadcode](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) — unreachable function detector
-
-### Verification Pipeline
-
-| Layer | Tool | What it catches |
-|-------|------|----------------|
-| Linting | revive + golangci-lint (43 linters) | Complexity, concurrency bugs, deprecated APIs |
-| Testing | `go test -race -shuffle=on -count=1` | Data races, test order dependencies |
-| Coverage | go tool cover | Untested code (>=80% project, >=80% patch) |
-| Security | gosec + govulncheck | SQL injection, hardcoded creds, dependency vulns |
-| Dead code | deadcode + ineffassign | Unreachable functions, unused assignments |
-| Build | go build + go mod verify | Compilation and dependency integrity |
-
-### Key Thresholds
-
-| Metric | Threshold |
-|--------|-----------|
-| Test coverage (project + patch) | >= 80% |
-| Cyclomatic complexity | <= 10 |
-| Cognitive complexity | <= 15 |
-| Function length | <= 80 lines, <= 50 statements |
-| Function arguments | <= 5 |
-| Return values | <= 3 |
+| Command | Purpose |
+|---------|---------|
+| `/init` | Scaffold project configs, Justfile, linters, `.verified/` |
+| `/assess` · `/map` | Gap analysis · deep codebase analysis (existing projects) |
+| `/specify` · `/ui-spec` · `/plan` · `/implement` · `/verify` · `/review` | The five-phase workflow (`/ui-spec` is optional, for UI features) |
+| `/quick "<desc>"` | Compressed workflow for small changes |
+| `/pause` · `/continue` | Capture mid-phase state · resume from it |
+| `/progress` · `/update-plan` · `/session-report` | Status · revise spec/plan · session summary |
+| `/install-hooks` | Project-specific enforcement (lint on write, pre-commit gate) |
 
 ## Installation
 
-### From Claude Code marketplace
-
 ```bash
-# Add the marketplace source
 claude plugin marketplace add https://github.com/mikemyl/verified-development
-
-# Install the plugin
 claude plugin install verified-development
 ```
 
-To scope to a single project instead of all projects:
+Scope to a single project with `--scope project` on both commands. To develop against a local clone, see [docs/configuration.md](docs/configuration.md#hacking-on-the-plugin).
 
-```bash
-claude plugin marketplace add --scope project https://github.com/mikemyl/verified-development
-claude plugin install --scope project verified-development
-```
-
-### From a local clone
-
-```bash
-# Add local path as marketplace source
-claude plugin marketplace add /path/to/verified-development
-
-# Install the plugin
-claude plugin install verified-development
-```
-
-### Development setup (testing changes to the plugin itself)
-
-Clone the repo and symlink the component directories into the project's `.claude/`:
-
-```bash
-cd your-project
-ln -s /path/to/verified-development/agents .claude/agents
-ln -s /path/to/verified-development/skills .claude/skills
-ln -s /path/to/verified-development/hooks .claude/hooks
-```
-
-This lets Claude Code load the plugin components while you develop. Changes to the plugin files are picked up on the next Claude Code session.
-
-To clean up:
-```bash
-rm .claude/agents .claude/skills .claude/hooks
-```
-
-### Getting started in a project
+## Getting started
 
 ```bash
 # New project
-/init                          # Scaffold configs, Justfile, .verified/
-/install-hooks                 # Set up enforcement (lint on write, verify on commit)
+/init                  # Scaffold configs, Justfile, .verified/
+/install-hooks         # Enforcement: lint on write, verify on commit
+/specify my-feature    # Start the workflow
 
 # Existing project
-/assess                        # Gap analysis — what verification layers are missing
-/map                           # Deep codebase analysis — produces .verified/codebase/ docs
-/init                          # Scaffold only what's missing
-/install-hooks                 # Set up enforcement
+/assess                # What verification layers are missing
+/map                   # Produce .verified/codebase/ docs
+/init                  # Scaffold only what's missing
 
-# Start working
-/specify my-feature            # Start a new feature
-
-# Resuming work (start of every new session)
-/progress                      # Shows current feature, phase, status, and next step
-/ui-spec 
-/plan 
-/implement 
-/veirfy
-/review
+# Every new session
+/progress              # Current feature, phase, status, next step
 ```
-
-## Plugin Structure
-
-```
-verified-development/
-├── .claude-plugin/
-│   ├── plugin.json                        # Plugin manifest
-│   └── marketplace.json                   # Marketplace metadata
-├── skills/
-│   ├── verified-development/              # Universal workflow & principles
-│   ├── go-verified-development/           # Go toolchain & standards
-│   │   └── references/                    # Justfile, golangci-yml, revive, codecov
-│   ├── specification/                     # How to write specs
-│   ├── tdd-go/                            # Go-specific TDD (Actor-based BDD, testdsl)
-│   ├── ui-specification/                  # UI design contracts
-│   ├── verify/                            # /verify — run verification pipeline
-│   ├── specify/                           # /specify — create feature spec
-│   ├── plan/                              # /plan — create implementation plan
-│   ├── implement/                         # /implement — execute plan with TDD
-│   ├── review/                            # /review — two-stage review agents
-│   ├── assess/                            # /assess — evaluate existing codebase
-│   ├── init-project/                      # /init — scaffold project configs
-│   ├── ui-spec/                           # /ui-spec — create UI design contract
-│   ├── map/                               # /map — analyze codebase, produce context docs
-│   ├── quick/                             # /quick — compressed workflow for small changes
-│   ├── progress/                          # /progress — show workflow status
-│   ├── session-report/                    # /session-report — work summary and outcomes
-│   └── install-hooks/                     # /install-hooks — project-specific enforcement hooks
-│   │
-│   │   # ── TypeScript / frontend arm ──
-│   ├── typescript-strict/                 # Strict-mode types, schema-first, branded types
-│   ├── functional/                        # Immutability, pure functions, composition
-│   ├── domain-driven-design/              # DDD patterns (value objects, aggregates, events)
-│   ├── hexagonal-architecture/            # Ports & adapters, dependency inversion
-│   ├── testing/                           # Behavior-driven test patterns & factories
-│   ├── front-end-testing/                 # Vitest Browser Mode, DOM Testing Library
-│   ├── react-testing/                     # React component/hook/form testing
-│   ├── test-design-reviewer/              # Test quality via Dave Farley's 8 properties
-│   ├── mutation-testing/                  # Stryker setup & surviving-mutant analysis
-│   └── ci-debugging/                      # Systematic CI/CD failure diagnosis
-├── agents/
-│   ├── spec-compliance-review.md          # Stage 1: spec compliance gate
-│   ├── test-review.md                     # Test quality & boundary coverage
-│   ├── security-review.md                 # Vulnerabilities & auth issues
-│   ├── complexity-review.md               # Function complexity thresholds
-│   ├── error-handling-review.md           # Go error patterns
-│   ├── concurrency-review.md              # Goroutine safety
-│   ├── dead-code-review.md                # Unreachable code & vaporware
-│   ├── interface-design-review.md         # Go interface patterns
-│   ├── doc-review.md                      # Documentation accuracy & codebase doc sync
-│   ├── domain-review.md                   # Abstraction leaks & boundaries
-│   ├── refactoring-review.md              # Post-GREEN opportunities
-│   ├── a11y-review.md                     # WCAG 2.1 AA accessibility
-│   ├── adr.md                             # Architecture decision records
-│   ├── docs-guardian.md                   # World-class documentation authoring/review
-│   └── use-case-data-patterns.md          # Map use cases to data-access patterns
-└── hooks/
-    ├── hooks.json                         # Setup + PostToolUse hooks
-    ├── setup-statusline.sh                # Auto-install statusline on plugin enable
-    ├── statusline.js                      # Feature, phase, context % in status bar
-    └── context-monitor.js                 # Warns when context window is filling up
-```
-
-## Future Stacks
-
-The plugin architecture supports multiple languages. Each gets its own skill with toolchain-specific configuration:
-
-- **TypeScript** — eslint, strict mode, vitest
-- **Java** — spotbugs, OWASP dependency-check
-- **Rust** — clippy, cargo-audit
 
 ## Influences
 
-This plugin combines ideas from:
-
 - [imti.co/go-ai-verified-development](https://imti.co/go-ai-verified-development/) — Go verification pipeline, thresholds, CLAUDE.md rules
-- [agentic-dev-team](https://github.com/bdfinst/agentic-dev-team) — Review agents, two-stage review, correction context
-- [get-shit-done](https://github.com/glittercowboy/get-shit-done) — Phase workflow, fresh context per agent, file-based state
-- [spec-kit](https://github.com/github/spec-kit) — Specification-first development, template-driven quality
+- [agentic-dev-team](https://github.com/bdfinst/agentic-dev-team) — review agents, two-stage review, correction context
+- [get-shit-done](https://github.com/glittercowboy/get-shit-done) — phase workflow, fresh context per agent, file-based state
+- [spec-kit](https://github.com/github/spec-kit) — specification-first development, template-driven quality
 - [citypaul/.dotfiles](https://github.com/citypaul/.dotfiles) — TDD, testing patterns, functional patterns
