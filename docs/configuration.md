@@ -14,6 +14,15 @@ Workflow behavior is controlled by `workflows.*` flags:
 
 `challenge` and `plan_critics` can also be turned off per-run with `--no-challenge` / `--no-critics`.
 
+## Teaching the plugin your stack
+
+The plugin does not bundle a toolchain for every language — it stays language-agnostic by learning each repo's mechanics instead of hardcoding them. You teach a repo's test mechanics, idioms, and verify command in one of two places:
+
+- **`.verified/codebase/` docs (the usual path)** — `/map` writes these. `TESTING.md` captures the repo's test framework, assertion style, and `## Test Types` taxonomy; the verify command lives in `config.json` (or a `Justfile`/`Makefile`/`package.json`/`pom.xml` target). This is data, not code — no skill authoring required.
+- **A per-repo skill** — for richer, repo-specific TDD guidance, add a skill in the repo (the bundled `tdd-go` / `go-verified-development` skills are the example to copy).
+
+The executor, `/implement`, and `/quick` resolve idioms by inference, in priority order: `.verified/codebase/TESTING.md` is authoritative when present; else they infer the dominant framework and assertion style from the repo's existing tests; else they fall back to the neutral `testing` skill with no idiom assumptions. The bundled Go support is one filled-in example of this model, not a privileged path — see [docs/go-stack.md](go-stack.md).
+
 ## What `/init` and `/map` create in your project
 
 ```

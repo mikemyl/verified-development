@@ -6,7 +6,7 @@ version: 0.1.0
 
 # React Testing
 
-For general UI testing patterns (queries, events, async, accessibility), load the `front-end-testing` skill. For TDD workflow, load the `tdd` skill. For the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
+For general UI testing patterns (queries, events, async, accessibility), load the `front-end-testing` skill. For TDD workflow, load the `testing` skill. For the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
 
 ## Vitest Browser Mode with React (Preferred)
 
@@ -586,6 +586,6 @@ React-specific checks:
 - [ ] Testing component output, not internal state
 - [ ] Using factory functions, not `beforeEach` render
 - [ ] Using `expect.element()` for auto-retrying assertions (Browser Mode)
-- [ ] Following TDD workflow (see `tdd` skill)
+- [ ] Following TDD workflow (see `testing` skill)
 - [ ] Using general UI testing patterns (see `front-end-testing` skill)
 - [ ] Using test factories for data (see `testing` skill)

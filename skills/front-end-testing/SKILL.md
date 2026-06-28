@@ -6,7 +6,7 @@ version: 0.1.0
 
 # Front-End Testing
 
-For React-specific patterns (components, hooks, context), load the `react-testing` skill. For TDD workflow, load the `tdd` skill. For general testing patterns (factories, public API testing) and the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
+For React-specific patterns (components, hooks, context), load the `react-testing` skill. For TDD workflow, load the `testing` skill. For general testing patterns (factories, public API testing) and the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
 
 ## Vitest Browser Mode (Preferred)
 
@@ -1057,6 +1057,6 @@ Before merging UI tests, verify:
 - [ ] No manual `cleanup()` calls (automatic)
 - [ ] No manual `act()` calls (Browser Mode handles timing)
 - [ ] MSW for API mocking (not fetch/axios mocks)
-- [ ] Following TDD workflow (see `tdd` skill)
+- [ ] Following TDD workflow (see `testing` skill)
 - [ ] Using test factories for data (see `testing` skill)
 - [ ] For React-specific patterns (hooks, context, components), see `react-testing` skill

@@ -59,9 +59,7 @@ If starting fresh:
 ### 4. Execute Tasks — Thin Orchestrator Pattern
 
 **You (the main agent) are the orchestrator. You do NOT write code yourself.** You:
-- Detect the project language and load the appropriate TDD skill:
-  - Go projects (go.mod): load `tdd-go` skill
-  - TypeScript projects (tsconfig.json): load `tdd` skill (citypaul's)
+- Load the neutral `testing` skill, then resolve the repo's test runner and idioms via this priority ladder: (1) `.verified/codebase/TESTING.md` is authoritative when present; (2) else infer the dominant framework and assertion style from the repo's existing test files; (3) else fall back to the neutral `testing` skill with no idiom assumptions and proceed. For Go repos (`go.mod`), additionally apply `tdd-go` as the one bundled language example.
 - Analyze task dependencies
 - Group tasks into waves (independent tasks run in parallel)
 - Spawn `executor` agents to do the actual implementation — tell each executor which TDD skill to follow

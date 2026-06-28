@@ -1,6 +1,6 @@
 # verified-development
 
-A Claude Code plugin for specification-first, verified development: ATDD, layered mechanical gates, adversarial critique, and a panel of review agents. Language-aware: the workflow, the test taxonomy, the craft rubric, and `/test-audit` span Go, TypeScript, Python, and Java; the full mechanical `/verify` toolchain (linters, security, coverage) is wired for Go today, with the other stacks landing.
+A Claude Code plugin for specification-first, verified development: ATDD, layered mechanical gates, adversarial critique, and a panel of review agents. The plugin is language-agnostic: it runs the repo's own verify command and infers each repo's test idioms rather than privileging a language. The bundled Go toolchain and the `/test-audit` adapters (Go · TypeScript · Python · Java) are examples, not the supported set — per-repo mechanics live in `.verified/codebase/` docs or a repo skill.
 
 ## Why
 
@@ -39,7 +39,7 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 | **[Planning & the wave engine](docs/planning.md)** | Task grammar, deterministic parallelization, collision detection |
 | **[Review](docs/reviews.md)** | Two-stage review, every review agent, the Farley Score, process retro |
 | **[Adversarial critique](docs/adversarial-critique.md)** | Spec-time challenge and the five plan critics |
-| **[Go stack](docs/go-stack.md)** | Toolchain, verification pipeline, thresholds |
+| **[Go stack](docs/go-stack.md)** | One example of wiring a stack's verify command — toolchain, pipeline, thresholds |
 | **[Test taxonomy](docs/test-taxonomy.md)** | Test types, tiers, the deterministic test-boundary gate, scenario traceability, and `/test-audit` (Go · TypeScript · Python · Java) |
 | **[Configuration & layout](docs/configuration.md)** | `config.json` toggles, `.verified/` structure, plugin layout, contributing |
 
@@ -75,8 +75,9 @@ Scope to a single project with `--scope project` on both commands. To develop ag
 
 # Existing project
 /assess                # What verification layers are missing
-/map                   # Produce .verified/codebase/ docs
+/map                   # Produce .verified/codebase/ docs + seed the test taxonomy (Test Types + diagrams)
 /init                  # Scaffold only what's missing
+/test-audit <path>     # Triage existing tests against that taxonomy — advisory, read-only (run after /map)
 
 # Every new session
 /progress              # Current feature, phase, status, next step

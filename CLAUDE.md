@@ -73,6 +73,15 @@ Every plan task now declares the *kind* of test it ships, and a deterministic ga
 - **Adding a language** — drop a `hooks/lib/lang/<id>.js` adapter (+ a `tests/lang-<id>.test.cjs`); the loader picks it up by extension. The core, the gate, and the taxonomy are untouched.
 - Tests: `tests/test-corpus.test.cjs` (discovery + classify + analyze), `tests/taxonomy.test.cjs` (optional fields), wiring anchors in `tests/test-audit.test.cjs`.
 
+### Language-agnostic core (v1.9.0+)
+
+The executor no longer hardcodes a language list. It loads the neutral `testing` skill and resolves the repo's test runner and idioms via a **priority ladder**: (1) `.verified/codebase/TESTING.md` is authoritative when present; (2) else infer the dominant framework/assertion style from the repo's existing tests; (3) else fall back to the neutral `testing` skill with no idiom assumptions (never a missing-skill error). Go is retained as the one bundled example — `tdd-go` is applied additionally for `go.mod` repos.
+
+- **Dangling `tdd` reference removed** — the bare `` `tdd` `` skill never existed (the neutral skill is `testing`). Every occurrence across `agents/` and `skills/` was repointed to `testing`, and a drift guard in `tests/language-agnostic-core.test.cjs` fails the build if it reappears.
+- **No-new-per-language-file invariant (SC-004)** — the change adds zero `tdd-<lang>` skills and zero `docs/<lang>-stack.md` files beyond the existing Go example; asserted by the same test file.
+- **Per-repo stack mechanics** live in `.verified/codebase/` (written by `/map`) or a repo skill, not in bundled per-language toolchains — see docs/configuration.md "Teaching the plugin your stack". The executor infers from these.
+- ADR: `.verified/decisions/0002-language-agnostic-executor.md`. Tests: `tests/language-agnostic-core.test.cjs`.
+
 ### Hook output envelopes
 
 Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare `{"additionalContext": "..."}` is silently dropped. All our hooks (`session-start.sh`, `context-monitor.js`) emit:

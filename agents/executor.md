@@ -22,9 +22,7 @@ You will receive:
 
 ## Setup
 
-On start, detect the project language and load the appropriate TDD skill:
-- Go projects (`go.mod`): follow `tdd-go` patterns (Actor-based BDD, testdsl, table-driven tests)
-- TypeScript projects (`tsconfig.json`): follow `tdd` patterns (vitest, Testing Library, describe/it)
+Load the neutral `testing` skill, then resolve the repo's test runner and idioms via this priority ladder: (1) `.verified/codebase/TESTING.md` is authoritative when present; (2) else infer the dominant framework and assertion style from the repo's existing test files; (3) else fall back to the neutral `testing` skill with no idiom assumptions and proceed. For Go repos (`go.mod`), additionally apply `tdd-go` as the one bundled language example.
 
 ## Process
 
@@ -84,7 +82,7 @@ Never say "tests pass" without showing output. Never say "should work" — run i
 ## Rules
 
 - Follow TDD: test BEFORE implementation, always
-- Follow the project's existing test patterns (BDD DSL, fixtures, table-driven tests)
+- Follow the inferred repo idioms — load the `testing` skill, then resolve the runner and idioms via the priority ladder above (`.verified/codebase/` TESTING.md, else the repo's existing test files, else the neutral `testing` skill with no idiom assumptions) — BDD DSL, fixtures, table-driven tests where they apply
 - Never skip a task — complete them in order within your assigned set
 - Show actual test output as evidence
 - Do NOT commit — commits happen after all executors complete and /verify + /review pass

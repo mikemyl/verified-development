@@ -17,7 +17,7 @@ If language argument provided, use it. Otherwise:
 - Check for `Cargo.toml` -> Rust
 - If ambiguous, ask the user
 
-Supported stacks: **Go** (full toolchain scaffolding). For other languages, create `.verified/` structure and config, then provide guidance on what verification tools to set up.
+The default scaffold **does not assume a stack** and works for any language: it creates the `.verified/` structure and config, then captures (or prompts for) the repo's own verify command. Go is the one bundled **example** of a fully-scaffolded toolchain — offered when the repo is Go (see step 6) — not a privileged default. For every other language, the neutral `.verified/` path is the path; document the repo's verification tools in `config.json`.
 
 ### 2. Check for Existing Assessment
 
@@ -77,9 +77,9 @@ Write `.verified/project.md`:
 - Two-stage review before merge
 ```
 
-### 6. Scaffold Language-Specific Configs
+### 6. Offer the Bundled Go Example (when the repo is Go)
 
-Based on the detected language, load the appropriate language skill and scaffold verification toolchain configs.
+This step is **not** automatic privileged behavior — it is the one bundled toolchain example. When the repo is Go, explicitly offer to scaffold the Go verification toolchain configs below. For any other language, skip this step: the neutral `.verified/` + verify-command path already set up above is sufficient; document the repo's own tools in `config.json` instead.
 
 **Go:** Load `go-verified-development` skill. Scaffold (if not already present):
 - `Justfile` — from `references/justfile-template.md`

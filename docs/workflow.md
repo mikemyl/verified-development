@@ -33,7 +33,8 @@ Two-stage review: a spec-compliance gate runs first (did we build the right thin
 |-----------|---------|--------------|
 | UI feature | `/ui-spec <feature>` | Design contract (brand, screens, components) between Specify and Plan |
 | Existing project | `/assess` | Gap analysis against verification standards |
-| Existing project | `/map` | Deep codebase analysis → living docs in `.verified/codebase/` |
+| Existing project | `/map` | Deep codebase analysis → living docs in `.verified/codebase/`, including the repo's `## Test Types` taxonomy (with Mermaid harness diagrams) |
+| Existing tests | `/test-audit <path>` | Triage an existing test corpus against the repo taxonomy, ranked worst-first — advisory, read-only. Needs a taxonomy first (run `/map`) |
 | Small change | `/quick "<description>"` | Compressed workflow — keeps TDD + verify, trims spec/plan ceremony, proportional review |
 | Any time | `/progress` | Show current feature, phase, status, and next action |
 | Mid-phase | `/update-plan` | Revise spec or plan when implementation reveals it was wrong |

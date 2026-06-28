@@ -36,7 +36,7 @@ Quick tasks don't get a feature directory, but interruptibility still applies â€
 
 ### 3. TDD Cycle
 
-Load the appropriate TDD skill (`tdd-go` for Go, `tdd` for TypeScript). Follow RED-GREEN-REFACTOR:
+Load the neutral `testing` skill, then resolve the repo's test runner and idioms via this priority ladder: (1) `.verified/codebase/TESTING.md` is authoritative when present; (2) else infer the dominant framework and assertion style from the repo's existing test files; (3) else fall back to the neutral `testing` skill with no idiom assumptions and proceed. For Go repos (`go.mod`), additionally apply `tdd-go` as the one bundled language example. Follow RED-GREEN-REFACTOR:
 
 **RED:** Write a test that exposes the bug or describes the new behavior.
 Run it using the project's test command. Show the failing output.

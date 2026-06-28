@@ -12,13 +12,13 @@ This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry,
 
 ## Process
 
-1. Detect the project's verify command:
-   - Read `.verified/config.json` for language and custom verify command
-   - If `Justfile` exists with a `verify` target → `just verify`
-   - If `Makefile` exists with a `verify` target → `make verify`
-   - If `package.json` has a `verify` script → `npm run verify`
-   - If `pom.xml` exists → `mvn verify`
-   - If none found, inform the user they need to run `/init` first
+1. Detect the project's verify command. Detection is **language-agnostic** — it runs whatever the repo declares, in priority order: the `.verified/config.json` custom verify command first, else a `Justfile`/`Makefile`/`package.json`/`pom.xml` target (so a repo with multiple manifests resolves via `config.json` and never silently defaults to one language):
+   - Read `.verified/config.json` for language and custom verify command — if present, this wins
+   - Else if `Justfile` exists with a `verify` target → `just verify`
+   - Else if `Makefile` exists with a `verify` target → `make verify`
+   - Else if `package.json` has a `verify` script → `npm run verify`
+   - Else if `pom.xml` exists → `mvn verify`
+   - If none found, guide the user to run `/init` to define a verify command
 
 2. Run the full verification pipeline:
    ```bash
