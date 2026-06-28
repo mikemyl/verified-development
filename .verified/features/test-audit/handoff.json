@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "feature": "test-audit",
+  "phase": "specify",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {
+      "id": "S1",
+      "title": "gather-context"
+    },
+    {
+      "id": "S2",
+      "title": "propose-approaches"
+    },
+    {
+      "id": "S3",
+      "title": "write-spec"
+    },
+    {
+      "id": "S4",
+      "title": "self-review"
+    },
+    {
+      "id": "S5",
+      "title": "present-and-confirm"
+    }
+  ],
+  "git_head": "a0e4789",
+  "timestamp": "2026-06-28T09:04:00Z"
+}
