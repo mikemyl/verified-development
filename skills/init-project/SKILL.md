@@ -102,6 +102,18 @@ Based on the detected language, load the appropriate language skill and scaffold
 
 **Other languages:** Create `.verified/` structure and config. Ask the user what verification tools they use and document them in config.json.
 
+### 6b. Scaffold the Test Taxonomy
+
+Seed a starter `## Test Types` section into `.verified/codebase/TESTING.md` by copying `${CLAUDE_PLUGIN_ROOT}/hooks/lib/test-types-seed.md` (`test-types-seed.md`) — structure preserved.
+
+```bash
+mkdir -p .verified/codebase
+# append the seed's `## Test Types` section to TESTING.md (create if absent)
+cat "${CLAUDE_PLUGIN_ROOT}/hooks/lib/test-types-seed.md" >> .verified/codebase/TESTING.md
+```
+
+This section is the human-inspectable, per-repo test taxonomy. Keep the field syntax exactly as the seed ships it — it stays parse-compatible with `taxonomy.js`. Adapt the *content* (types, boundaries, primitives) as the project grows, or regenerate it later via `/map`. Don't overwrite an existing `## Test Types` section without asking.
+
 ### 7. Verify Tool Installation
 
 Check that required tools for the detected language are installed. Report any missing tools with install instructions.

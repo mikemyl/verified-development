@@ -134,6 +134,8 @@ describe('processPayment', () => {
 
 **Key insight:** When coverage drops, ask **"What business behavior am I not testing?"** not "What line am I missing?"
 
+Exercise behavior through a **sanctioned boundary** — the test types your taxonomy declares (acceptance, dao, etc.) are the sanctioned boundaries; internal/unit tests need explicit sign-off. Coverage is then a consequence of those behavioral tests, not a target chased with internal tests.
+
 ---
 
 ## Don't Extract for Testability

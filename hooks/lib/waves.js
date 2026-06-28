@@ -11,22 +11,27 @@
  * parallel schedule auditable and unit-testable with zero model calls.
  *
  * Task grammar parsed from plan.md (one task per line):
- *   - [ ] T001 [P] <title> (files: `a.go`, `b.go`)
- *   - [ ] T004 Implement X (files: `a.go`) (depends on T003)
- *   - [ ] T010 Wire up (files: `c.go`) (depends on T001-T003, T007)
+ *   - [ ] T001 [P] <title> (files: `a.go`, `b.go`) (test: unit)
+ *   - [ ] T004 Implement X (files: `a.go`) (depends on T003) (test: dao) (scenario: S1)
+ *   - [ ] T010 Wire up (files: `c.go`) (depends on T001-T003, T007) (scenario: S2, S3)
  *
- *   • id      — `T` followed by digits, right after the checkbox.
- *   • deps    — `(depends on ...)` or `(deps: ...)`; comma/space list of ids
- *               and inclusive ranges (`T001-T003`); `none` or absent ⇒ no deps.
- *   • files   — `(files: ...)`; comma list, backticks/whitespace stripped.
- *               Absent ⇒ undeclared surface (cannot prove independence).
+ *   • id       — `T` followed by digits, right after the checkbox.
+ *   • deps     — `(depends on ...)` or `(deps: ...)`; comma/space list of ids
+ *                and inclusive ranges (`T001-T003`); `none` or absent ⇒ no deps.
+ *   • files    — `(files: ...)`; comma list, backticks/whitespace stripped.
+ *                Absent ⇒ undeclared surface (cannot prove independence).
+ *   • test     — `(test: ...)`; the task's sanctioned test type. Human hint
+ *                consumed by test-gate.js; the wave math ignores it.
+ *   • scenario — `(scenario: ...)`; comma/space list of acceptance-scenario ids
+ *                this task serves. Human hint consumed by test-gate.js; the
+ *                wave math ignores it.
  *   • The `[P]` marker is a human hint only — this script is authoritative.
  *
  * Output contract `plan-waves/v1`:
  *   {
  *     schema: "plan-waves/v1",
  *     waves: [["T001","T002"],["T003"]],   // each inner array runs concurrently
- *     tasks: { T001: { title, depends_on, files, files_undeclared, status, wave } },
+ *     tasks: { T001: { title, depends_on, files, files_undeclared, test_type, scenarios, status, wave } },
  *     collisions: [{ wave, tasks:["T002","T003"], file }],  // same-wave file overlap
  *     undeclared: ["T005"],                 // tasks in a parallel wave with no files
  *     parallel: true                        // any wave has >= 2 tasks
@@ -50,6 +55,8 @@ const SCHEMA = 'plan-waves/v1';
 const TASK_RE = /^\s*[-*]\s*\[([ xX!~])\]\s*(T\d+)\b(.*)$/;
 const DEPS_RE = /\((?:depends on|deps:)\s*([^)]*)\)/i;
 const FILES_RE = /\(files:\s*([^)]*)\)/i;
+const TEST_RE = /\(test:\s*([^)]*)\)/i;
+const SCENARIO_RE = /\(scenario:\s*([^)]*)\)/i;
 const RANGE_RE = /T(\d+)\s*-\s*T(\d+)/gi;
 const ID_RE = /T\d+/gi;
 
@@ -101,14 +108,43 @@ function stripClauses(rest) {
   return rest
     .replace(DEPS_RE, '')
     .replace(FILES_RE, '')
+    .replace(TEST_RE, '')
+    .replace(SCENARIO_RE, '')
     .replace(/\[P\]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+// Split a (scenario: …) inner on comma/whitespace, keeping non-empty tokens.
+function parseScenarios(inner) {
+  return inner
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * The full shape of a parsed plan task — the shared contract that downstream
+ * libraries consume by name rather than re-deriving it from raw plan text.
+ * hooks/lib/test-gate.js (T008) depends on this shape; keep it in sync.
+ *
+ * @typedef {Object} Task
+ * @property {string}   title            Task title with all clauses stripped.
+ * @property {string[]} depends_on       Task ids this task depends on (expanded ranges).
+ * @property {string[]} files            Declared file surface (backticks/whitespace stripped).
+ * @property {boolean}  files_undeclared True when no (files: …) clause was present.
+ * @property {string}   status           Checkbox status: 'open' for ' ', else the raw char (x/X/!/~).
+ * @property {?string}  test_type        Value of the (test: …) trailer, or null when absent.
+ * @property {string[]} scenarios        Ids from the (scenario: …) trailer; [] when absent.
+ * @property {number}   wave             1-based wave number (stamped by analyze()).
+ */
+
 /**
  * Parse plan text into a tasks map. Order-independent: tasks may reference
  * ids defined later in the file.
+ *
+ * @param {string} text
+ * @returns {Object.<string, Task>}
  */
 function parsePlan(text) {
   const tasks = {};
@@ -122,6 +158,8 @@ function parsePlan(text) {
     }
     const depsMatch = DEPS_RE.exec(rest);
     const filesMatch = FILES_RE.exec(rest);
+    const testMatch = TEST_RE.exec(rest);
+    const scenarioMatch = SCENARIO_RE.exec(rest);
     const files = filesMatch ? parseFiles(filesMatch[1]) : [];
     tasks[id] = {
       title: stripClauses(rest) || id,
@@ -129,6 +167,8 @@ function parsePlan(text) {
       files,
       files_undeclared: files.length === 0,
       status: status === ' ' ? 'open' : status,
+      test_type: testMatch ? (testMatch[1].trim() || null) : null,
+      scenarios: scenarioMatch ? parseScenarios(scenarioMatch[1]) : [],
     };
   }
   if (Object.keys(tasks).length === 0) {

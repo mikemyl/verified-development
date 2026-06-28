@@ -256,4 +256,72 @@ module.exports = [
       assert.ok(/collision gate/i.test(content), '/implement must document the collision gate');
     },
   },
+
+  // ----- test-taxonomy grammar extension (T005 makes these pass) ----------
+  {
+    name: '(test: <type>) trailer captured as task.test_type',
+    fn: () => {
+      const r = analyze(plan(
+        '- [ ] T001 a (test: acceptance) (files: `a.js`)',
+        '- [ ] T002 b (test: unit) (files: `b.js`)',
+        '- [ ] T003 c (test: none) (files: `c.js`)',
+      ));
+      assert.equal(r.tasks.T001.test_type, 'acceptance');
+      assert.equal(r.tasks.T002.test_type, 'unit');
+      assert.equal(r.tasks.T003.test_type, 'none');
+    },
+  },
+  {
+    name: '(scenario: …) trailer captured as task.scenarios array, comma/space tolerant',
+    fn: () => {
+      const r = analyze(plan(
+        '- [ ] T001 a (scenario: AS-001, AS-002) (files: `a.js`)',
+        '- [ ] T002 b (scenario: AS-003 AS-004) (files: `b.js`)',
+      ));
+      assert.deepEqual(r.tasks.T001.scenarios, ['AS-001', 'AS-002']);
+      assert.deepEqual(r.tasks.T002.scenarios, ['AS-003', 'AS-004']);
+    },
+  },
+  {
+    name: 'task with neither trailer → test_type null and scenarios []',
+    fn: () => {
+      const r = analyze(plan('- [ ] T001 a (files: `a.js`)'));
+      assert.equal(r.tasks.T001.test_type, null);
+      assert.deepEqual(r.tasks.T001.scenarios, []);
+    },
+  },
+  {
+    name: 'test: and scenario: clauses are stripped from task.title',
+    fn: () => {
+      const r = analyze(plan(
+        '- [ ] T010 Implement X (test: acceptance) (scenario: AS-001, AS-002) (files: `a.js`) (depends on T001)',
+        '- [ ] T001 Setup (files: `setup.js`)',
+      ));
+      const title = r.tasks.T010.title;
+      assert.ok(!/test:/i.test(title), `title must not contain "test:" — got: ${title}`);
+      assert.ok(!/scenario:/i.test(title), `title must not contain "scenario:" — got: ${title}`);
+      assert.equal(title, 'Implement X');
+    },
+  },
+  {
+    name: 'new trailers coexist with files/deps parsing and leave wave math unchanged',
+    fn: () => {
+      const r = analyze(plan(
+        '- [ ] T001 Setup (files: `setup.js`)',
+        '- [ ] T010 Implement X (test: acceptance) (scenario: AS-001, AS-002) (files: `a.js`) (depends on T001)',
+      ));
+      // files + deps still parse correctly alongside the new trailers
+      assert.deepEqual(r.tasks.T010.files, ['a.js']);
+      assert.equal(r.tasks.T010.files_undeclared, false);
+      assert.deepEqual(r.tasks.T010.depends_on, ['T001']);
+      // and the new fields are captured
+      assert.equal(r.tasks.T010.test_type, 'acceptance');
+      assert.deepEqual(r.tasks.T010.scenarios, ['AS-001', 'AS-002']);
+      // wave math is unchanged: linear chain, no collisions, not parallel
+      assert.deepEqual(r.waves, [['T001'], ['T010']]);
+      assert.equal(r.parallel, false);
+      assert.deepEqual(r.collisions, []);
+      assert.deepEqual(r.undeclared, []);
+    },
+  },
 ];

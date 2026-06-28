@@ -169,13 +169,15 @@ func TestDiscount_NeverNegative(t *testing.T) {
 
 ### Test error paths
 
-Every error return needs a test that triggers it:
+Error paths are covered by an acceptance scenario that provokes them through a sanctioned boundary — not by a dedicated internal test per error return. Drive the input that triggers the error in from the public boundary and assert the observable failure; coverage is a consequence of behavioral tests, not a target met by internal tests.
 
 ```go
 func TestShouldReturnBadRequestForInvalidRoles(t *testing.T) {
     dsl := NewTestDsl(t)
     client := NewClient(t, "id", "secret", []string{"invalid-role"})
 
+    // Provoke the error through the public boundary; the bad-request return
+    // is exercised because the scenario drives an invalid role in from outside.
     dsl.When().Client("manager").Sends(client.NewCreateClientRequest())
     dsl.Then().Client("manager").Receives(
         sent.ExpectedBadRequestResponse("Invalid role: invalid-role"))

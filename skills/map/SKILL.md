@@ -167,7 +167,30 @@ Analyze test infrastructure:
 - {Approximate coverage if measurable}
 - {Areas with good coverage}
 - {Areas with poor coverage}
+
+## Test Types
+{Per-repo, human-inspectable test taxonomy — one `### <type>` per discovered test type}
 ```
+
+TESTING.md MUST include a `## Test Types` section. Seed it from
+`${CLAUDE_PLUGIN_ROOT}/hooks/lib/test-types-seed.md` (the shipped `test-types-seed.md`),
+then ADAPT each entry to the repo's actually-discovered test types and patterns — rename,
+drop, or add types so the taxonomy describes THIS codebase, not the generic seed.
+
+Keep the section structure parse-compatible with `taxonomy.js` (content adaptation only,
+do not change the field syntax). For each type emit an H3 `### <type>` followed by:
+- `- **boundary:** {what the test drives through}`
+- `- **pattern:** {how tests of this type are written}`
+- `- **location:** {where they live — globs/paths discovered in the repo}`
+- `- **tier:** default|exception|sign-off`
+- `- **when-to-use:** {when this type is the right choice}`
+- `- **primitives:** {DSL helpers, fixtures, runners}`
+- a fenced ```mermaid flowchart harness diagram showing actor → boundary →
+  system-under-test → stubbed externals for that type.
+
+Tiers: `default` (no friction — the expected choice), `exception` (sanctioned without
+per-task approval, e.g. `dao` against a real datastore), `sign-off` (unit/none — needs
+explicit user approval at plan time, so the choice is deliberate and human-reviewed).
 
 #### INTEGRATIONS.md
 Find external service connections:

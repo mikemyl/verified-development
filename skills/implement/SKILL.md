@@ -95,6 +95,31 @@ Only same-wave tasks with disjoint, declared file surfaces go to separate parall
 executors. Completed (`[x]`) tasks are skipped — use handoff.json `remaining_tasks`
 to know what's left, but take the wave ORDER from the engine.
 
+**Test-boundary gate — non-negotiable.** Before dispatching ANY wave, re-run the same
+deterministic gate `/plan` ran. A plan can drift if edited between phases, so
+`/implement` re-checks it rather than trusting the prior pass. Read prior approvals from
+`.verified/features/{feature-name}/test-signoffs.json` (absent → empty), then:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/test-gate.js check \
+  .verified/features/{feature-name}/plan.md \
+  --spec .verified/features/{feature-name}/spec.md \
+  --testing .verified/codebase/TESTING.md \
+  --approved <ids from test-signoffs.json>
+```
+
+Omit `--testing` if the repo has no `.verified/codebase/TESTING.md` (the gate falls back
+to the shipped seed taxonomy). Handle the exit code:
+- Exit 3 (malformed repo `## Test Types`) → STOP. The repo taxonomy is broken; tell the
+  user to fix `TESTING.md` before implementing.
+- Exit 2 (blocked) → do NOT dispatch any wave. If the findings are `MIGRATION_NEEDED`
+  (a pre-grammar plan with no `(test: …)`/`(scenario: …)` trailers), say so explicitly
+  and tell the user to `/update-plan` to add test-type + scenario trailers — never fail
+  opaquely. For other error findings, name them and stop.
+- Exit 0 → proceed to dispatch waves as normal.
+
+This keeps `/implement` consistent with the gate `/plan` already passed.
+
 #### Spawning Executors
 
 For each wave, spawn `executor` agents (subagent_type: `verified-development:executor`):

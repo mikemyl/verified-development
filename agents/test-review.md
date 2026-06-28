@@ -83,6 +83,16 @@ that comes solely from the error/warning findings above. A high Farley Score wit
 assertions is still a warning; report both ("high Farley + weak assertions = brittle
 confidence"). Skip the score entirely for changes that don't touch tests — don't invent one.
 
+### 8. Test Taxonomy Fit (test-quality signal — non-blocking)
+
+When a written test does not match a **sanctioned** test type — the ones declared in the
+repo's `.verified/codebase/TESTING.md` `## Test Types` section — or when it scatters its
+assertions across unrelated behaviours, report it as a `warning` only. Like the Farley
+Score, this is informational: a taxonomy mismatch or scattered assertions NEVER escalates
+the PASS/WARN/FAIL status by itself (same framing as "high Farley + weak assertions is
+still a warning"). The gate stays driven purely by the error/warning findings in criteria
+1–6. If the repo declares no sanctioned test types, skip this check rather than inventing one.
+
 ## Output Format
 
 ```markdown
@@ -119,3 +129,4 @@ confidence"). Skip the score entirely for changes that don't touch tests — don
 - Read the IMPLEMENTATION to identify conditionals, then check if tests cover them
 - Don't flag test helpers or fixtures as "untested code"
 - Farley Score (criterion 7) is non-blocking: it informs, it never gates. PASS/WARN/FAIL comes from error/warning findings only. Compute it only when tests were added or rewritten.
+- Test Taxonomy Fit (criterion 8) is non-blocking too: a test that does not match a sanctioned test type (or that scatters assertions) is a non-blocking `warning` only — it never moves the PASS/WARN/FAIL gate on its own.

@@ -174,6 +174,12 @@ function clear(featureDir) {
 
 async function readStdinJson() {
   return new Promise((resolve, reject) => {
+    // Fast-fail when stdin is an interactive terminal: these commands expect a
+    // JSON patch piped in, and without it they would block indefinitely.
+    if (process.stdin.isTTY) {
+      reject(new Error('expected a JSON patch on stdin, e.g. `echo \'{...}\' | handoff.js update <feature-dir>`'));
+      return;
+    }
     let buf = '';
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', c => (buf += c));

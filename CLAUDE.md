@@ -51,6 +51,17 @@ A non-blocking test-quality signal, filling the gap left by removing mutation te
 - **Wiring** — the `test-review` agent computes a Farley Score when a change adds or rewrites tests; `/review` surfaces it in the report and `/verify` points at it. It is **informational only** — PASS/WARN/FAIL comes from error/warning findings, never from the score. "High Farley + weak assertions" is still a warning.
 - Tests: `tests/farley-score.test.cjs` locks the formula (a pure-function reimplementation must equal the published formula string — prose and math can't drift) and asserts the non-blocking wiring.
 
+### Enforced test taxonomy (v1.7.0+)
+
+Every plan task now declares the *kind* of test it ships, and a deterministic gate refuses tasks that under-test without sanction. No LLM is in the block decision.
+
+- **Task-grammar trailers** — `(test: <type>)` (the task's sanctioned test type) and `(scenario: <id>)` (the acceptance-scenario ids it serves). Parsed by `hooks/lib/waves.js` (`test_type`/`scenarios` on the task contract); the authoritative gate is `hooks/lib/test-gate.js`. The wave math ignores both — they exist for the gate.
+- **Per-repo taxonomy** — a `## Test Types` table in `.verified/codebase/TESTING.md` defines the repo's sanctioned types, seeded from `hooks/lib/test-types-seed.md` (single source of truth: it is both the gate's fallback when a repo has no taxonomy and the scaffold `/map` and `/init` write). Resolution (`hooks/lib/taxonomy.js`): repo taxonomy authoritative, else the seed.
+- **Tiers** — `default` (no friction), `exception` (sanctioned narrow types, e.g. `dao`), `sign-off` (e.g. `unit`, `none` — blocked until the user explicitly approves, persisted in `.verified/features/<feature>/test-signoffs.json`).
+- **Gate contract `test-gate/v1`** — severity-coded `findings` (`MISSING_TEST_TYPE`, `UNKNOWN_TEST_TYPE`, `UNTRACEABLE_TASK`, `DANGLING_SCENARIO`, `UNSERVED_SCENARIO`, `MIGRATION_NEEDED`, `SIGNOFF_REQUIRED`, `DIAGRAM_MISSING`), per-task `summary`, `blocked`. Exit codes: `0` ok · `1` usage · `2` blocked (error findings) · `3` malformed taxonomy. Wired into `/plan` (step 8a-bis, renders a `## Test Boundaries` table; surfaces warnings non-blocking) and `/implement` (re-gates before dispatching each wave). Deterministic — a script makes the block decision.
+- **Coverage reframed** — coverage is a *consequence* of the taxonomy (tdd-go/testing), not a primary gate. A taxonomy/quality mismatch (declared type vs. what the test actually does) is WARN-only, surfaced by `test-review`/`test-design-reviewer`, never blocking.
+- ADR: `.verified/decisions/0001-test-taxonomy-design.md`. Tests: `tests/taxonomy.test.cjs`, `tests/test-gate.test.cjs`, grammar in `tests/waves.test.cjs`, wiring anchors in `tests/test-taxonomy*.test.cjs`.
+
 ### Hook output envelopes
 
 Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare `{"additionalContext": "..."}` is silently dropped. All our hooks (`session-start.sh`, `context-monitor.js`) emit:

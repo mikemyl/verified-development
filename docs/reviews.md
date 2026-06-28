@@ -38,6 +38,8 @@ When a change adds or rewrites tests, `test-review` computes a **Farley Score** 
 
 The rubric and score bands live in `skills/test-design-reviewer/SKILL.md` (single source of truth).
 
+A test whose implementation does not match its declared taxonomy type is a non-blocking `WARN` signal — see [docs/test-taxonomy.md](test-taxonomy.md).
+
 **It is informational only.** PASS/WARN/FAIL comes from error/warning findings, never from the score. A high Farley Score with weak assertions is still a warning. The score fills the test-quality gap left when mutation testing was dropped as a hard verification requirement — without re-introducing a blocking gate.
 
 ## Process retro

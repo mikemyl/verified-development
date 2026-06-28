@@ -141,6 +141,7 @@ https://www.linkedin.com/pulse/tdd-properties-good-tests-dave-farley-iexge/
 - When uncertain about TDD adherence, note it and score conservatively
 - If reviewing multiple test files, provide both individual and aggregate scores
 - Always include the reference link to Dave Farley's article in your output
+- A test that does not match a sanctioned test type (the ones declared in the repo's `.verified/codebase/TESTING.md` `## Test Types` section) is a non-blocking, advisory quality signal — surface it as advisory feedback, consistent with the Farley Score being informational only. Neither the score nor a taxonomy mismatch is a gate.
 
 ## Attribution
 

@@ -1,6 +1,6 @@
 {
   "name": "verified-development",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Specification-first, verified development with ATDD, layered quality gates, and review agents. Language-aware: Go (TDD/quality gates) plus TypeScript/React (strict types, functional patterns, DDD, hexagonal architecture, behavior-driven UI testing).",
   "author": {
     "name": "Mike Mylonakis"

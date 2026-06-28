@@ -128,6 +128,11 @@ Every task must:
   trailers are machine-readable: the wave engine (step 8a) parses them to compute the
   parallel schedule and detect file collisions between same-wave tasks. A task with no
   `(files: …)` cannot be proven independent and will not be safely parallelized.
+- **Declare its test boundary** — end every task with a `(test: <type>)` trailer (a
+  sanctioned type from the repo's `## Test Types` / the seed taxonomy) and, unless the
+  type is `none`, a `(scenario: <id>)` trailer naming a scenario that exists in spec.md.
+  Both are machine-checked by the test-gate (step 8a-bis); a task that omits them, or
+  uses a sign-off-tier type without approval, will not present.
 
 Task phases should be ordered so:
 1. Setup and types first
@@ -176,6 +181,53 @@ Handle the result:
 - **Otherwise** — render the schedule into plan.md under a `## Waves` section: a short
   table of `Wave N → T…, T…` and (optionally) a Mermaid DAG. Render from the JSON;
   never hand-author the waves. `/implement` re-runs this same script to dispatch.
+
+### 8a-bis. Test-Boundary Gate (deterministic)
+
+After waves compute and before critics/approval, run the deterministic test-taxonomy
+gate. Like the wave engine, a script does the checking — you do not eyeball whether
+tasks declare a sanctioned test type and trace to real scenarios.
+
+First read persisted approvals from
+`.verified/features/{feature-name}/test-signoffs.json` (a JSON array of approved task
+ids; if the file is absent, treat it as empty). Then run:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/test-gate.js check \
+  .verified/features/{feature-name}/plan.md \
+  --spec .verified/features/{feature-name}/spec.md \
+  --testing .verified/codebase/TESTING.md \
+  --approved <comma-separated ids from test-signoffs.json>
+```
+
+Omit `--testing` if the repo has no `.verified/codebase/TESTING.md` — the gate falls
+back to the seed taxonomy. This emits a `test-gate/v1` JSON contract: `findings`
+(severity-coded), a per-task `summary`, and `blocked`.
+
+Handle the result (mirrors the step-8a collision/exit-2 language):
+- **Exit code 3 (TAXONOMY_DEFECT)** — the repo's `## Test Types` is malformed (a
+  required field is missing). STOP, report the defect to the user, and do NOT present
+  the plan. The taxonomy must be fixed before planning can continue.
+- **Exit code 2 (blocked)** — there are error findings (`MISSING_TEST_TYPE`,
+  `UNKNOWN_TEST_TYPE`, `UNTRACEABLE_TASK`, `DANGLING_SCENARIO`, `UNSERVED_SCENARIO`,
+  `MIGRATION_NEEDED`, `SIGNOFF_REQUIRED`). Do NOT present the plan. For each finding,
+  make the task declare a sanctioned `(test: <type>)` and — for any type other than
+  `none` — a `(scenario: <id>)` that exists in spec.md; ensure every spec scenario is
+  served by some task. Fix plan.md and re-run the gate.
+  - **`SIGNOFF_REQUIRED` findings** (sign-off-tier types such as `unit` and `none`):
+    these are not auto-fixable — they need human judgment. Ask the user to approve each
+    such task explicitly (AskUserQuestion or conversational). On approval, append the
+    task id to `.verified/features/{feature-name}/test-signoffs.json` and RE-RUN the
+    gate with the updated `--approved` list. Record the approval rationale in
+    concerns.md. Without approval the task stays blocked and the plan is not presented.
+- **Exit code 0 (clean)** — render the gate's `summary` array into plan.md under a
+  `## Test Boundaries` table (columns: Task, Test type, Scenarios). Render from the
+  JSON; never hand-author this table. If the gate's `findings` still contains any
+  `severity: "warning"` entries (e.g. `DIAGRAM_MISSING`), surface them to the user
+  alongside the table as non-blocking notes — do not discard them.
+
+`/implement` re-runs this same gate before fanning out each wave, so the plan MUST be
+gate-clean (exit 0) before you present it.
 
 ### 8b. Plan Critics — Plan-Time Stress Test (default on)
 

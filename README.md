@@ -40,6 +40,7 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 | **[Review](docs/reviews.md)** | Two-stage review, every review agent, the Farley Score, process retro |
 | **[Adversarial critique](docs/adversarial-critique.md)** | Spec-time challenge and the five plan critics |
 | **[Go stack](docs/go-stack.md)** | Toolchain, verification pipeline, thresholds |
+| **[Test taxonomy](docs/test-taxonomy.md)** | Test types, tiers, the deterministic test-boundary gate, scenario traceability |
 | **[Configuration & layout](docs/configuration.md)** | `config.json` toggles, `.verified/` structure, plugin layout, contributing |
 
 ## Commands

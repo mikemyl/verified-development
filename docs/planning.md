@@ -12,6 +12,8 @@ T003 [P] Add the Booking value object (files: domain/booking.go, domain/booking_
 
 - `(files: a, b)` — the files the task creates or modifies. This is the authoritative signal for collision detection.
 - `(depends on T001)` / `(depends on T001-T003)` — explicit ordering. Ranges expand.
+- `(test: <type>)` — the task's sanctioned test type (e.g. `acceptance`, `dao`, `unit`, `none`). Consumed by the test-boundary gate; ignored by the wave math.
+- `(scenario: <id>)` — comma- or space-separated acceptance-scenario ids this task serves. Behavioral tasks must carry at least one. Consumed by the test-boundary gate.
 - `[P]` — a **human hint only**. The engine, not the marker, decides what actually runs in parallel.
 
 ## The deterministic wave engine
@@ -46,6 +48,12 @@ cat plan.md | node hooks/lib/waves.js compute -
 ```
 
 The engine is fully unit-tested model-free (`tests/waves.test.cjs`) — that is the entire point of moving the schedule out of the LLM.
+
+## Test-boundary gate
+
+`/plan` runs a second gate (step 8a-bis) after the wave engine: `hooks/lib/test-gate.js` verifies that every task carries a `(test: …)` type from the active taxonomy, that behavioral tasks trace to spec scenarios, and that every spec scenario is served by at least one task. Sign-off-tier types (`unit`, `none`) are blocked until the user approves.
+
+The gate is deterministic — no LLM in the block decision. A `## Test Boundaries` table is rendered in the plan for human review. Full detail: [docs/test-taxonomy.md](test-taxonomy.md).
 
 ## Backward compatibility
 
