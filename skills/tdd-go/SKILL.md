@@ -130,6 +130,10 @@ updated := original.Clone(func(a *ApartmentFixture) {
 }).WithID(original.ID)
 ```
 
+## Actor-BDD craft rules
+
+The six language-neutral actor-BDD craft rules live in the `testing` skill (`## Actor-BDD craft rules`) — that is the single source. The Go examples above show how those rules apply with `testdsl`; consult the `testing` skill for the canonical rule list.
+
 ## What to Test
 
 ### Test behavior through public APIs

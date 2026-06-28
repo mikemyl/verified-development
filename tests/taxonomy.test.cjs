@@ -240,4 +240,146 @@ module.exports = [
       }
     },
   },
+
+  // --- T002 (RED): optional match-signal + craft fields (AS-009, AS-016, AS-011) ---
+  //
+  // T003 must implement, in taxonomy.js parseTaxonomy:
+  //   LIST fields (comma-split, trimmed → array; hyphen→underscore key):
+  //     - **match-paths:**   → type.match_paths   (string[])
+  //     - **match-markers:** → type.match_markers (string[])
+  //     - **anti-patterns:** → type.anti_patterns (string[])
+  //   SCALAR fields (string; hyphen→underscore key):
+  //     - **good-example:**  → type.good_example  (string|null)
+  //     - **bad-example:**   → type.bad_example   (string|null)
+  //   Defaults when a field is omitted entirely: list → [], example → null.
+  //   Sentinel coercion: a list value of `—` → [] (NOT ["—"]); an example value
+  //     of `n/a` or `—` → null.
+  //   None of these are added to REQUIRED_FIELDS (forward gate unaffected).
+  {
+    name: 'T002: list fields parse to trimmed arrays; example fields to strings (AS-009, AS-016)',
+    fn: () => {
+      const md = `## Test Types
+
+### acceptance
+- **boundary:** public/API
+- **pattern:** actor-based Sends/Receives DSL
+- **location:** tests/acceptance
+- **tier:** default
+- **when-to-use:** Default for user-observable behavior.
+- **primitives:** Sends, Receives
+- **match-paths:** **/acceptance/**, **/scenarios/**
+- **match-markers:** Sends, Receives, EventuallyReceives
+- **good-example:** tests/acceptance/checkout_test.go::TestCustomerChecksOut
+- **bad-example:** tests/acceptance/checkout_test.go::TestCheckoutInternals
+- **anti-patterns:** scattered raw assertions, inline ids, multiple behaviors per test
+`;
+      const { types } = parseTaxonomy(md);
+      const t = types.acceptance;
+
+      assert.deepEqual(t.match_paths, ['**/acceptance/**', '**/scenarios/**']);
+      assert.deepEqual(t.match_markers, ['Sends', 'Receives', 'EventuallyReceives']);
+      assert.deepEqual(t.anti_patterns, [
+        'scattered raw assertions',
+        'inline ids',
+        'multiple behaviors per test',
+      ]);
+      assert.equal(t.good_example, 'tests/acceptance/checkout_test.go::TestCustomerChecksOut');
+      assert.equal(t.bad_example, 'tests/acceptance/checkout_test.go::TestCheckoutInternals');
+    },
+  },
+
+  {
+    name: 'T002: a type omitting all new fields stays valid with empty defaults (EC-004)',
+    fn: () => {
+      // repoDocNoDiagram declares only the original required fields.
+      const { types, defects } = parseTaxonomy(repoDocNoDiagram);
+      const t = types.acceptance;
+
+      assert.deepEqual(t.match_paths, [], 'absent match-paths → []');
+      assert.deepEqual(t.match_markers, [], 'absent match-markers → []');
+      assert.deepEqual(t.anti_patterns, [], 'absent anti-patterns → []');
+      assert.equal(t.good_example, null, 'absent good-example → null');
+      assert.equal(t.bad_example, null, 'absent bad-example → null');
+
+      // The new fields are OPTIONAL — their absence must NOT raise a defect.
+      const newFieldKeys = ['match_paths', 'match_markers', 'anti_patterns', 'good_example', 'bad_example'];
+      const offending = defects.filter(d => newFieldKeys.includes(d.field));
+      assert.deepEqual(offending, [], `optional fields must not be defects — got ${JSON.stringify(offending)}`);
+    },
+  },
+
+  {
+    name: 'T002: sentinel coercion — seed `none` type maps — and n/a to []/null',
+    fn: () => {
+      const { types } = loadSeed();
+      const none = types.none;
+
+      // `none` uses `—` for list fields and `n/a` for example fields.
+      assert.deepEqual(none.match_paths, [], '`—` list → [] not ["—"]');
+      assert.deepEqual(none.match_markers, [], '`—` list → [] not ["—"]');
+      assert.deepEqual(none.anti_patterns, [], '`—` list → [] not ["—"]');
+      assert.equal(none.good_example, null, '`n/a` example → null');
+      assert.equal(none.bad_example, null, '`n/a` example → null');
+    },
+  },
+
+  {
+    name: 'T002: shipped seed acceptance parses its match-markers, anti-patterns, good-example',
+    fn: () => {
+      const { types } = loadSeed();
+      const acc = types.acceptance;
+
+      assert.ok(Array.isArray(acc.match_markers) && acc.match_markers.length > 0, 'match_markers non-empty');
+      assert.ok(acc.match_markers.includes('Sends'), 'includes Sends');
+      assert.ok(acc.match_markers.includes('Receives'), 'includes Receives');
+
+      assert.ok(Array.isArray(acc.match_paths) && acc.match_paths.length > 0, 'match_paths non-empty');
+
+      assert.ok(Array.isArray(acc.anti_patterns) && acc.anti_patterns.length > 0, 'anti_patterns non-empty');
+
+      assert.equal(typeof acc.good_example, 'string', 'good_example is a string');
+      assert.ok(acc.good_example.length > 0, 'good_example non-empty');
+    },
+  },
+
+  {
+    name: 'T002 (AS-011): a type omitting new fields resolves with original fields byte-identical + empty defaults',
+    fn: () => {
+      // repoDocOwnTypes types (acceptance, handler) declare ONLY the original
+      // required fields. The optional extension must not perturb their resolved
+      // shape: original keys unchanged, new keys at empty defaults.
+      const r = resolve({ repoDoc: repoDocOwnTypes });
+      assert.equal(r.source, 'repo');
+
+      const ORIGINAL_KEYS = [
+        'boundary', 'pattern', 'location', 'tier', 'when_to_use', 'primitives', 'has_diagram',
+      ];
+      const expectedAcceptance = {
+        boundary: 'public/API',
+        pattern: 'actor-based Sends/Receives DSL',
+        location: 'tests/acceptance',
+        tier: 'default',
+        when_to_use: 'Default for user-observable behavior.',
+        primitives: 'Sends, Receives, world fixtures',
+        has_diagram: true,
+      };
+
+      const acc = r.types.acceptance;
+      for (const k of ORIGINAL_KEYS) {
+        assert.deepEqual(acc[k], expectedAcceptance[k], `original field ${k} must be byte-identical`);
+      }
+
+      // New keys present at empty defaults (additive, non-breaking).
+      assert.deepEqual(acc.match_paths, []);
+      assert.deepEqual(acc.match_markers, []);
+      assert.deepEqual(acc.anti_patterns, []);
+      assert.equal(acc.good_example, null);
+      assert.equal(acc.bad_example, null);
+
+      // Forward gate unaffected: new keys are NOT in REQUIRED_FIELDS.
+      for (const k of ['match_paths', 'match_markers', 'anti_patterns', 'good_example', 'bad_example']) {
+        assert.ok(!REQUIRED_FIELDS.includes(k), `${k} must not be a required field`);
+      }
+    },
+  },
 ];

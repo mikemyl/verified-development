@@ -6,7 +6,7 @@ version: 0.1.0
 
 # Front-End Testing
 
-For React-specific patterns (components, hooks, context), load the `react-testing` skill. For TDD workflow, load the `tdd` skill. For general testing patterns (factories, public API testing), load the `testing` skill.
+For React-specific patterns (components, hooks, context), load the `react-testing` skill. For TDD workflow, load the `tdd` skill. For general testing patterns (factories, public API testing) and the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
 
 ## Vitest Browser Mode (Preferred)
 

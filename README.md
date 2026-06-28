@@ -40,7 +40,7 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 | **[Review](docs/reviews.md)** | Two-stage review, every review agent, the Farley Score, process retro |
 | **[Adversarial critique](docs/adversarial-critique.md)** | Spec-time challenge and the five plan critics |
 | **[Go stack](docs/go-stack.md)** | Toolchain, verification pipeline, thresholds |
-| **[Test taxonomy](docs/test-taxonomy.md)** | Test types, tiers, the deterministic test-boundary gate, scenario traceability |
+| **[Test taxonomy](docs/test-taxonomy.md)** | Test types, tiers, the deterministic test-boundary gate, scenario traceability, and `/test-audit` (Go · TypeScript · Python · Java) |
 | **[Configuration & layout](docs/configuration.md)** | `config.json` toggles, `.verified/` structure, plugin layout, contributing |
 
 ## Commands
@@ -51,6 +51,7 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 | `/assess` · `/map` | Gap analysis · deep codebase analysis (existing projects) |
 | `/specify` · `/ui-spec` · `/plan` · `/implement` · `/verify` · `/review` | The five-phase workflow (`/ui-spec` is optional, for UI features) |
 | `/quick "<desc>"` | Compressed workflow for small changes |
+| `/test-audit <path>` | Triage an existing test corpus (Go/TypeScript/Python/Java) against the repo taxonomy — advisory, read-only |
 | `/pause` · `/continue` | Capture mid-phase state · resume from it |
 | `/progress` · `/update-plan` · `/session-report` | Status · revise spec/plan · session summary |
 | `/install-hooks` | Project-specific enforcement (lint on write, pre-commit gate) |

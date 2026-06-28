@@ -10,6 +10,8 @@ It is distinct from `/review` (diff-scoped to the active feature) and `/assess` 
 
 To classify legacy tests — which carry no `(test:)` annotation — deterministically, the taxonomy gains optional machine-matchable signals per type (`match-paths`, `match-markers`). A cheap deterministic pass classifies and ranks the whole corpus; an LLM pass deep-reviews only the worst-ranked few. The match-signals are optional and do not affect the forward gate.
 
+The deep-dive does not judge "quality" abstractly — it judges each test against an actor-BDD **craft rubric** for its type. Generic craft rules (fixtures at the top, immutable fixture chaining, assert only via `Sends`/`Receives`, sequences for setup, captured data for SUT-generated ids, single-behavior/readability) are defined once in the `tdd-go` skill and referenced. Per-type repo exemplars (`good-example`, `bad-example`, `anti-patterns`) live in the taxonomy and are populated by `/map`. The rubric is what separates a clean behavioral test from a long, scattered-assertion one — Farley alone does not capture it.
+
 Beneficiaries: a developer paying down test debt in an existing codebase, who needs a prioritized, behavior-focused read on which tests to fix first.
 
 ## Acceptance Scenarios
@@ -52,6 +54,28 @@ Beneficiaries: a developer paying down test debt in an existing codebase, who ne
 **Given** a test selected for deep review
 **When** the audit reviews it
 **Then** the report records a Farley score, a readability/traceability verdict (can a human identify the user-observable behavior it asserts?), and a concrete recommendation (e.g. move to a sanctioned boundary, split scattered assertions).
+
+### AS-015 — Deep-dive verdict cites craft patterns, not just a score
+**Given** a test selected for deep review whose resolved type has a craft rubric
+**When** the audit reviews it
+**Then** the verdict names which good patterns it follows and which anti-patterns it exhibits (e.g. "scattered raw assertions instead of Sends/Receives", "inline ids instead of captured data", "multiple behaviors in one test")
+**And** the recommendation references the specific pattern to adopt.
+
+### AS-016 — Taxonomy parses optional craft fields
+**Given** a `## Test Types` entry declaring `good-example`, `bad-example`, and/or `anti-patterns`
+**When** the taxonomy is resolved
+**Then** those fields are available on the resolved type
+**And** a type omitting them is still valid.
+
+### AS-017 — /map populates per-type exemplars
+**Given** `/map` documents a repo's tests
+**When** it writes the `## Test Types` section
+**Then** each type includes a `good-example` (a representative real test) and `anti-patterns` where discoverable from the repo.
+
+### AS-018 — Generic craft rules are single-sourced
+**Given** the generic actor-BDD craft rules (fixtures-at-top, immutable chaining, Sends/Receives-only, sequences, captured data, single-behavior)
+**When** the audit or taxonomy needs them
+**Then** they are referenced from one canonical location (the `tdd-go` skill), not duplicated.
 
 ### AS-007 — Read-only
 **Given** any audit run
@@ -102,7 +126,7 @@ Beneficiaries: a developer paying down test debt in an existing codebase, who ne
 - **FR-003** A deterministic, model-free pass classifies each in-scope test by the taxonomy's `match-paths` (path glob) and `match-markers` (identifier/regex tokens in the test body). A test matching a type's signals is recorded as that type and marked sanctioned.
 - **FR-004** The deterministic pass computes a mechanical rank ("smell") for each test from at least: classification outcome (unclassified ranks worst), assertion dispersion, test length, and weakness of the type match. The corpus is ordered worst-first.
 - **FR-005** An LLM pass deep-reviews only the top-N worst-ranked tests, where N is configurable with a sensible default. It produces, per reviewed test, a Farley score, a readability/traceability verdict, and a concrete recommendation.
-- **FR-006** The audit writes a durable report to `.verified/audits/<scope>-tests.md`, ranked worst-first, with per-test: location, inferred type, sanctioned/unclassified status, the mechanical smell signals, and — for deep-reviewed tests — the Farley score, verdict, and recommendation.
+- **FR-006** The audit writes a durable report to `.verified/audits/<scope>-tests.md`, where `<scope>` is derived from the target path (e.g. `internal/analytics` → `analytics`). The report is ranked worst-first, with per-test: location, inferred type, sanctioned/unclassified status, the mechanical smell signals, and — for deep-reviewed tests — the Farley score, verdict, and recommendation.
 - **FR-007** The report includes corpus summary stats: counts by inferred type, share sanctioned, classification coverage, and number deep-reviewed.
 - **FR-008** The audit is read-only: it never modifies test or source files.
 - **FR-009** The taxonomy schema gains optional `match-paths` and `match-markers` fields per type. The parser captures them; their absence is valid and leaves the type unaffected for all other uses.
@@ -112,6 +136,10 @@ Beneficiaries: a developer paying down test debt in an existing codebase, who ne
 - **FR-013** The audit is advisory: it never blocks any gate and its result is a report, not a pass/fail verdict.
 - **FR-014** The deterministic classifier and ranker are model-free and unit-testable: identical input yields identical output.
 - **FR-015** When a test matches more than one type's signals, the classifier resolves the tie deterministically (e.g. most specific path / most markers matched) and the report notes the ambiguity.
+- **FR-016** The taxonomy schema gains optional per-type `good-example`, `bad-example`, and `anti-patterns` fields. The parser captures them; their absence is valid and non-breaking (the forward gate ignores them).
+- **FR-017** The deep-dive evaluates each reviewed test against its resolved type's craft rubric — the generic actor-BDD rules plus that type's exemplars/anti-patterns — and reports which good patterns hold and which anti-patterns are present, feeding the recommendation.
+- **FR-018** The generic actor-BDD craft rules are documented once in the `tdd-go` skill and referenced by the audit and taxonomy — never duplicated. The rules cover: fixtures declared at the top (not inline body variables); immutable fixture chaining (a derived fixture must not mutate its origin); assertions only via `Sends`/`Receives` (no scattered raw assertions); sequences (`Given…` helpers) for setup; captured/supplementary data for SUT-generated identifiers (no inline id fetch-and-assert); single-behavior, readable tests.
+- **FR-019** `/map` populates each documented type's `good-example` (a representative real test from the repo) and `anti-patterns` where discoverable.
 
 ## Edge Cases
 
@@ -123,6 +151,8 @@ Beneficiaries: a developer paying down test debt in an existing codebase, who ne
 - **EC-006** Mixed/unsupported test languages in scope → recognized languages audited; others listed as not-audited, no crash.
 - **EC-007** A match-marker token appears in a non-test helper or production file → classification is scoped to test files / test functions only, avoiding false positives.
 - **EC-008** Scope is a single test file vs a directory → both supported (FR-001).
+- **EC-009** A resolved type declares no exemplars/anti-patterns → the deep-dive falls back to the generic craft rules only; it still produces a verdict.
+- **EC-010** A `good-example`/`bad-example` reference points at a test that no longer exists → the report notes the stale reference and continues with the generic rules; not fatal.
 
 ## Success Criteria
 
@@ -133,3 +163,4 @@ Beneficiaries: a developer paying down test debt in an existing codebase, who ne
 - **SC-005** The forward test-gate suite passes unchanged after the match-signal schema extension (no regression).
 - **SC-006** The report ranks worst-first and never silently drops tests — the count not deep-reviewed is always shown.
 - **SC-007** No test or source file is modified by an audit run.
+- **SC-008** The generic craft rules exist in exactly one canonical location (`tdd-go`); the audit and taxonomy reference them, and a test guards against duplication/drift.

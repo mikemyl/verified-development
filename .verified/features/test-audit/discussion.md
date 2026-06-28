@@ -33,6 +33,15 @@ Distinct from `/review` (diff-scoped to the active feature) and `/assess` (whole
 - top-N default for the LLM deep-dive (configurable).
 - "Traceability" for a legacy test with no spec = can a human identify the user-observable behavior it asserts (an LLM readability judgment in pass 2), NOT a scenario-id match.
 
+### D4 — Good/bad exemplars + craft rubric (added during spec)
+- **Chosen:** the audit's deep-dive judges each test against an actor-BDD **craft rubric**, not just Farley. Two layers:
+  - **Generic craft rules** live ONCE in `tdd-go` (single source, referenced — mirrors the Farley-rubric discipline; no duplication): fixtures declared at the top (not inline body vars); immutable fixture chaining (a derived fixture must not mutate its origin); assert only via `Sends`/`Receives` (no scattered raw `require`/`assert`); sequences (`Given…` helpers) to hide setup; captured/supplementary data for SUT-generated identifiers (never fetch-and-assert ids inline); short, single-behavior, readable.
+  - **Per-type repo exemplars** live in the taxonomy: each `## Test Types` entry gets optional `good-example`, `bad-example`, and `anti-patterns`, populated by `/map` from the repo's real tests (e.g. acceptance → `TestShouldMarkReservationUploadedToShortTermRegistry`). Per-type because a `dao` test legitimately differs from an `acceptance` test.
+- The deep-dive reports which good patterns hold and which anti-patterns are present (feeding the recommendation), scored against the test's resolved type's rubric.
+- **Rejected — one global good/bad reference:** conflates types; a `dao`/`unit` test held to the acceptance `Sends`/`Receives` rubric yields false violations.
+- **Rejected — audit prompt + tdd-go only, no taxonomy fields:** exemplars can't be repo-specific or `/map`-discoverable, and the rubric isn't inspectable in the repo's `TESTING.md`.
+- Anti-patterns the user named (the bad exemplars): scattered assertions; inline variables instead of top fixtures; asserting on ids + capturing ids in-test instead of via captured data; raw `SendsAndAwaits`+`require`/`assert` instead of `Sends`/`Receives`; very long tests where the behavior under test is unclear.
+
 ## Residual / out of scope
 - Auto-fixing or rewriting tests (D2).
 - Progress-tracking JSON worklist (D2 rejected for now).

@@ -16,6 +16,19 @@ For verifying test effectiveness through mutation analysis, load the `mutation-t
 
 ---
 
+## Actor-BDD craft rules
+
+The canonical, language-neutral rubric for actor-BDD test craft. Single source — other skills (`/test-audit`, `/map`, `tdd-go`, `react-testing`, `front-end-testing`) reference these rules, they do not restate them. Six rules, each naming the anti-pattern it prevents:
+
+1. **Fixtures at the top** — declare fixtures up front, not as inline variables scattered through the body. Prevents setup buried mid-test.
+2. **immutable fixture chaining** — derive a fixture from another (`Clone`/builder); mutating the derived one must never alter the origin. Prevents shared-mutable-state bleed between steps.
+3. **Assert only via `Sends`/`Receives`** — no scattered raw assertions in the test body. Prevents off-DSL assertions that bypass cursor matching.
+4. **Sequences for setup** — hide setup clutter behind `Given…` helpers. Prevents preconditions drowning the behavior under test.
+5. **captured data** — use captured/supplementary data for SUT-generated identifiers; never fetch-and-assert ids inline. Prevents brittle id plumbing.
+6. **single behavior** — one behavior per test, short and readable: one reason to fail. Prevents multi-assert tests that obscure the cause of failure.
+
+---
+
 ## Mutation-Aware Test Planning
 
 When planning or writing tests, automatically scan the intended behavior and changed production code against the mutator rules from the `mutation-testing` skill's `resources/mutator-rules.md` resource. A good test should fail if a realistic mutant changes the behavior.

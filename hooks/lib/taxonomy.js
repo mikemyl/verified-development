@@ -26,6 +26,17 @@
  *   - **primitives:** …   → type.primitives  (string)
  *   - a fenced ```mermaid block in the subsection → type.has_diagram (boolean)
  *
+ * Optional extension fields (additive, non-breaking — NOT required; their
+ * absence never produces a defect, FR-011 / AS-011). Hyphen→underscore keys:
+ *   - **match-paths:**   → type.match_paths   (string[]; comma-split, trimmed)
+ *   - **match-markers:** → type.match_markers (string[]; comma-split, trimmed)
+ *   - **anti-patterns:** → type.anti_patterns (string[]; comma-split, trimmed)
+ *   - **good-example:**  → type.good_example  (string|null)
+ *   - **bad-example:**   → type.bad_example   (string|null)
+ * Defaults when omitted: array fields → [], example fields → null. Sentinel
+ * coercion: a list value of `—` (em-dash) or empty → []; an example value of
+ * `n/a` / `—` / empty → null.
+ *
  * A type missing any required field is reported in `defects` as `{type, field}`
  * rather than throwing — callers (the gate) decide policy (EC-003). A subsection
  * with prose but no mermaid fence parses fine with has_diagram:false (EC-004).
@@ -50,6 +61,14 @@ const path = require('path');
 
 const REQUIRED_FIELDS = ['boundary', 'pattern', 'location', 'tier', 'when_to_use', 'primitives'];
 
+// Optional list fields (normalized keys). Comma-split + trim → string[].
+const ARRAY_FIELDS = ['match_paths', 'match_markers', 'anti_patterns'];
+// Optional scalar example fields (normalized keys). Trimmed string | null.
+const EXAMPLE_FIELDS = ['good_example', 'bad_example'];
+// A list value of `—`/empty → []; an example value of `n/a`/`—`/empty → null.
+const LIST_SENTINELS = new Set(['', '—']);
+const EXAMPLE_SENTINELS = new Set(['', '—', 'n/a']);
+
 const TEST_TYPES_H2_RE = /^##\s+Test Types\s*$/;
 const ANY_H2_RE = /^##\s+/;
 const H3_RE = /^###\s+(.+?)\s*$/;
@@ -60,6 +79,33 @@ const FENCE_RE = /^```/;
 
 function normaliseFieldKey(name) {
   return name.trim().toLowerCase().replace(/-/g, '_');
+}
+
+/**
+ * Coerce a raw list-field value into a trimmed string[]. A sentinel (`—`) or
+ * empty value yields [] rather than ["—"].
+ *
+ * @param {string} raw
+ * @returns {string[]}
+ */
+function parseListField(raw) {
+  if (LIST_SENTINELS.has(raw)) return [];
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+/**
+ * Coerce a raw example-field value into a trimmed string or null. A sentinel
+ * (`n/a`, `—`) or empty value yields null.
+ *
+ * @param {string} raw
+ * @returns {?string}
+ */
+function parseExampleField(raw) {
+  if (EXAMPLE_SENTINELS.has(raw.toLowerCase())) return null;
+  return raw;
 }
 
 /**
@@ -89,19 +135,56 @@ function sliceTestTypesSection(lines) {
 }
 
 /**
- * Parse a `## Test Types` markdown document into a taxonomy map.
+ * Fill optional-field defaults for every parsed type in place: an absent list
+ * field becomes [], an absent example field becomes null. Mutates and returns
+ * the same `types` map.
  *
- * @param {string} md
- * @returns {{types: Object.<string, Object>, defects: Array<{type: string, field: string}>}}
+ * @param {Object.<string, Object>} types
+ * @returns {Object.<string, Object>}
  */
-function parseTaxonomy(md) {
-  const types = {};
+function fillOptionalDefaults(types) {
+  for (const name of Object.keys(types)) {
+    const obj = types[name];
+    for (const f of ARRAY_FIELDS) {
+      if (!Array.isArray(obj[f])) obj[f] = [];
+    }
+    for (const f of EXAMPLE_FIELDS) {
+      if (typeof obj[f] !== 'string') obj[f] = null;
+    }
+  }
+  return types;
+}
+
+/**
+ * Validate required fields per type. Returns a `defects` array (never throws);
+ * callers decide policy (EC-003).
+ *
+ * @param {Object.<string, Object>} types
+ * @returns {Array<{type: string, field: string}>}
+ */
+function validateTypes(types) {
   const defects = [];
-  const lines = String(md).split(/\r?\n/);
+  for (const name of Object.keys(types)) {
+    for (const f of REQUIRED_FIELDS) {
+      const v = types[name][f];
+      if (typeof v !== 'string' || v.length === 0) {
+        defects.push({ type: name, field: f });
+      }
+    }
+  }
+  return defects;
+}
 
-  const section = sliceTestTypesSection(lines);
-  if (!section) return { types, defects };
-
+/**
+ * Parse the `### <name>` subsections of a `## Test Types` section into a typed
+ * map. Optional fields are left absent here — defaulting happens separately in
+ * fillOptionalDefaults.
+ *
+ * @param {string[]} section
+ * @returns {Object.<string, Object>}
+ */
+function parseTypeSections(section) {
+  const types = {};
   let current = null; // { name, obj }
   let inMermaid = false;
 
@@ -129,19 +212,38 @@ function parseTaxonomy(md) {
 
     const field = FIELD_RE.exec(line);
     if (field) {
-      current.obj[normaliseFieldKey(field[1])] = field[2].trim();
-    }
-  }
-
-  // Validate required fields per type (report, never throw).
-  for (const name of Object.keys(types)) {
-    for (const f of REQUIRED_FIELDS) {
-      const v = types[name][f];
-      if (typeof v !== 'string' || v.length === 0) {
-        defects.push({ type: name, field: f });
+      const key = normaliseFieldKey(field[1]);
+      const raw = field[2].trim();
+      if (ARRAY_FIELDS.includes(key)) {
+        current.obj[key] = parseListField(raw);
+      } else if (EXAMPLE_FIELDS.includes(key)) {
+        current.obj[key] = parseExampleField(raw);
+      } else {
+        current.obj[key] = raw;
       }
     }
   }
+
+  return types;
+}
+
+/**
+ * Parse a `## Test Types` markdown document into a taxonomy map.
+ *
+ * Pipeline: parse subsections → fill optional defaults → validate required
+ * fields → return.
+ *
+ * @param {string} md
+ * @returns {{types: Object.<string, Object>, defects: Array<{type: string, field: string}>}}
+ */
+function parseTaxonomy(md) {
+  const lines = String(md).split(/\r?\n/);
+
+  const section = sliceTestTypesSection(lines);
+  if (!section) return { types: {}, defects: [] };
+
+  const types = fillOptionalDefaults(parseTypeSections(section));
+  const defects = validateTypes(types);
 
   return { types, defects };
 }
@@ -209,4 +311,5 @@ module.exports = {
   loadSeed,
   resolve,
   REQUIRED_FIELDS,
+  ARRAY_FIELDS,
 };

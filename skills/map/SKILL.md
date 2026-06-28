@@ -185,8 +185,17 @@ do not change the field syntax). For each type emit an H3 `### <type>` followed 
 - `- **tier:** default|exception|sign-off`
 - `- **when-to-use:** {when this type is the right choice}`
 - `- **primitives:** {DSL helpers, fixtures, runners}`
+- `- **match-paths:** {path globs where these tests live — drives deterministic classification in `/test-audit`}`
+- `- **match-markers:** {identifier tokens that signal the type — e.g. the DSL primitives — also used to classify}`
+- `- **good-example:** {a representative real test from the repo, as `path::TestName`}`
+- `- **bad-example:** {a representative anti-pattern test, as `path::TestName`}`
+- `- **anti-patterns:** {common smells for this type, comma-separated}`
 - a fenced ```mermaid flowchart harness diagram showing actor → boundary →
   system-under-test → stubbed externals for that type.
+
+For the actor-BDD craft rubric (what makes a *good* test of each type), REFERENCE the
+canonical rules in the `testing` skill rather than restating them here — keep the taxonomy
+descriptive of THIS repo and let the `testing` skill own the craft rules.
 
 Tiers: `default` (no friction — the expected choice), `exception` (sanctioned without
 per-task approval, e.g. `dao` against a real datastore), `sign-off` (unit/none — needs

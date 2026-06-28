@@ -6,7 +6,7 @@ version: 0.1.0
 
 # React Testing
 
-For general UI testing patterns (queries, events, async, accessibility), load the `front-end-testing` skill. For TDD workflow, load the `tdd` skill.
+For general UI testing patterns (queries, events, async, accessibility), load the `front-end-testing` skill. For TDD workflow, load the `tdd` skill. For the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
 
 ## Vitest Browser Mode with React (Preferred)
 

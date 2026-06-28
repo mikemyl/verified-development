@@ -108,3 +108,49 @@ node hooks/lib/test-gate.js check path/to/plan.md \
 ```
 
 Outputs `test-gate/v1` JSON to stdout. Exit codes as above.
+
+## Optional fields: match-signals & craft rubric
+
+Beyond the required fields, each `## Test Types` entry may declare optional fields. They are non-breaking — the forward gate ignores them; only `/test-audit` consumes them.
+
+| Field | Shape | Used for |
+|-------|-------|----------|
+| `match-paths` | comma-list of globs (`*` within a segment, `**` across) | classify an existing test by its file path |
+| `match-markers` | comma-list of identifier tokens | classify by tokens found in the test body |
+| `good-example` | one reference | a representative well-formed test of this type |
+| `bad-example` | one reference | a representative anti-pattern test |
+| `anti-patterns` | comma-list | the smells `/test-audit` flags for this type |
+
+`/map` populates these from the repo. The generic actor-BDD craft rules (fixtures-at-top, immutable fixture chaining, `Sends`/`Receives`-only assertions, sequences, captured data, single-behavior) are language-neutral — they live once in the `testing` skill and are referenced — not restated — here, by the audit, by `tdd-go`, and by the TS testing skills.
+
+## Auditing an existing corpus (`/test-audit`)
+
+The forward gate blocks new under-tested plan tasks; `/test-audit <path>` is its retroactive, advisory counterpart — it triages tests that already exist.
+
+```
+/test-audit internal/analytics
+```
+
+1. **Requires a repo taxonomy** (`.verified/codebase/TESTING.md` `## Test Types`). With none, it refuses and points you to `/map` — the generic seed can't recognize a repo's own types.
+2. **Deterministic pass** (`hooks/lib/test-corpus.js`, `test-corpus/v1`) discovers every test, classifies it via `match-paths` + `match-markers`, and ranks the corpus worst-first by a mechanical smell (unclassified, scattered assertions, length, weak match).
+3. **Deep-dive** sends the worst top-N to `test-design-reviewer`, judged against the type's rubric (the `testing` skill's craft rules + the type's exemplars/anti-patterns) → a Farley score, which patterns hold/violate, and a recommendation per test.
+4. **Report** at `.verified/audits/<scope>-tests.md` — ranked worst-first, with summary stats and the count not deep-reviewed (no silent truncation).
+
+Read-only and advisory: it never modifies a test and never blocks a gate.
+
+### Language adapters
+
+Test discovery and assertion-counting are per-language; the classify/rank/report core is language-agnostic. Adapters are drop-in files under `hooks/lib/lang/` — each exports `{ id, extensions, testFileGlobs, discover, countAssertions }` and is auto-loaded by extension, so adding a language is a new file, not a core change.
+
+| Adapter | Recognizes | Body extraction |
+|---------|-----------|-----------------|
+| `go` | `func TestXxx(t *testing.T)` | brace-balance (shared `cfamily`) |
+| `typescript` | `it()`/`test()` (incl. `.only`/`.skip`), `.ts/.tsx/.js/.jsx` | brace-balance |
+| `python` | `def test_*`, methods in `class Test*` | indentation scanner |
+| `java` | `@Test`-annotated methods | brace-balance |
+
+A test file in a language with no adapter is listed under `unsupported_files` (never silently dropped); if a scope contains *only* unsupported languages, the report carries an explicit note.
+
+```bash
+node hooks/lib/test-corpus.js scan <path> --testing .verified/codebase/TESTING.md
+```
