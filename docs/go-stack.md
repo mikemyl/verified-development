@@ -41,8 +41,12 @@ Defined in the project's build config (read them there, don't hardcode):
 
 ## Future stacks
 
-The plugin architecture supports multiple languages; each gets its own skill with toolchain-specific configuration. A TypeScript/frontend skill arm already ships (strict mode, functional patterns, DDD, hexagonal architecture, Vitest Browser Mode testing). Planned:
+The plugin architecture supports multiple languages; each gets its own skill with toolchain-specific configuration. Test-corpus analysis (`/test-audit`) already reads **Go, TypeScript, Python, and Java** via drop-in adapters (`hooks/lib/lang/*.js`), and the craft rubric + test taxonomy are language-neutral. What remains per-stack is the mechanical `/verify` toolchain and a TDD skill:
 
-- **TypeScript** — eslint, strict mode, vitest (skill arm present; full `/verify` toolchain in progress)
-- **Java** — spotbugs, OWASP dependency-check
-- **Rust** — clippy, cargo-audit
+| Stack | `/test-audit` | TDD skill | `/verify` toolchain |
+|-------|:---:|:---:|:---:|
+| Go | ✅ | `tdd-go` | ✅ golangci-lint · revive · gosec · govulncheck |
+| TypeScript | ✅ | `react-testing` / `front-end-testing` | ⏳ eslint · strict mode · vitest |
+| Python | ✅ | ⏳ planned | ⏳ ruff · mypy · pytest · bandit |
+| Java | ✅ | ⏳ planned | ⏳ spotbugs · OWASP dependency-check |
+| Rust | ⏳ | ⏳ planned | ⏳ clippy · cargo-audit |

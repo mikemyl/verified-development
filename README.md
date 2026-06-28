@@ -1,6 +1,6 @@
 # verified-development
 
-A Claude Code plugin for specification-first, verified development: ATDD, layered mechanical gates, adversarial critique, and a panel of review agents. Language-aware, with Go as the first fully-supported stack and a TypeScript/frontend arm in progress.
+A Claude Code plugin for specification-first, verified development: ATDD, layered mechanical gates, adversarial critique, and a panel of review agents. Language-aware: the workflow, the test taxonomy, the craft rubric, and `/test-audit` span Go, TypeScript, Python, and Java; the full mechanical `/verify` toolchain (linters, security, coverage) is wired for Go today, with the other stacks landing.
 
 ## Why
 
