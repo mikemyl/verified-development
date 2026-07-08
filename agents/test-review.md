@@ -61,6 +61,23 @@ Check that error returns are tested:
 - Error messages are asserted (not just "error occurred")
 - Validation errors have specific test cases
 
+### 5b. Must-not-ship craft violations (BLOCKING — `error`)
+
+Two craft violations from the `testing` skill's "Must-not-ship anti-patterns" are mechanical
+(no judgment call) and therefore raise `error` severity — they BLOCK the review, unlike the
+non-blocking taxonomy/Farley signals below:
+
+- **Weak assertion on a named error.** The code under test returns a *named* sentinel or typed
+  error, but the test asserts only that *some* error occurred (Go `require.Error` / `assert.Error`
+  with no `ErrorIs`/`ErrorAs`; JS `toThrow()` with no matcher). It passes for the wrong error.
+  → `error`. Suggested fix: assert the exact sentinel/type.
+- **Assertion below the declared test boundary.** A test whose taxonomy type is a component /
+  integration boundary (DAO or public seam) reaches past that seam to assert against physical
+  storage — e.g. a raw `SELECT` / `db.Get` inside a DAO-level test — duplicating a fact the seam
+  already exposes. → `error`. Suggested fix: route the assertion through the seam, or move a
+  genuine storage-guarantee assertion to the storage-test boundary. (A deviation the author
+  justified in-code with an explicit comment is a `warning`, not an `error`.)
+
 ### 6. No-Vaporware Check
 
 Verify wiring is tested:
@@ -123,8 +140,8 @@ still a warning"). The gate stays driven purely by the error/warning findings in
 
 ## Rules
 
-- `error` severity: tautological tests, vaporware — these MUST be fixed
-- `warning` severity: missing boundaries, untested error paths — SHOULD be fixed
+- `error` severity: tautological tests, vaporware, and the two must-not-ship craft violations in criterion 5b (weak assertion on a named error; assertion below the declared test boundary) — these MUST be fixed and BLOCK the review
+- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy mismatch — SHOULD be fixed
 - `suggestion` severity: missing property tests, structure improvements — nice to have
 - Read the IMPLEMENTATION to identify conditionals, then check if tests cover them
 - Don't flag test helpers or fixtures as "untested code"

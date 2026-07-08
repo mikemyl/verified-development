@@ -82,6 +82,15 @@ The executor no longer hardcodes a language list. It loads the neutral `testing`
 - **Per-repo stack mechanics** live in `.verified/codebase/` (written by `/map`) or a repo skill, not in bundled per-language toolchains — see docs/configuration.md "Teaching the plugin your stack". The executor infers from these.
 - ADR: `.verified/decisions/0002-language-agnostic-executor.md`. Tests: `tests/language-agnostic-core.test.cjs`.
 
+### Test-craft prevention + comment economy (v1.11.0+)
+
+Two levers, both aimed at the *executor* (where tests and comments are written) plus a selective review gate:
+
+- **Two must-not-ship craft anti-patterns are now blocking.** Single-sourced in `skills/testing/SKILL.md` ("Must-not-ship anti-patterns"): (1) asserting only that *some* error occurred when the code returns a *named* sentinel/type (Go `require.Error` where `require.ErrorIs` is right); (2) asserting *below* the declared test boundary (raw `SELECT`/`db.Get` inside a DAO/component test). `test-review` criterion **5b** raises exactly these two as `error` — they BLOCK review. The other four craft rules + `single behavior` (multi-behavior tests) stay `warning` (prevention only). This is deliberately narrow: only mechanical, no-judgment violations block. Farley (criterion 7) and taxonomy-fit (criterion 8) remain non-blocking — that framing is locked by `tests/farley-score.test.cjs` and must not regress.
+- **Executor prevents them at write-time** via a new "Test craft (write-time)" section in `agents/executor.md` — review is the backstop, not the first line.
+- **Comment economy + feature-qualified IDs.** `agents/executor.md` "Comments & traceability": comment *why* not *what*, no multi-line "scope of this file / covers FR-a, AS-b, EC-c…" header dumps, requirement IDs go on the *test* not implementation prose, and every requirement ID is **feature-qualified** — `<feature-slug>/FR-015`, never a bare `FR-015` (ambiguous once a repo has many `.verified/features/`). The density is emergent (the model cross-references the plan's `(scenario:)` trailers + the spec's IDs), so it needs an explicit counter-instruction, not a deletion.
+- Tests: `tests/test-craft-enforcement.test.cjs`.
+
 ### Hook output envelopes
 
 Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare `{"additionalContext": "..."}` is silently dropped. All our hooks (`session-start.sh`, `context-monitor.js`) emit:

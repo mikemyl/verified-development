@@ -8,6 +8,14 @@ version: 0.1.0
 
 For React-specific patterns (components, hooks, context), load the `react-testing` skill. For TDD workflow, load the `testing` skill. For general testing patterns (factories, public API testing) and the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
 
+> **Read `## Actor-BDD for UI` (below) before the mechanics.** The query/event/async
+> examples in this skill teach *primitives* — `getByRole`, `userEvent`, `expect.element`.
+> They deliberately show those primitives inline so the mechanic is legible. That inline
+> shape is **not** the shape a real spec ships in. For any component with interactions +
+> an API, the primitives get composed inside a **page-object fixture** and driven through
+> **interacts/observes**, with setup lifted out of the test body. Inline `render`/`screen`/
+> `expect` in the body is acceptable only for a trivial, single-render assertion.
+
 ## Vitest Browser Mode (Preferred)
 
 **Always prefer Vitest Browser Mode over jsdom/happy-dom.** Tests run in a real browser (via Playwright), giving production-accurate behavior for CSS, events, focus management, and accessibility.
@@ -171,6 +179,67 @@ it('creates and displays a user', async () => {
 ```
 
 **Why this matters:** Browser Mode can run tests in parallel across multiple browser instances. Non-idempotent tests will produce flaky failures that are nearly impossible to debug.
+
+---
+
+## Actor-BDD for UI
+
+The `testing` skill's `## Actor-BDD craft rules` are the single source of truth — six
+language-neutral rules. This section **maps** them to the UI idiom; it does not restate them.
+A UI spec is the same actor test the Go suites write: **the component is the system under
+test, the user and the API are external actors, and the test reads as a sequence of
+interactions and observations — never as inline `render` + scattered `expect`.**
+
+Three moving parts:
+
+- **Component page-object fixtures.** One fixture per component/dialog holds *all* selector
+  and DOM knowledge (`getByRole`/testid/etc.) and exposes named, intent-revealing actions —
+  `confirmButton.click`, `removalDateInput.type(...)`, `toBeClosed`, `errorMessage`. The
+  spec never reaches into `data-testid` directly; if a selector changes, one fixture changes,
+  not twenty tests. This is the UI form of *fixtures at the top*.
+- **interacts / observes.** Drive the SUT through a verb pair — `when.user.performs(...)` /
+  `then.observes(...)` — instead of raw `userEvent` + `expect` in the body. The API is
+  another actor: assert requests with `api.<x>.receives({ path, method, body })` and program
+  responses with `api.<x>.sends({ ..., statusCode })` (MSW-backed). This is the UI form of
+  *assert only through the DSL*.
+- **Setup lifted out.** Mount + arrange live in a `beforeEach` or a `Given…`/`openDialog()`
+  helper, so each test body is only the behavior under test — one behavior, one reason to
+  fail. This is the UI form of *sequences for setup* and *single behavior*.
+
+Prefer **observing DOM outcomes** ("dialog closes on success / stays open on error") over
+asserting on spies/toasts — it survives refactors and mirrors what the user sees.
+
+### Before → after
+
+```tsx
+// ❌ ad-hoc: setup in the body, raw render/screen/expect, hand-rolled body capture
+render(<Harness onOpenChange={onOpenChange} />);
+await user.click(screen.getByTestId("decommission-confirm"));
+await waitFor(() => expect(body).not.toBeNull());
+expect(body!.removalDate).toBe(todayISO());
+await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+```
+
+```tsx
+// ✅ actor-BDD: fixture owns the selectors, interacts/observes, API as an actor
+const dsl = await openDialog();          // setup lifted into a helper
+const dialog = decommissionDialog();     // page-object fixture
+
+await dsl.when.user.performs(dialog.confirmButton.click);
+await dsl.then.api.receives({ path: DECOMMISSION_PATH, method: "POST", body: { removalDate: todayISO() } });
+await dsl.when.api.sends({ path: DECOMMISSION_PATH, method: "POST", statusCode: 200, body: {} });
+await dsl.then.observes(dialog.toBeClosed);
+```
+
+### The DSL shape is per-repo — don't invent it here
+
+The exact verbs (`performs`/`observes`), the API-actor object, and the fixture layout are a
+**per-repo convention**, not a plugin-owned API. Read the repo's existing DSL before writing
+specs: `.verified/codebase/TESTING.md` (written by `/map`) records the runner, the fixture
+location convention (e.g. DSL specs under `test/**/*.spec.tsx` vs ad-hoc `src/**/*.test.tsx`),
+and a reference exemplar to mirror. If the repo has no such convention documented, that gap
+is the first thing to fix — capture it in `TESTING.md` so the executor infers it next time —
+rather than hard-coding a house style into a test.
 
 ---
 
@@ -1049,6 +1118,8 @@ npm install -D eslint-plugin-testing-library eslint-plugin-jest-dom
 Before merging UI tests, verify:
 
 - [ ] **Preferred**: Using Vitest Browser Mode with real browser (not jsdom/happy-dom)
+- [ ] Interactive/API components driven through a page-object fixture + interacts/observes, setup lifted out — not inline `render`/`screen`/`expect` (see `## Actor-BDD for UI`)
+- [ ] Followed the repo's documented DSL/fixture convention (`.verified/codebase/TESTING.md`), not a bespoke house style
 - [ ] All Playwright/Browser Mode tests are idempotent (no shared state between tests)
 - [ ] Using `getByRole` as first choice for queries (built-in or Testing Library)
 - [ ] Using `expect.element()` for auto-retrying assertions (Browser Mode)

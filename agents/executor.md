@@ -79,6 +79,37 @@ BEFORE claiming any task is done:
 
 Never say "tests pass" without showing output. Never say "should work" — run it.
 
+## Test craft (write-time — do not rely on review to catch these)
+
+When you write a test, apply the `testing` skill's Actor-BDD craft rules as you type — the
+review agent is a backstop, not your first line. Two are non-negotiable and will BLOCK review
+if they ship:
+
+- **Assert the specific error, not just that one occurred.** If the code returns a named
+  sentinel or typed error, assert *that* error (Go `require.ErrorIs`/`errors.As`; JS
+  `toThrow(SpecificError)`), never a bare `require.Error`/`toThrow()`.
+- **Assert at your test's declared taxonomy boundary, never below it.** A DAO/component-level
+  test must not reach past the seam to raw storage (e.g. raw `SELECT`/`db.Get`). Route the
+  assertion through the seam, or extend the seam. A true storage-guarantee assertion belongs
+  in a storage-boundary test, not smuggled into a higher one.
+
+Also prefer one behavior per test (split multi-behavior functions), and match the `(test: …)`
+type the plan task declares.
+
+## Comments & traceability (be economical)
+
+- **Be sparse.** Comment *why*, not *what* — the code and test names carry the *what*. Do not
+  narrate the implementation. A dense multi-line "scope of this file / this covers FR-a, AS-b,
+  EC-c…" header is noise; delete it. If a comment restates the function name or the next line,
+  drop it.
+- **Put requirement IDs on the test, not the implementation.** The test that encodes a scenario
+  is where traceability belongs. Production code should read as self-documenting; annotate it
+  with a requirement ID only where the *why* is genuinely non-obvious.
+- **Feature-qualify every requirement ID.** A bare `FR-015` is ambiguous once a repo has many
+  features under `.verified/`. Always write the feature slug: `<feature-slug>/FR-015`,
+  `<feature-slug>/AS-006` (the slug is the `.verified/features/<slug>/` directory you were given
+  the spec/plan from). Same for `EC-`/`SC-`/`ADR-` references that live in the feature spec.
+
 ## Rules
 
 - Follow TDD: test BEFORE implementation, always

@@ -27,6 +27,15 @@ The canonical, language-neutral rubric for actor-BDD test craft. Single source �
 5. **captured data** — use captured/supplementary data for SUT-generated identifiers; never fetch-and-assert ids inline. Prevents brittle id plumbing.
 6. **single behavior** — one behavior per test, short and readable: one reason to fail. Prevents multi-assert tests that obscure the cause of failure.
 
+### Must-not-ship anti-patterns (blocking)
+
+Two craft violations are mechanical enough to block review outright — no judgment call — so `test-review` raises them as `error`, not `warning`. Never write a test that does either:
+
+- **Assert the specific error, not merely that one occurred.** When the code under test returns a *named* sentinel or typed error, a test that asserts only "some error happened" (Go `require.Error`; JS `expect(fn).toThrow()` with no matcher) passes for the *wrong* error and lets a regression slip through. Assert the exact sentinel/type — Go `require.ErrorIs(err, ErrX)` / `errors.As`; JS `toThrow(SpecificError)` or match the message.
+- **Assert at the declared test boundary, never below it.** A component/integration test whose taxonomy boundary is the DAO / public seam must not reach *past* that seam to assert against physical storage (e.g. a raw `SELECT` inside a DAO-level test). That couples the test to the storage layout and re-asserts a fact the seam already exposes. Route the assertion through the seam; if the seam can't express it, extend the seam. (A genuine storage-guarantee test — e.g. "ciphertext at rest" — belongs at the storage-test boundary, not smuggled into a higher-boundary test.)
+
+The other four rules and `single behavior` stay `warning`-level judgment calls.
+
 ---
 
 ## Mutation-Aware Test Planning

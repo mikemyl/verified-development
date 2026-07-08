@@ -197,6 +197,14 @@ For the actor-BDD craft rubric (what makes a *good* test of each type), REFERENC
 canonical rules in the `testing` skill rather than restating them here — keep the taxonomy
 descriptive of THIS repo and let the `testing` skill own the craft rules.
 
+For UI/front-end test types, make the `pattern`/`primitives`/`good-example` fields concrete
+about the repo's **page-object fixture + interacts/observes** convention (the UI form of the
+actor pattern — see `front-end-testing` → `## Actor-BDD for UI`): where fixtures live, the
+interact/observe verbs and API-actor object in use, and the file-location split (e.g. DSL
+specs under `test/**/*.spec.tsx` vs ad-hoc `src/**/*.test.tsx`). The executor infers the UI
+test shape from this — if it is left generic, agents fall back to inline `render`/`screen`/
+`expect` and miss the house DSL.
+
 Tiers: `default` (no friction — the expected choice), `exception` (sanctioned without
 per-task approval, e.g. `dao` against a real datastore), `sign-off` (unit/none — needs
 explicit user approval at plan time, so the choice is deliberate and human-reviewed).

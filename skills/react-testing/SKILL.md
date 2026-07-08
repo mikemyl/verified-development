@@ -8,6 +8,13 @@ version: 0.1.0
 
 For general UI testing patterns (queries, events, async, accessibility), load the `front-end-testing` skill. For TDD workflow, load the `testing` skill. For the language-neutral actor-BDD craft rules (`## Actor-BDD craft rules`), load the `testing` skill.
 
+> **The component examples below show `render`/`screen` inline to isolate the React-specific
+> mechanic** (async `render`, `renderHook`, `wrapper`, portals, suspense). That inline shape
+> is not how a real spec ships. For any component with interactions + an API, compose these
+> primitives inside a **page-object fixture** driven through **interacts/observes**, with
+> mount/setup lifted out of the body — see `## Actor-BDD for UI` in the `front-end-testing`
+> skill, and follow the repo's own DSL convention in `.verified/codebase/TESTING.md`.
+
 ## Vitest Browser Mode with React (Preferred)
 
 **Always prefer `vitest-browser-react` over `@testing-library/react`.** Tests run in a real browser, giving production-accurate rendering, events, and CSS.
@@ -585,6 +592,7 @@ React-specific checks:
 - [ ] No manual `cleanup()` calls (automatic)
 - [ ] Testing component output, not internal state
 - [ ] Using factory functions, not `beforeEach` render
+- [ ] Interactive/API components go through a page-object fixture + interacts/observes (see `front-end-testing` → `## Actor-BDD for UI`), not inline `render`/`screen`/`expect`
 - [ ] Using `expect.element()` for auto-retrying assertions (Browser Mode)
 - [ ] Following TDD workflow (see `testing` skill)
 - [ ] Using general UI testing patterns (see `front-end-testing` skill)
