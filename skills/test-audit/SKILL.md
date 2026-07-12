@@ -47,6 +47,7 @@ The report contains, ranked worst-first:
 - **Per test**: location (file:line), inferred type, sanctioned (yes/no), smell signals (unclassified, assertion dispersion, length, weak match), and — for deep-reviewed tests — the Farley score, the craft verdict, and the recommendation.
 - **Summary stats** from the JSON `summary` (totals, counts by type, share sanctioned, classification coverage), plus the list of unsupported (not-audited) files.
 - **The count of tests ranked but not deep-reviewed** (total ranked minus N). Never truncate silently — the reader must see how much of the tail went un-reviewed.
+- **A provenance footer** — append the shared footer from `plans/shared/provenance-footer.md` (repo/branch/SHA/plugin-version/date) and apply its empty-section rule. Quote it; don't restate.
 
 ## Read-only / advisory
 

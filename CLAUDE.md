@@ -4,6 +4,15 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### ATDD loop closure (v1.18.0+)
+
+Adapted from `agentic-dev-team` #537, reshaped for the language-agnostic core: detect a repo's acceptance-test convention and **record a decision**, never force a Gherkin export on a testdsl/page-object repo.
+
+- **`hooks/lib/bdd-convention.js`** (contract `bdd-convention/v1`, model-free) — `classify({featureFileCount, manifestText})` → `{convention: "gherkin"|"none", export: bool, signals}`. `gherkin` when `.feature` files exist OR a cucumber-family runner (godog/cucumber/reqnroll/behave/pytest-bdd) is in a manifest; else `none`. CLI: `bdd-convention.js detect <path>`.
+- **`/plan` step 8a-ter** runs it and records a `## Scenario Persistence` decision: `export:false` (default for testdsl repos) → scenarios stay prose, kept honest by the test-gate's `UNSERVED_SCENARIO` traceability; `export:true` → note that approved Given/When/Then scenarios should be materialized as `.feature` files (the mechanical exporter is a follow-up). A decision record, never a gate.
+- **Down-payments:** (1) `/review` step 8c seeds new `learnings.md` lessons with `_(status: unvalidated)_` — the hook for a future lesson-validation pass (→ `validated`/`harmful`); (2) a single-sourced **provenance footer** (`plans/shared/provenance-footer.md`: repo/branch/SHA/plugin-version/date + `_Not applicable_` empty-section rule) referenced by `/review` and `/test-audit` report writers.
+- Tests: `tests/bdd-convention.test.cjs`, `tests/atdd-loop-closure.test.cjs`.
+
 ### Structured finding layer (v1.17.0+)
 
 Ported from `agentic-dev-team` (#808/#811). Turns `/verify`'s opaque pass/fail into a structured, deduped finding stream via SARIF — the **producer only** (the `/review` finding-injection and the static self-heal loop are deliberately separate follow-ups).

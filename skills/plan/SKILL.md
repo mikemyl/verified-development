@@ -229,6 +229,32 @@ Handle the result (mirrors the step-8a collision/exit-2 language):
 `/implement` re-runs this same gate before fanning out each wave, so the plan MUST be
 gate-clean (exit 0) before you present it.
 
+### 8a-ter. Scenario Persistence Decision (deterministic)
+
+Record — don't guess — whether this repo's acceptance scenarios should be materialized as
+runnable Gherkin `.feature` files, or stay as spec prose traced to tasks. A script detects the
+repo's convention; it never forces a Gherkin export on a testdsl/page-object repo.
+
+```bash
+node /Users/mike/.claude/plugins/cache/verified-development/verified-development/1.11.0/hooks/lib/bdd-convention.js detect .
+```
+
+This emits a `bdd-convention/v1` decision: `convention` (`gherkin` | `none`), `export` (bool), and
+the `signals` that fired (`.feature` files present, or a cucumber-family runner — godog / cucumber /
+reqnroll / behave / pytest-bdd — in a manifest). Record the decision in plan.md under a
+`## Scenario Persistence` note:
+
+- **`export: false`** (no Gherkin convention) — scenarios stay as spec prose; their executable form
+  is the tests the executor writes, kept honest by the test-gate's scenario traceability
+  (`UNSERVED_SCENARIO`). No `.feature` scaffolding is added. This is the default for testdsl /
+  page-object repos.
+- **`export: true`** (a Gherkin convention exists) — note that the approved plan's Given/When/Then
+  scenarios should be exported to `.feature` files so they run under the repo's cucumber-family
+  runner. (The mechanical exporter is a follow-up increment; this step records the decision and the
+  signals that warranted it.)
+
+This is a decision record, not a gate — it never blocks the plan.
+
 ### 8b. Plan Critics — Plan-Time Stress Test (default on)
 
 Before presenting the plan to the user, dispatch the critic agents in parallel to stress-test it. Skip if `--no-critics` was passed or `.verified/config.json` has `"workflows": { "plan_critics": false }`.

@@ -130,7 +130,9 @@ Combine findings from all agents into a unified review report:
 - Farley Score (test quality): {X.X/10 — rating, or "n/a — no tests changed"} — non-blocking signal
 ```
 
-Save the report to `.verified/features/{feature-name}/review.md`.
+Save the report to `.verified/features/{feature-name}/review.md`. Append the shared provenance
+footer and apply the empty-section rule from `plans/shared/provenance-footer.md` (quote it; don't
+restate). Do the same for `retro.md` in step 8c.
 
 ### 5. Correction Loop
 
@@ -259,10 +261,15 @@ Each section may be empty (`_(none)_`). Keep total content tight — typically 2
 Append exactly ONE line to `.verified/learnings.md` (create the file if it doesn't exist). Format:
 
 ```
-- {YYYY-MM-DD} **{feature-name}** — {top-process-learning verbatim from retro.md}
+- {YYYY-MM-DD} **{feature-name}** — {top-process-learning verbatim from retro.md} _(status: unvalidated)_
 ```
 
-Do NOT modify existing entries in `learnings.md`. This is append-only — it's the cross-feature trend signal. After many features, scanning / grepping this file reveals patterns that no individual retro can show.
+New lessons start `status: unvalidated`. The `status` field is the down-payment for a future
+lesson-validation pass: a later comparison of before/after metrics can promote a lesson to
+`validated` or flag it `harmful` (→ rollback candidate). Until that pass exists, every new lesson is
+`unvalidated` — it records that the lesson has not yet been measured, not that it's wrong.
+
+Do NOT modify existing entries in `learnings.md` (including their status). This is append-only — it's the cross-feature trend signal. After many features, scanning / grepping this file reveals patterns that no individual retro can show.
 
 If the top learning is "no notable process surprises", still append the line — absence of signal is itself a signal over time.
 

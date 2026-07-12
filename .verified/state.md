@@ -1,8 +1,8 @@
 ---
-feature: structured-finding-layer
-phase: review
+feature: none
+phase: idle
 status: complete
-last_activity: 2026-07-12 - Review complete (0 errors, 3 warnings fixed; Farley 7.7). Roadmap #4 done (v1.17.0)
+last_activity: 2026-07-12 - Roadmap #5 (atdd-loop-closure) shipped: bdd-convention + down-payments (v1.18.0)
 active_phase: ""
 next_action: ""
 next_phases: []
