@@ -1,0 +1,27 @@
+{
+  "$comment": "Captured from golangci-lint 1.55.x `run --out-format sarif`. Two findings across two files. Hand-trimmed; used only to lock findings.js/go.js SARIF parsing.",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": { "driver": { "name": "golangci-lint" } },
+      "results": [
+        {
+          "ruleId": "errcheck",
+          "level": "error",
+          "message": { "text": "Error return value of `w.Close` is not checked" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "internal/store/db.go" }, "region": { "startLine": 42 } } }
+          ]
+        },
+        {
+          "ruleId": "ineffassign",
+          "level": "warning",
+          "message": { "text": "ineffectual assignment to err" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "cmd/main.go" }, "region": { "startLine": 8 } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

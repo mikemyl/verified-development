@@ -4,6 +4,16 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Structured finding layer (v1.17.0+)
+
+Ported from `agentic-dev-team` (#808/#811). Turns `/verify`'s opaque pass/fail into a structured, deduped finding stream via SARIF — the **producer only** (the `/review` finding-injection and the static self-heal loop are deliberately separate follow-ups).
+
+- **`hooks/lib/findings.js`** (contract `findings/v1`, model-free, no deps) — `normalize(sarifText, {tool, lang})` parses SARIF into unified findings with tool-prefixed rule ids (`<tool>.<lang>.<rule>`); `dedup()` (within-adapter — cross-tool suppression deferred, see ADR 0003); `buildEnvelope()` → `{schema, scope, findings, summary, skipped, status}` where `status` is `ok`|`skip` and **never `fail`** (findings are data, not a gate); `scan(scopeFiles, {adapters})` loads adapters, probes language-conditionally, and degrades gracefully; a `scan <path>` CLI (exit 0 ok/skip, 1 usage — never non-zero for "found problems").
+- **Adapters** live in `hooks/lib/findings/` (a NEW dir, decoupled from the test-corpus `hooks/lib/lang/` adapters), auto-loaded by extension. `go.js` runs `golangci-lint run --out-format sarif ./...` at **module scope** via an injectable spawn seam; `normalize` is pure (fixture-tested, no tool). A new language is a drop-in adapter.
+- **Graceful degradation is first-class**: no tool → `status: skip`, exit 0; a missing/crashing/malformed-output linter → a `{lang, tool, reason, hint}` entry in `skipped`, never a failure; only-unsupported scope → skip + explicit `note`. A broken linter never blocks a green build.
+- **`/verify`** step 3b surfaces the envelope as a **non-blocking** section — the repo's existing verify command stays the sole gate (same framing as the Farley score).
+- ADR: `.verified/decisions/0003-findings-envelope-contract.md`. Tests: `tests/findings.test.cjs`, `tests/findings-go.test.cjs`, `tests/findings-verify.test.cjs` (fixtures + injected adapters — no tool invoked).
+
 ### Self-declared review dispatch (v1.14.0+)
 
 Ported from `agentic-dev-team`. `/review` Stage 2 no longer hardcodes which agent runs on which file type. Each review agent (`agents/*-review.md`) self-declares two frontmatter fields, and the skill dispatches from them:

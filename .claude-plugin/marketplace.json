@@ -11,7 +11,7 @@
       "name": "verified-development",
       "source": "./",
       "description": "Specification-first development workflow with ATDD, layered verification gates, and two-stage review agents. Enforces TDD, mechanical quality gates (lint, test, coverage, security, dead code), and AI-powered code review. Language-agnostic: runs the repo's own verify command and infers test idioms; Go is the bundled toolchain example; /test-audit spans Go, TypeScript, Python, and Java.",
-      "version": "1.16.0",
+      "version": "1.17.0",
       "author": {
         "name": "Mike Mylonakis"
       },

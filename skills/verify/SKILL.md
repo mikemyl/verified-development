@@ -31,6 +31,18 @@ This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry,
    - Suggest the specific fix needed
    - Do NOT proceed to the next target — fix failures in order
 
+3b. Structured findings (informational, NON-BLOCKING). After the gate targets run, produce a
+   structured view of what the static-analysis tools found:
+   ```
+   node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/findings.js scan <path>
+   ```
+   This emits a `findings/v1` envelope (normalized, deduped findings across whatever linters the
+   repo has, via SARIF). Surface it as a **structured findings** section in the report. It is
+   **non-blocking and never flips pass/fail** — the repo's verify command from steps 1–3 remains the
+   sole gate (same framing as the Farley score). `findings.js` never exits non-zero for "a linter
+   found problems" and degrades gracefully: a missing or broken linter is listed in the envelope's
+   `skipped`, never a failure. If `status` is `skip` (no applicable tool), just note that.
+
 4. If all targets pass:
    - Report the results summary (coverage %, any warnings)
    - Confirm the codebase is verified

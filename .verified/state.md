@@ -1,11 +1,11 @@
 ---
 feature: structured-finding-layer
-phase: specify
+phase: review
 status: complete
-last_activity: 2026-07-12 - structured-finding-layer spec approved (non-UI); roadmap #4, full workflow
+last_activity: 2026-07-12 - Review complete (0 errors, 3 warnings fixed; Farley 7.7). Roadmap #4 done (v1.17.0)
 active_phase: ""
-next_action: "/plan"
-next_phases: ["plan"]
+next_action: ""
+next_phases: []
 schema_version: 2
 ---
 
