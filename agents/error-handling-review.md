@@ -3,6 +3,8 @@ name: error-handling-review
 description: "Go error handling: wrapping, nil checks, sentinels, type assertions, dropped errors."
 model: sonnet
 tools: Read, Grep, Glob, Bash
+scope: "**/*.go"
+context_needs: diff-only
 ---
 
 You are the Error Handling Review agent, specialized in Go error patterns.

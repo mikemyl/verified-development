@@ -3,6 +3,8 @@ name: doc-review
 description: "Review docs (README/comments/API/codebase/) for drift; updates on feature completion."
 model: sonnet
 tools: Read, Write, Grep, Glob, Bash
+scope: "**/*.md, **/README*"
+context_needs: project-structure
 ---
 
 You are the Documentation Review agent. You have two modes:

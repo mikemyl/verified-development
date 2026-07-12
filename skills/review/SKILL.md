@@ -63,20 +63,23 @@ If `--stage2-only` flag is used, skip Stage 1 (for re-running quality agents aft
 
 ### 3. Stage 2: Quality Review (targeted agents)
 
-Select agents based on what changed. Run applicable agents in parallel:
+Dispatch is **self-declared**, not hardcoded here. Each review agent (`agents/*-review.md`)
+declares in its frontmatter:
 
-| Changed Files | Agents to Run |
-|--------------|---------------|
-| Any source code | complexity-review, test-review, correctness-review |
-| Error handling patterns | error-handling-review |
-| Concurrent/async code | concurrency-review |
-| Security-sensitive code (auth, crypto, SQL) | security-review |
-| Code with interfaces/abstractions | interface-design-review |
-| README, docs, comments changed | doc-review |
-| Domain/business logic | domain-review |
-| After GREEN phase | refactoring-review |
-| Dead code risk (deleted/moved code) | dead-code-review |
-| UI code (HTML, JSX, templates) | a11y-review |
+- `scope:` — either `always`, or a comma-list of path globs. Include the agent when its scope is
+  `always`, or when any of the feature's changed files (the git range from step 1) matches one of
+  its globs.
+- `context_needs:` — how much context to load before dispatching it (`diff-only` | `full-file` |
+  `project-structure` | `artifact-stream`). Load exactly that, no more.
+
+To select Stage-2 agents: read the `scope:` of each `*-review` agent **except `spec-compliance-review`**
+(that one already ran as Stage 1), match it against the changed files, and run the matched agents
+in parallel — each loaded per its `context_needs:`. Adding a new review agent requires **no edit
+here**: it is dispatched by its own declaration, and `tests/agent-frontmatter.test.cjs` guards that
+every `*-review` agent declares a valid scope.
+
+`domain-review` and `security-review` declare `scope: always` and self-limit inside their own
+bodies (business-logic / security-sensitive patterns) rather than by path glob.
 
 When in doubt about applicability, include the agent — false positives are cheap, missed issues aren't.
 

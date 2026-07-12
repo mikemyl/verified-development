@@ -4,6 +4,19 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Self-declared review dispatch (v1.14.0+)
+
+Ported from `agentic-dev-team`. `/review` Stage 2 no longer hardcodes which agent runs on which file type. Each review agent (`agents/*-review.md`) self-declares two frontmatter fields, and the skill dispatches from them:
+
+- **`scope:`** — `always`, or a comma-list of quoted path globs (globs are quoted because a YAML scalar starting with `*` is an alias). Include the agent when scope is `always` or a changed file matches a glob. `security-review`/`domain-review` use `always` and self-limit in their bodies.
+- **`context_needs:`** — `diff-only | full-file | project-structure | artifact-stream`; how much context to load before dispatching.
+
+Adding a review agent is now **zero edits to `/review`** — it's dispatched by its own declaration. `tests/agent-frontmatter.test.cjs` is the drift guard: every `*-review` agent must declare a valid `scope:` + `context_needs:` (all 13 review agents happen to end in `-review`, so the rule is self-maintaining). `spec-compliance-review` declares metadata for consistency but runs in Stage 1, not the Stage-2 loop. Dispatch *selection* is LLM-prose-driven (not a script) deliberately — it isn't a blocking gate, so over-inclusion is cheap; a `hooks/lib/review-scope.js` matcher is a possible future upgrade. `/quick` keeps its own minimal review table (test-review + complexity-review) by design.
+
+The **`correctness-review`** agent (v1.13.0) is the first agent added under this model — evident-intent functional-defect detection (code contradicts its own name/comment/sibling), distinct from `spec-compliance-review` (code vs. written spec). It is language-agnostic; a Self-Challenge drop rule (no citable evident intent → drop, don't downgrade) keeps it precision-over-recall.
+
+Stack-specific reactivity/component-architecture review agents were **deliberately not bundled** — they belong to the per-repo "teach your stack" path, consistent with the language-agnostic core (v1.9.0) that keeps `tdd-go` the lone bundled example.
+
 ### Deterministic repair loop (v1.12.0+)
 
 Ported from `agentic-dev-team` (bdfinster #861/#864/#865). Three additive, model-free mechanisms that harden `/implement` — a script makes the route/gate decision, not the LLM (same doctrine as `waves.js`/`test-gate.js`).

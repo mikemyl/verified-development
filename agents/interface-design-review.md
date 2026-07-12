@@ -3,6 +3,8 @@ name: interface-design-review
 description: "Go interface design: consumer-site definition, sizing, accept-interfaces pattern."
 model: haiku
 tools: Read, Grep, Glob, Bash
+scope: "**/*.go"
+context_needs: full-file
 ---
 
 You are the Interface Design Review agent, specialized in Go interface patterns.

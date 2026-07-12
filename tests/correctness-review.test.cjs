@@ -70,11 +70,21 @@ module.exports = [
     },
   },
   {
-    name: 'wiring: /review Stage 2 dispatches correctness-review on any source code',
+    name: 'wiring: correctness-review runs on any source via scope: always',
+    fn: () => {
+      // Post scope-refactor, dispatch is self-declared — the agent runs on any
+      // source because it declares scope: always, not via a hardcoded table row.
+      assert.match(agent(), /^scope:\s*always$/m);
+    },
+  },
+  {
+    name: 'wiring: /review Stage 2 is declaration-driven, not a hardcoded table',
     fn: () => {
       const t = reviewSkill();
-      // Same row as complexity-review/test-review — runs on any source change.
-      assert.match(t, /Any source code \| [^\n]*correctness-review/);
+      assert.match(t, /self-declared/i, 'Stage 2 reads agent scope: declarations');
+      assert.match(t, /context_needs/, 'Stage 2 honors context_needs');
+      // The old per-agent dispatch table must be gone (that was the drift source).
+      assert.doesNotMatch(t, /\| Any source code \|/, 'hardcoded dispatch table removed');
     },
   },
 ];

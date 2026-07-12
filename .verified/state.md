@@ -2,7 +2,7 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-12 - Shipped correctness-review agent (v1.13.0); roadmap #2 slice 1/3
+last_activity: 2026-07-12 - Shipped self-declared review dispatch + scope/context_needs (v1.14.0); roadmap #2 slice 2/3
 active_phase: ""
 next_action: ""
 next_phases: []
@@ -28,9 +28,12 @@ SPLIT OUT to feature #6: tests-frozen-during-refactor guard (needs a TDD sub-pha
 Five features grouped from a review of bdfinster's last month (853 commits). Order by conviction:
 
 1. **deterministic-repair-loop** (current) — routing + dead-end + invariants/rollback.
-2. **review-roster-dispatch** — `scope:` self-declared dispatch + `correctness-review` agent +
-   React reactivity/component-architecture agents + prompt-injection/falsifiability +
-   agent-frontmatter contract test + `Context needs:`.
+2. **review-roster-dispatch** — `correctness-review` agent [DONE v1.13.0] +
+   `scope:` self-declared dispatch + agent-frontmatter contract test + `Context needs:` [in progress] +
+   prompt-injection/falsifiability [todo].
+   React reactivity/component-architecture agents DROPPED from core (2026-07-12): stack-specific,
+   contradicts the language-agnostic direction (v1.9.0). Belongs to the "teach your stack per-repo"
+   path (repo-local skill/agent), same argument that keeps tdd-go the lone bundled example.
 3. **test-quality-signals** — oracle-provenance/circular-test taxonomy + unarmored-region +
    reflection-based private-access detection.
 4. **structured-finding-layer** — SARIF unified-finding envelope + golangci-lint adapter +

@@ -3,6 +3,8 @@ name: concurrency-review
 description: "Go concurrency review: goroutines, channels, mutexes, races, context, shutdown."
 model: sonnet
 tools: Read, Grep, Glob, Bash
+scope: "**/*.go"
+context_needs: full-file
 ---
 
 You are the Concurrency Review agent, specialized in Go concurrency patterns.
