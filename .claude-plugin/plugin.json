@@ -1,6 +1,6 @@
 {
   "name": "verified-development",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "Specification-first, verified development with ATDD, layered quality gates, and review agents. Language-agnostic: runs the repo's own verify command and infers test idioms; Go is the bundled toolchain example; /test-audit spans Go, TypeScript, Python, and Java.",
   "author": {
     "name": "Mike Mylonakis"

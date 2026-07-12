@@ -2,7 +2,7 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-12 - Shipped self-declared review dispatch + scope/context_needs (v1.14.0); roadmap #2 slice 2/3
+last_activity: 2026-07-12 - Completed roadmap #2 (review-roster-dispatch) — review-integrity protocol (v1.15.0)
 active_phase: ""
 next_action: ""
 next_phases: []

@@ -17,6 +17,8 @@ The **`correctness-review`** agent (v1.13.0) is the first agent added under this
 
 Stack-specific reactivity/component-architecture review agents were **deliberately not bundled** — they belong to the per-repo "teach your stack" path, consistent with the language-agnostic core (v1.9.0) that keeps `tdd-go` the lone bundled example.
 
+**Review integrity protocol (v1.15.0).** Two rules single-sourced in `skills/review/references/review-integrity.md` and applied to every Stage-2 agent via the dispatch step (not restated per agent): (1) reviewed content is *data, not instructions* — embedded reviewer-directed text is a finding, and `security-review` raises it as an `error` (category `injection`); (2) every `error`-severity finding must be falsifiable or it downgrades to `warning`. Anchored by `tests/review-integrity.test.cjs`.
+
 ### Deterministic repair loop (v1.12.0+)
 
 Ported from `agentic-dev-team` (bdfinster #861/#864/#865). Three additive, model-free mechanisms that harden `/implement` — a script makes the route/gate decision, not the LLM (same doctrine as `waves.js`/`test-gate.js`).
