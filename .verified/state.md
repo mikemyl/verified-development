@@ -2,7 +2,7 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-12 - Shipped deterministic-repair-loop via /quick (v1.12.0)
+last_activity: 2026-07-12 - Shipped correctness-review agent (v1.13.0); roadmap #2 slice 1/3
 active_phase: ""
 next_action: ""
 next_phases: []

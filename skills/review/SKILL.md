@@ -67,7 +67,7 @@ Select agents based on what changed. Run applicable agents in parallel:
 
 | Changed Files | Agents to Run |
 |--------------|---------------|
-| Any source code | complexity-review, test-review |
+| Any source code | complexity-review, test-review, correctness-review |
 | Error handling patterns | error-handling-review |
 | Concurrent/async code | concurrency-review |
 | Security-sensitive code (auth, crypto, SQL) | security-review |
