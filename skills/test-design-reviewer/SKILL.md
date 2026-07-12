@@ -47,6 +47,14 @@ When reviewing tests, you will score each test file or test suite against these 
 - **4-6**: Some tests feel like checkbox exercises; moderate redundancy
 - **1-3**: Many tests add little value; significant redundancy
 
+**Oracle provenance** is the concrete lens for Necessary. Classify each expected value as
+SPEC-DERIVED (from a requirement), INDEPENDENT (hand-computed/known-good), or CIRCULAR (captured
+from the implementation's own output — snapshots, golden files, ApprovalTests, AI-recorded
+"current output"). A CIRCULAR oracle stays green through a regression (it just re-records), so it
+asserts "unchanged", not "correct" — it is **not Necessary** in Farley's sense. The higher a
+suite's circular ratio, the lower its N score. This is informational and shares `test-review`'s
+non-blocking framing — it never gates on its own.
+
 ### 6. Granular (G)
 - **10**: Each test asserts one thing; failures pinpoint exact issues
 - **7-9**: Tests are focused; occasional multiple assertions with clear purpose

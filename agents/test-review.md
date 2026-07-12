@@ -112,6 +112,42 @@ the PASS/WARN/FAIL status by itself (same framing as "high Farley + weak asserti
 still a warning"). The gate stays driven purely by the error/warning findings in criteria
 1–6. If the repo declares no sanctioned test types, skip this check rather than inventing one.
 
+### 9. Oracle Provenance (test-quality signal — non-blocking)
+
+Classify where each expected value a test asserts *came from*:
+
+- **SPEC-DERIVED** — traceable to a requirement/acceptance scenario. Best.
+- **INDEPENDENT** — hand-computed or a known-good constant the author reasoned out. Good.
+- **CIRCULAR** — captured from the implementation's own current output: snapshots
+  (`toMatchSnapshot`, `__snapshots__/`, syrupy), golden files, ApprovalTests, or any assertion
+  whose expected value was evidently recorded by running the code (incl. AI-captured "current
+  output"). A circular oracle stays green through a *regression* — the snapshot is just
+  re-recorded — so it verifies "unchanged", not "correct".
+
+When a test's assertions are dominated by circular oracles, report a `warning`, worst-first as
+the circular ratio rises. This is the concrete mechanism behind Farley's **Necessary** property
+(criterion 7 / the N score in `test-design-reviewer`) — surface both together. Non-blocking: it
+never moves PASS/WARN/FAIL on its own.
+
+### 10. Unarmored Regions (test-quality signal — non-blocking)
+
+An **unarmored region** is changed code with *neither* test coverage *nor* any historical
+defensive attention — no negative/error-path test, no boundary assertion, no nearby
+`// edge case`-style guard. This is distinct from an ordinary coverage gap: it's code no one has
+ever hardened, so its unknown-risk is higher. Surface unarmored regions worst-first as a
+`warning`. Non-blocking.
+
+### 11. Reflection Into Privates (test-quality signal — non-blocking)
+
+A test that reaches *around* the public seam to touch a private member via a language escape
+hatch tests an implementation detail, not behavior. Signatures: Go unexported access via
+`reflect`/`go:linkname`; TS/JS `(obj as any)['_private']` / bracket casts to reach `#private` or
+`_`-prefixed members. This is the same "reaching around the seam" family as 5b's boundary
+violation, but it's a judgment call, so `warning` only (never blocking). Fix menu: (a) extract
+the collaborator so the behavior is observable through a public API; (b) relax visibility *only*
+if production genuinely needs it; (c) test through the public API. It's an architecture smell, not
+a hygiene nit. Non-blocking.
+
 ## Output Format
 
 ```markdown
@@ -143,9 +179,10 @@ still a warning"). The gate stays driven purely by the error/warning findings in
 ## Rules
 
 - `error` severity: tautological tests, vaporware, and the two must-not-ship craft violations in criterion 5b (weak assertion on a named error; assertion below the declared test boundary) — these MUST be fixed and BLOCK the review
-- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy mismatch — SHOULD be fixed
+- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy mismatch, circular oracles (criterion 9), unarmored regions (criterion 10), reflection into privates (criterion 11) — SHOULD be fixed
 - `suggestion` severity: missing property tests, structure improvements — nice to have
 - Read the IMPLEMENTATION to identify conditionals, then check if tests cover them
 - Don't flag test helpers or fixtures as "untested code"
 - Farley Score (criterion 7) is non-blocking: it informs, it never gates. PASS/WARN/FAIL comes from error/warning findings only. Compute it only when tests were added or rewritten.
 - Test Taxonomy Fit (criterion 8) is non-blocking too: a test that does not match a sanctioned test type (or that scatters assertions) is a non-blocking `warning` only — it never moves the PASS/WARN/FAIL gate on its own.
+- Oracle provenance (9), unarmored regions (10), and reflection into privates (11) are all non-blocking `warning` signals as well — same framing as Farley/taxonomy: they inform worst-first triage but NEVER move PASS/WARN/FAIL on their own. Only criteria 1–6 (and the two 5b craft violations) gate.

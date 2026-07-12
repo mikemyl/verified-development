@@ -30,9 +30,10 @@ Parse the JSON: `tests` is already ranked worst-first; `summary` carries counts 
 Take the top-N worst tests from the ranked list. **N is configurable; default 15.** For each selected test, invoke the `test-design-reviewer` skill to judge it against its type's rubric:
 
 - the generic actor-BDD craft rules, **referenced from the `testing` skill** (the single source — do not restate them here), PLUS
-- the test's inferred type's `good-example` / `bad-example` / `anti-patterns` from the taxonomy.
+- the test's inferred type's `good-example` / `bad-example` / `anti-patterns` from the taxonomy, PLUS
+- **oracle provenance** (circular-oracle ratio) and any **unarmored regions** the test's subject leaves — both defined in `agents/test-review.md` criteria 9–10 (single source; do not restate). A high circular ratio is the concrete driver of a low Farley **Necessary** score.
 
-For each deep-reviewed test produce: one **Farley score**, which craft patterns hold and which `anti-patterns` are present, and a concrete recommendation.
+For each deep-reviewed test produce: one **Farley score**, which craft patterns hold and which `anti-patterns` are present, its oracle provenance (spec-derived / independent / circular), and a concrete recommendation.
 
 - If a type declares no exemplars, fall back to the generic actor-BDD craft rules from the `testing` skill alone.
 - If a `good-example` reference points at a test that no longer exists, note it as stale in the report rather than failing.

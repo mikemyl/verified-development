@@ -2,7 +2,7 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-12 - Completed roadmap #2 (review-roster-dispatch) — review-integrity protocol (v1.15.0)
+last_activity: 2026-07-12 - Completed roadmap #3 (test-quality-signals): oracle/unarmored/reflection (v1.16.0)
 active_phase: ""
 next_action: ""
 next_phases: []

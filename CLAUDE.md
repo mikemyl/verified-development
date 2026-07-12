@@ -75,6 +75,15 @@ A non-blocking test-quality signal, filling the gap left by removing mutation te
 - **Wiring** — the `test-review` agent computes a Farley Score when a change adds or rewrites tests; `/review` surfaces it in the report and `/verify` points at it. It is **informational only** — PASS/WARN/FAIL comes from error/warning findings, never from the score. "High Farley + weak assertions" is still a warning.
 - Tests: `tests/farley-score.test.cjs` locks the formula (a pure-function reimplementation must equal the published formula string — prose and math can't drift) and asserts the non-blocking wiring.
 
+### Test-quality signals (v1.16.0+)
+
+Three more **non-blocking** test-quality signals (ported from `agentic-dev-team`), all sharing the Farley framing — they inform worst-first triage, never move PASS/WARN/FAIL:
+
+- **Oracle provenance** (`test-review` criterion 9) — classify each expected value as SPEC-DERIVED / INDEPENDENT / CIRCULAR (snapshots, golden files, ApprovalTests, AI-recorded "current output"). A circular oracle stays green through a regression, so it verifies "unchanged" not "correct". Co-located with Farley's **Necessary** property in `test-design-reviewer` (a high circular ratio drives a low N score) — single-sourced, not duplicated.
+- **Unarmored regions** (criterion 10) — changed code with *neither* coverage *nor* any historical defensive attention (no negative test, boundary assertion, or edge-case guard); higher unknown-risk than an ordinary coverage gap; surfaced worst-first.
+- **Reflection into privates** (criterion 11) — tests reaching around the public seam via reflection / `(obj as any)` casts; same "reaching around the seam" family as the blocking 5b boundary rule but a judgment call, so `warning` only.
+- `test-audit` references criteria 9–10 (single-sourced, not restated). Tests: `tests/test-quality-signals.test.cjs`; the non-blocking framing is guarded there and by `tests/farley-score.test.cjs` / `tests/test-craft-enforcement.test.cjs`.
+
 ### Enforced test taxonomy (v1.7.0+)
 
 Every plan task now declares the *kind* of test it ships, and a deterministic gate refuses tasks that under-test without sanction. No LLM is in the block decision.
