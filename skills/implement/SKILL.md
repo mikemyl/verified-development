@@ -118,6 +118,23 @@ to the shipped seed taxonomy). Handle the exit code:
 
 This keeps `/implement` consistent with the gate `/plan` already passed.
 
+#### Rollback anchors & declared-scope advisory
+
+These are deterministic — never guess a revert SHA or eyeball scope. Both use `hooks/lib/waves.js`.
+
+**Record rollback anchors.** Capture the current short SHA as `plan-start` before dispatching
+wave 1, and as `wave-start` before each wave (and `slice-start` before a single executor when a
+wave runs sequentially). A task carrying a `(rollback: …)` trailer resolves its revert boundary
+from these — pass the recorded anchors to `resolveRollback(task.rollback, anchors)`; it throws
+rather than fall back to `HEAD` if the anchor/ref can't resolve. If a wave's tests can't be made
+green, revert to the failed task's resolved rollback point rather than unwinding by hand.
+
+**Run the scope advisory after each wave.** Diff what executors actually wrote
+(`git diff --name-only`) and, for each task, call
+`declaredScopeAdvisory(task, touchedFiles)`. Surface any returned lines as an ADVISORY (never a
+block) — they flag a task that reached beyond its declared `(files: …)` surface. Invariant
+*commands* are not writes, so they never appear here.
+
 #### Spawning Executors
 
 For each wave, spawn `executor` agents (subagent_type: `verified-development:executor`):

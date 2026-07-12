@@ -25,6 +25,14 @@
  *   • scenario — `(scenario: ...)`; comma/space list of acceptance-scenario ids
  *                this task serves. Human hint consumed by test-gate.js; the
  *                wave math ignores it.
+ *   • invariants (optional) — `(invariants: cmd1; cmd2)`; semicolon list of
+ *                commands that must stay green AFTER the task's own suite passes
+ *                (executor-enforced). Absent ⇒ no extra invariant gate.
+ *   • rollback  (optional) — `(rollback: slice-start|wave-start|plan-start|<ref>)`;
+ *                a revert boundary resolved to a concrete SHA at dispatch via
+ *                resolveRollback(). Absent ⇒ no declared rollback point.
+ *   • Both optional trailers are additive: a task without them serializes
+ *     byte-identically to the pre-feature engine, and the wave math ignores both.
  *   • The `[P]` marker is a human hint only — this script is authoritative.
  *
  * Output contract `plan-waves/v1`:
@@ -57,8 +65,17 @@ const DEPS_RE = /\((?:depends on|deps:)\s*([^)]*)\)/i;
 const FILES_RE = /\(files:\s*([^)]*)\)/i;
 const TEST_RE = /\(test:\s*([^)]*)\)/i;
 const SCENARIO_RE = /\(scenario:\s*([^)]*)\)/i;
+// Optional, additive per-task trailers (deterministic-repair-loop feature). The
+// wave math ignores both; they ride on the task contract for the executor.
+const INVARIANTS_RE = /\(invariants:\s*([^)]*)\)/i;
+const ROLLBACK_RE = /\(rollback:\s*([^)]*)\)/i;
 const RANGE_RE = /T(\d+)\s*-\s*T(\d+)/gi;
 const ID_RE = /T\d+/gi;
+
+// Symbolic rollback anchors resolved to a concrete SHA at dispatch. Anything
+// else in a (rollback: …) trailer is treated as a literal git ref — except a
+// stray `*-start` token, which is a likely typo of an anchor and is rejected.
+const SYMBOLIC_ANCHORS = new Set(['slice-start', 'wave-start', 'plan-start']);
 
 class AnalysisError extends Error {
   constructor(message) {
@@ -110,9 +127,64 @@ function stripClauses(rest) {
     .replace(FILES_RE, '')
     .replace(TEST_RE, '')
     .replace(SCENARIO_RE, '')
+    .replace(INVARIANTS_RE, '')
+    .replace(ROLLBACK_RE, '')
     .replace(/\[P\]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+// Split a (invariants: …) inner on ';', keeping non-empty commands. An empty
+// list is legal (EC-003) — it means "author noted no extra invariants."
+function parseInvariants(inner) {
+  return inner
+    .split(';')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+// Validate AND canonicalize a (rollback: …) value at parse time. A known
+// symbolic anchor is lowercased to its canonical form so resolveRollback()
+// matches it regardless of the author's casing (e.g. `Plan-Start` → `plan-start`
+// — without this the mixed-case token would silently degrade to a git ref). A
+// `*-start` token that is not a known anchor is rejected as a likely typo;
+// anything else is a literal git ref, preserved as written.
+function canonicalRollback(id, value) {
+  const lower = value.toLowerCase();
+  if (SYMBOLIC_ANCHORS.has(lower)) return lower;
+  if (/-start$/i.test(value)) {
+    throw new AnalysisError(
+      `task ${id}: unknown rollback anchor "${value}" (expected slice-start|wave-start|plan-start or a git ref)`,
+    );
+  }
+  return value;
+}
+
+// Parse the optional (invariants: …) / (rollback: …) trailers off a task line.
+// Kept out of parsePlan so that function stays under the complexity ceiling and
+// the malformed-trailer guards live next to the parsing they protect. Returns a
+// partial object to Object.assign onto the task — empty when neither trailer is
+// present, so a trailer-less task serializes byte-identically (FR-012 / SC-005).
+function parseOptionalTrailers(id, rest) {
+  const invMatch = INVARIANTS_RE.exec(rest);
+  const rollbackMatch = ROLLBACK_RE.exec(rest);
+
+  // Malformed-trailer guard (EC-006): opener present but the balanced (…: …)
+  // form didn't match — an unterminated trailer. Reject, don't silently ignore.
+  if (!invMatch && /\(invariants:/i.test(rest)) {
+    throw new AnalysisError(`task ${id}: malformed (invariants: …) trailer (unterminated?)`);
+  }
+  if (!rollbackMatch && /\(rollback:/i.test(rest)) {
+    throw new AnalysisError(`task ${id}: malformed (rollback: …) trailer (unterminated?)`);
+  }
+
+  const out = {};
+  if (invMatch) out.invariants = parseInvariants(invMatch[1]);
+  if (rollbackMatch) {
+    const rb = rollbackMatch[1].trim();
+    if (rb) out.rollback = canonicalRollback(id, rb);
+  }
+  return out;
 }
 
 // Split a (scenario: …) inner on comma/whitespace, keeping non-empty tokens.
@@ -161,7 +233,7 @@ function parsePlan(text) {
     const testMatch = TEST_RE.exec(rest);
     const scenarioMatch = SCENARIO_RE.exec(rest);
     const files = filesMatch ? parseFiles(filesMatch[1]) : [];
-    tasks[id] = {
+    const task = {
       title: stripClauses(rest) || id,
       depends_on: depsMatch ? expandDeps(depsMatch[1]) : [],
       files,
@@ -170,6 +242,10 @@ function parsePlan(text) {
       test_type: testMatch ? (testMatch[1].trim() || null) : null,
       scenarios: scenarioMatch ? parseScenarios(scenarioMatch[1]) : [],
     };
+    // Optional trailers attach ONLY when present (empty object otherwise), so a
+    // trailer-less task stays byte-identical to the pre-feature engine.
+    Object.assign(task, parseOptionalTrailers(id, rest));
+    tasks[id] = task;
   }
   if (Object.keys(tasks).length === 0) {
     throw new AnalysisError('no tasks found in plan (expected lines like "- [ ] T001 ...")');
@@ -262,6 +338,65 @@ function analyze(text) {
   };
 }
 
+// --- rollback + scope helpers (deterministic-repair-loop) --------------------
+
+// Default resolver: ask git for the concrete commit a ref points at. Kept
+// injectable so the pure logic is unit-testable with no git and no model.
+function defaultGitResolve(ref) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
+    encoding: 'utf8',
+  });
+  const out = (r.stdout || '').trim();
+  return r.status === 0 && out ? out : null;
+}
+
+/**
+ * Resolve a (rollback: …) value to a concrete SHA at dispatch time.
+ *
+ *  • A symbolic anchor (slice-start|wave-start|plan-start) resolves from the
+ *    `anchors` map the caller recorded at the corresponding boundary. A known
+ *    anchor with no recorded SHA is an error (never a silent HEAD fallback).
+ *  • Anything else is a literal git ref, resolved via `resolver`. An
+ *    unresolvable ref throws naming the ref (EC-004) — again, never HEAD.
+ *
+ * @param {string} symbol
+ * @param {Object.<string,string>} [anchors]  boundary → SHA the caller recorded
+ * @param {(ref:string)=>?string} [resolver]  git ref → SHA (null if unresolvable)
+ * @returns {string} concrete SHA
+ */
+function resolveRollback(symbol, anchors = {}, resolver = defaultGitResolve) {
+  const sym = String(symbol || '').trim();
+  if (!sym) throw new AnalysisError('resolveRollback: empty rollback symbol');
+  if (Object.prototype.hasOwnProperty.call(anchors, sym)) return anchors[sym];
+  if (SYMBOLIC_ANCHORS.has(sym)) {
+    throw new AnalysisError(`resolveRollback: no anchor recorded for rollback point "${sym}"`);
+  }
+  const sha = resolver(sym);
+  if (!sha) throw new AnalysisError(`resolveRollback: cannot resolve rollback ref "${sym}"`);
+  return sha;
+}
+
+/**
+ * Advisory (never blocking): the files an executor actually wrote that fall
+ * outside the task's declared (files:) surface. Returns [] when the surface is
+ * undeclared (nothing to check against). Callers pass only real file writes —
+ * invariant *commands* are not writes, so they never appear here (EC-005).
+ *
+ * @param {Task} task
+ * @param {string[]} touchedFiles
+ * @returns {string[]} human-readable advisory lines
+ */
+function declaredScopeAdvisory(task, touchedFiles) {
+  if (!task || task.files_undeclared || !Array.isArray(task.files) || task.files.length === 0) {
+    return [];
+  }
+  const declared = new Set(task.files);
+  return (touchedFiles || [])
+    .filter(f => !declared.has(f))
+    .map(f => `writes outside declared (files:) scope: ${f}`);
+}
+
 // --- CLI shim ----------------------------------------------------------------
 
 function readSource(arg) {
@@ -309,6 +444,8 @@ module.exports = {
   computeWaves,
   detectCollisions,
   expandDeps,
+  resolveRollback,
+  declaredScopeAdvisory,
   AnalysisError,
   SCHEMA,
 };

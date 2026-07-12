@@ -42,6 +42,28 @@ For each task assigned to you:
 ### After Each Task
 - Mark the task complete in plan.md: change `- [ ]` to `- [x]`
 - If you can't complete a task, mark it with `- [!] TXXX BLOCKED: {reason}`
+- If your task declares `(invariants: …)`, run each invariant command AFTER your own test is
+  green. A non-zero invariant fails the task — it means you broke something outside your own
+  test's reach. Stay within your `(files: …)`; writing outside it is surfaced as an advisory,
+  so if you must, say why in your report.
+
+### Repair loop — route deterministically, detect dead-ends
+
+When a test won't go green, don't free-associate a fix strategy. Capture the failing command's
+output and exit code and let the script classify it — the route decision is deterministic:
+
+```
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/repair-routing.js classify <exitCode> < failure.txt
+```
+
+It returns `{class, route, signature}`. Follow the `route`: `fix-inline` (compile/lint — fix in
+place), `generate-test` (coverage gap — add the missing test), `systematic-debug` (behavioral —
+debug the logic before editing), `dispatch:<agent>` (hand to that review agent), or
+`escalate:human`/`retry`.
+
+Track the `signature` across attempts. Two consecutive attempts with the SAME signature means
+you're stuck: STOP, checkpoint-commit progress, and escalate with the resolved-vs-remaining diff.
+Never loop a third time on an identical failure.
 
 ## Before You Begin
 

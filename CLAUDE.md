@@ -4,6 +4,15 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Deterministic repair loop (v1.12.0+)
+
+Ported from `agentic-dev-team` (bdfinster #861/#864/#865). Three additive, model-free mechanisms that harden `/implement` — a script makes the route/gate decision, not the LLM (same doctrine as `waves.js`/`test-gate.js`).
+
+- **`hooks/lib/repair-routing.js`** (contract `repair-routing/v1`) — `classify(failureText, exitCode) → {class, route}` from an ordered regex table (compile/security/lint/coverage/reviewer/behavioral; unmatched → `unclassified`/`retry`, so nothing regresses). `signature(text)` hashes the failing-test-id set + error class with volatile tokens (timestamps, addresses, durations, temp paths) stripped; `isDeadEnd(prev, cur)` fires when two consecutive attempts share a signature; `failureDiff` gives the resolved-vs-remaining set for escalation. `agents/executor.md` calls it in the repair loop.
+- **`hooks/lib/waves.js` grammar (additive)** — optional `(invariants: c1; c2)` (commands that must stay green *after* the task's own suite; executor-enforced post-green) and `(rollback: slice-start|wave-start|plan-start|<ref>)` (revert boundary; `resolveRollback(sym, anchors, resolver?)` → concrete SHA, throws rather than falling back to HEAD). Symbolic anchors canonicalize case-insensitively. A trailer-less task serializes byte-identically to the pre-feature engine (the wave math ignores both trailers). `declaredScopeAdvisory(task, touchedFiles)` surfaces out-of-`(files:)` writes as an advisory (never a block). `/implement` records the anchors + runs the scope advisory per wave.
+- Deliberately **split out**: the tests-frozen-during-refactor guard — it needs a RED/GREEN/REFACTOR sub-phase state machine the plugin lacks (future `tdd-subphase-freeze` feature).
+- Tests: `tests/repair-routing.test.cjs`, `tests/plan-invariants.test.cjs` (kept separate from `waves.test.cjs`, which stays byte-for-byte unchanged).
+
 ### Interruptible workflow (v1.2.0+)
 
 Every phase skill is interruptible at any tool-use boundary.

@@ -1,0 +1,13 @@
+{
+  "language": "node",
+  "thresholds": {
+    "coverage": 80,
+    "cyclomatic_complexity": 10,
+    "cognitive_complexity": 15
+  },
+  "workflows": {
+    "require_spec": true,
+    "require_review": true,
+    "require_verify": true
+  }
+}
