@@ -1,17 +1,28 @@
 ---
-feature: none
-phase: idle
+feature: structured-finding-layer
+phase: specify
 status: complete
-last_activity: 2026-07-12 - Completed roadmap #3 (test-quality-signals): oracle/unarmored/reflection (v1.16.0)
+last_activity: 2026-07-12 - structured-finding-layer spec approved (non-UI); roadmap #4, full workflow
 active_phase: ""
-next_action: ""
-next_phases: []
+next_action: "/plan"
+next_phases: ["plan"]
 schema_version: 2
 ---
 
 # Verified Development State
 
-## Last shipped: deterministic-repair-loop (v1.12.0, via /quick)
+## Current feature: structured-finding-layer (roadmap #4, full workflow)
+
+SARIF unified-finding envelope from agentic-dev-team (#808/#811). Producer-only scope (Q2=4a):
+`hooks/lib/findings.js` (`findings/v1`, pure SARIF→envelope parser) + Go/golangci-lint SARIF
+adapter (auto-loaded by extension) + `/verify` surfaces the envelope as a NON-BLOCKING section
+(existing `just verify` stays the sole gate). Graceful degradation first-class (no/broken tool →
+skip, never fail). Self-heal loop and `/review` finding-injection are SPLIT to follow-ups.
+- spec.md — approved (10 scenarios, 11 reqs, 6 edge cases, 7 SC)
+- discussion.md — scope trail (envelope-only; producer-only, no review-behavior change)
+- Next: /plan
+
+## Earlier shipped: deterministic-repair-loop (v1.12.0, via /quick)
 
 Ported three deterministic `/implement` hardening mechanisms from `agentic-dev-team` (bdfinster
 #861/#864/#865): failure-class **routing** + **dead-end detection** (`hooks/lib/repair-routing.js`,
