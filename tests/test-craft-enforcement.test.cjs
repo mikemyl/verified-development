@@ -29,12 +29,12 @@ const mustAll = (hay, needles, where) => {
 
 module.exports = [
   {
-    name: 'testing skill single-sources the two must-not-ship blocking anti-patterns',
+    name: 'testing skill single-sources the three must-not-ship blocking anti-patterns',
     fn: () => {
       const s = readSkill('testing');
       mustAll(
         s,
-        ['Must-not-ship anti-patterns', 'Assert the specific error', 'declared test boundary'],
+        ['Must-not-ship anti-patterns', 'Assert the specific error', 'declared boundary'],
         'skills/testing/SKILL.md',
       );
       // ErrorIs is the illustrative fix for the named-error rule.
@@ -80,6 +80,85 @@ module.exports = [
         e,
         ['Test craft (write-time', 'specific error', 'declared taxonomy boundary'],
         'agents/executor.md',
+      );
+    },
+  },
+  {
+    name: 'testing skill blocks violating a repo-declared anti-pattern for the test type',
+    fn: () => {
+      const s = readSkill('testing');
+      mustAll(
+        s,
+        ['anti-patterns:', 'good-example:', 'TESTING.md'],
+        'skills/testing/SKILL.md',
+      );
+      // The boundary rule must cover ARRANGE, not just assert — the hole that let a
+      // handler-boundary test seed state through a DAO method pass review.
+      assert.ok(
+        /arrange/i.test(s) && /seed/i.test(s),
+        'the boundary rule must cover arranging below the boundary, not only asserting',
+      );
+      // And it must be measured against the test's OWN type, not the layer the code lives in.
+      assert.ok(
+        ci(s, "your own test's declared boundary") || ci(s, 'own declared type'),
+        'the boundary must be anchored on the test\'s own declared type',
+      );
+    },
+  },
+  {
+    name: 'test-review resolves each test to its declared type BEFORE judging craft (5a)',
+    fn: () => {
+      const a = readAgent('test-review');
+      assert.ok(ci(a, '5a'), 'test-review must have criterion 5a (resolve the declared type)');
+      mustAll(
+        a,
+        ['match-paths', 'match-markers', 'good-example', 'anti-patterns', 'boundary:'],
+        'agents/test-review.md',
+      );
+      // The repo-declared anti-pattern violation is an ERROR (mechanical), while taxonomy
+      // FIT (criterion 8) stays a judgment call and non-blocking. Both must be present.
+      assert.ok(
+        /declared for that test's type/i.test(a),
+        'criterion 5b must escalate repo-declared anti-pattern violations to error',
+      );
+      assert.ok(
+        /fit is a judgment call/i.test(a),
+        'criterion 8 must stay a non-blocking judgment call, distinct from 5b',
+      );
+    },
+  },
+  {
+    name: 'a feature-specific dispatch brief cannot displace the standing rubric',
+    fn: () => {
+      const a = readAgent('test-review');
+      const r = readSkill('review');
+      assert.ok(
+        ci(a, 'additive'),
+        'test-review must treat a dispatch brief as additive to its rubric',
+      );
+      assert.ok(
+        ci(r, 'additive, never a substitute') || ci(r, 'additive'),
+        '/review must state that a feature-specific brief is additive, not a substitute',
+      );
+      assert.ok(
+        ci(r, 'TESTING.md'),
+        '/review must point test-review at the repo TESTING.md type table',
+      );
+    },
+  },
+  {
+    name: 'executor loads the declared type golden path before writing a test',
+    fn: () => {
+      const e = readAgent('executor');
+      mustAll(
+        e,
+        ['good-example', 'anti-patterns', 'golden path', '(test:'],
+        'agents/executor.md',
+      );
+      // Extend-the-seam escape hatch, not a below-boundary shortcut.
+      assert.ok(
+        ci(e, 'extend the seam'),
+        'executor must route a missing capability to extending the seam',
       );
     },
   },

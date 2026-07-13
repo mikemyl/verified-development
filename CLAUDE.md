@@ -4,6 +4,34 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Repo-declared golden path enforcement (v1.19.0+)
+
+Closes the hole that let a handler-boundary test ship with DAO-level setup/assertions and scattered
+raw `require`s while `test-review` returned WARN + Farley 7.7 "Excellent" (keros `per-apartment-str-owner`).
+Three compounding causes, all fixed:
+
+- **The reviewer never saw the repo's own rubric.** `TESTING.md`'s per-type `good-example:` /
+  `anti-patterns:` / `boundary:` fields (added v1.8.0) were consumed **only by `/test-audit`**. New
+  `test-review` **criterion 5a** makes resolving each changed test to its declared type (via
+  `match-paths`/`match-markers`/the `(test:)` trailer) and loading that type's golden path a
+  *precondition* for judging craft. `agents/executor.md` reads the same rubric at write-time.
+- **The boundary rule was anchored on the wrong axis.** It was written as "a DAO-level test reaching
+  down to raw SQL", so a *use-case*-boundary test calling `dsl.Repository.X.SetFoo(id)` didn't match
+  the example and never fired. Now stated relative to the test's **own** declared type boundary, in
+  both directions, and it **covers arrange, not just assert** (seeding a precondition through a lower
+  layer is the same violation).
+- **A bespoke dispatch prompt displaced the standing rubric.** `/review` hand-wrote a
+  vacuity-focused brief; the agent answered it and skipped its own criteria. `/review` + `test-review`
+  now both state that a feature-specific brief is **additive, never a substitute**.
+
+**Severity:** violating an anti-pattern the repo *declared* for a test's type is an `error` (blocking) —
+the repo already made the call in its own `TESTING.md`, so it's a declaration match, not a judgment
+call. This is deliberately distinct from **criterion 8 (taxonomy _fit_)**, which stays a non-blocking
+`warning` judgment call. The Farley/oracle/unarmored/reflection signals remain non-blocking — that
+framing is still locked by `tests/farley-score.test.cjs` and `tests/test-quality-signals.test.cjs`.
+The `testing` skill now single-sources **three** must-not-ship anti-patterns (was two).
+Tests: `tests/test-craft-enforcement.test.cjs`.
+
 ### ATDD loop closure (v1.18.0+)
 
 Adapted from `agentic-dev-team` #537, reshaped for the language-agnostic core: detect a repo's acceptance-test convention and **record a decision**, never force a Gherkin export on a testdsl/page-object repo.

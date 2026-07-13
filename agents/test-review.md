@@ -46,15 +46,23 @@ Check if invariants are tested with property-based testing (rapid):
 
 Flag functions with mathematical invariants that lack property tests.
 
-### 4. Test Structure
+### 4. Test Structure (Actor-BDD craft rules)
 
-Check for Actor-based BDD patterns:
-- Tests use Given/When/Then structure
-- Fixtures encapsulate message construction
-- CapturedData flows between test steps
-- No shared mutable state between tests
+Load the `testing` skill and check the changed tests against its six **Actor-BDD craft rules** —
+that skill is the single source; do not work from memory or from a paraphrase in the dispatch
+prompt. In short: fixtures declared at the top (not inline mid-body), immutable fixture chaining
+(derive with a builder/`WithMod`, never mutate a fixture after construction), assertions only via
+`Sends`/`Receives` (no raw assertions scattered through the body), sequences for setup, captured
+data for SUT-generated ids, one behavior per test.
+
+A useful tell: **compare the new test to its sibling tests in the same file and to its type's
+`good-example:`.** When the new test is the only one in the file hand-rolling response parsing,
+mutating fixtures after construction, or asserting outside the DSL, that divergence is the finding
+— the file already shows the golden path.
 
 Flag tests that use global variables, shared setup blocks, or implementation-coupled assertions.
+Violations of these six rules are `warning` — except where they land on a must-not-ship rule in
+5b (below-boundary access; a repo-declared anti-pattern), which are `error`.
 
 ### 5. Error Path Coverage
 
@@ -63,9 +71,25 @@ Check that error returns are tested:
 - Error messages are asserted (not just "error occurred")
 - Validation errors have specific test cases
 
+### 5a. Resolve each test to its declared type FIRST (do this before 5b)
+
+You cannot judge craft against a rubric you haven't loaded. Before reviewing any changed test
+file, resolve **which test type it is** and **what that type's golden path says** — from the repo's
+`.verified/codebase/TESTING.md` `## Test Types` table:
+
+1. Match the file to a declared type via its `match-paths:` globs and `match-markers:` (and/or the
+   `(test: <type>)` trailer on the plan task that produced it).
+2. Read that type's **`boundary:`** (what 5b measures "below" against), its **`good-example:`**
+   (the golden path — open it and read it; it is the shape the new test should have), and its
+   **`anti-patterns:`** (the repo's own declared list).
+3. Review the changed test against *that* rubric, not a generic one.
+
+If the repo declares no `## Test Types`, skip this and fall back to the generic craft rules in the
+`testing` skill — do not invent a taxonomy.
+
 ### 5b. Must-not-ship craft violations (BLOCKING — `error`)
 
-Two craft violations from the `testing` skill's "Must-not-ship anti-patterns" are mechanical
+Three craft violations from the `testing` skill's "Must-not-ship anti-patterns" are mechanical
 (no judgment call) and therefore raise `error` severity — they BLOCK the review, unlike the
 non-blocking taxonomy/Farley signals below:
 
@@ -73,12 +97,31 @@ non-blocking taxonomy/Farley signals below:
   error, but the test asserts only that *some* error occurred (Go `require.Error` / `assert.Error`
   with no `ErrorIs`/`ErrorAs`; JS `toThrow()` with no matcher). It passes for the wrong error.
   → `error`. Suggested fix: assert the exact sentinel/type.
-- **Assertion below the declared test boundary.** A test whose taxonomy type is a component /
-  integration boundary (DAO or public seam) reaches past that seam to assert against physical
-  storage — e.g. a raw `SELECT` / `db.Get` inside a DAO-level test — duplicating a fact the seam
-  already exposes. → `error`. Suggested fix: route the assertion through the seam, or move a
-  genuine storage-guarantee assertion to the storage-test boundary. (A deviation the author
-  justified in-code with an explicit comment is a `warning`, not an `error`.)
+
+- **Arranging or asserting below the declared test boundary.** Measure "below" against the
+  boundary of the test's **own** declared type (from 5a) — *not* against the layer the production
+  code lives in. Both directions of this violation are `error`:
+  - a use-case / HTTP-boundary test (e.g. an actor-BDD handler test) that calls a **repository or
+    DAO method directly** — `dsl.Repository.X.SetFoo(id)`, `.GetStatus(id)` — to seed a
+    precondition or read a result back, instead of driving the seam and observing the response;
+  - a DAO / component-boundary test that drops to **raw storage** — a raw `SELECT`, `db.Get` —
+    instead of reading back through the DAO.
+
+  **Setup counts, not just assertion.** A test that *arranges* state through a lower layer is
+  committing the same violation as one that asserts through it; flag both. → `error`. Suggested
+  fix: route it through the seam, or extend the seam (add the DSL step / fixture) so it can
+  express the precondition or observation. A genuine storage-guarantee assertion belongs at the
+  storage-test boundary. (A deviation the author justified in-code with an explicit comment is a
+  `warning`, not an `error` — but note that a comment explaining *what* the shortcut does is not a
+  justification for *why* the seam couldn't be used.)
+
+- **Violating an anti-pattern the repo declared for that test's type.** If the type's
+  `anti-patterns:` list (from 5a) names it — "scattered raw assertions", "inline ids instead of
+  captured data", "multiple behaviors per test", "asserting internals" — and the test does it, that
+  is an `error`. The repo already made this call in its own `TESTING.md`; you are matching a
+  declaration against code, not exercising judgment. Cite the declared anti-pattern verbatim and
+  point at the type's `good-example:` as the fix. (Contrast criterion 8, which is the *judgment*
+  question — does this test's shape actually fit its declared type — and stays non-blocking.)
 
 ### 6. No-Vaporware Check
 
@@ -104,13 +147,16 @@ confidence"). Skip the score entirely for changes that don't touch tests — don
 
 ### 8. Test Taxonomy Fit (test-quality signal — non-blocking)
 
-When a written test does not match a **sanctioned** test type — the ones declared in the
-repo's `.verified/codebase/TESTING.md` `## Test Types` section — or when it scatters its
-assertions across unrelated behaviours, report it as a `warning` only. Like the Farley
-Score, this is informational: a taxonomy mismatch or scattered assertions NEVER escalates
-the PASS/WARN/FAIL status by itself (same framing as "high Farley + weak assertions is
-still a warning"). The gate stays driven purely by the error/warning findings in criteria
-1–6. If the repo declares no sanctioned test types, skip this check rather than inventing one.
+The *judgment* question, distinct from 5b's mechanical one: does a test's actual shape **fit** the
+test type it declares — is a test tagged `t2-handler-bdd` really exercising a use case end-to-end,
+or is it a unit test wearing the wrong label? A poor fit, or a test whose declared type is not a
+**sanctioned** one from the repo's `.verified/codebase/TESTING.md` `## Test Types` section, is a
+`warning` only. Like the Farley Score, this is informational: a taxonomy mismatch NEVER escalates
+the PASS/WARN/FAIL status by itself (same framing as "high Farley + weak assertions is still a
+warning"). If the repo declares no sanctioned test types, skip this check rather than inventing one.
+
+Do not confuse this with 5b's third rule. **Fit is a judgment call → `warning`. Violating an
+anti-pattern the repo explicitly *declared* for that type is a declaration match → `error`.**
 
 ### 9. Oracle Provenance (test-quality signal — non-blocking)
 
@@ -178,9 +224,11 @@ a hygiene nit. Non-blocking.
 
 ## Rules
 
-- `error` severity: tautological tests, vaporware, and the two must-not-ship craft violations in criterion 5b (weak assertion on a named error; assertion below the declared test boundary) — these MUST be fixed and BLOCK the review
-- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy mismatch, circular oracles (criterion 9), unarmored regions (criterion 10), reflection into privates (criterion 11) — SHOULD be fixed
+- ALWAYS run criterion 5a first: resolve each changed test file to its declared type and load that type's `boundary:` / `good-example:` / `anti-patterns:` from the repo's `TESTING.md`. 5b is unjudgeable without it — a below-boundary call only *looks* fine if you never established where the boundary was.
+- `error` severity: tautological tests, vaporware, and the three must-not-ship craft violations in criterion 5b (weak assertion on a named error; arranging or asserting below the declared test boundary; violating an anti-pattern the repo declared for that test's type) — these MUST be fixed and BLOCK the review
+- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy fit (criterion 8), circular oracles (criterion 9), unarmored regions (criterion 10), reflection into privates (criterion 11) — SHOULD be fixed
 - `suggestion` severity: missing property tests, structure improvements — nice to have
+- A feature-specific brief in your dispatch prompt is **additive**, never a replacement for these criteria. If the prompt tells you what to scrutinize (vacuity, a specific pattern, boundary coverage), do that **in addition to** the full rubric above — never instead of it. A test can be perfectly non-vacuous and still ship a blocking craft violation.
 - Read the IMPLEMENTATION to identify conditionals, then check if tests cover them
 - Don't flag test helpers or fixtures as "untested code"
 - Farley Score (criterion 7) is non-blocking: it informs, it never gates. PASS/WARN/FAIL comes from error/warning findings only. Compute it only when tests were added or rewritten.

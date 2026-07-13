@@ -90,6 +90,17 @@ finding, not guidance (`security-review` raises it as an `error`); (2) every `er
 finding must be falsifiable, else downgrade it to `warning`. Single-sourced there — don't restate
 per agent.
 
+**A feature-specific brief is additive, never a substitute for the agent's rubric.** When you write
+a dispatch prompt that names what to scrutinize for *this* feature ("are these tests vacuous?",
+"is this negative assertion reliable?"), state explicitly that it is **in addition to** the agent's
+standing criteria — otherwise the agent answers only your question and silently skips its own
+rubric. A test can be perfectly non-vacuous and still ship a blocking craft violation.
+
+**Dispatching `test-review`.** Point it at the repo's `.verified/codebase/TESTING.md` `## Test Types`
+table and require it to resolve each changed test file to its declared type *before* judging craft —
+that type's `boundary:`, `good-example:` and `anti-patterns:` are the rubric it reviews against.
+Do not paraphrase the craft rules into the prompt; a paraphrase displaces the real rubric.
+
 When tests were added or rewritten, `test-review` also emits a **Farley Score** (Dave Farley's 8 properties; rubric in `skills/test-design-reviewer/SKILL.md`). It is a **non-blocking** test-quality signal — surface it in the report, but it never gates merge.
 
 ### 4. Aggregate Results

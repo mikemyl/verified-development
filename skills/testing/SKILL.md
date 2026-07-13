@@ -29,10 +29,17 @@ The canonical, language-neutral rubric for actor-BDD test craft. Single source �
 
 ### Must-not-ship anti-patterns (blocking)
 
-Two craft violations are mechanical enough to block review outright — no judgment call — so `test-review` raises them as `error`, not `warning`. Never write a test that does either:
+Three craft violations are mechanical enough to block review outright — no judgment call — so `test-review` raises them as `error`, not `warning`. Never write a test that does any of them:
 
 - **Assert the specific error, not merely that one occurred.** When the code under test returns a *named* sentinel or typed error, a test that asserts only "some error happened" (Go `require.Error`; JS `expect(fn).toThrow()` with no matcher) passes for the *wrong* error and lets a regression slip through. Assert the exact sentinel/type — Go `require.ErrorIs(err, ErrX)` / `errors.As`; JS `toThrow(SpecificError)` or match the message.
-- **Assert at the declared test boundary, never below it.** A component/integration test whose taxonomy boundary is the DAO / public seam must not reach *past* that seam to assert against physical storage (e.g. a raw `SELECT` inside a DAO-level test). That couples the test to the storage layout and re-asserts a fact the seam already exposes. Route the assertion through the seam; if the seam can't express it, extend the seam. (A genuine storage-guarantee test — e.g. "ciphertext at rest" — belongs at the storage-test boundary, not smuggled into a higher-boundary test.)
+
+- **Work at your own test's declared boundary — never reach below it, to arrange *or* to assert.** Take the boundary from the test's *own* declared type (its `(test:)` trailer / the `boundary:` of its type in `.verified/codebase/TESTING.md`), not from the layer the code happens to live in. Reaching below it couples the test to internals the seam already exposes, and it is a violation *whichever* layer you land on:
+  - an HTTP/use-case-boundary test that calls a **repository or DAO method directly** to seed state or read a result back (`dsl.Repository.X.SetFoo(id)` / `.GetStatus(id)`) instead of driving the seam and observing the response;
+  - a DAO/component-boundary test that drops to **raw storage** (a raw `SELECT`, `db.Get`) instead of reading back through the DAO.
+
+  **Arrange counts, not just assert.** Seeding a precondition through a lower layer is the same violation as asserting through one — it manufactures a state the seam may not even be able to produce. Route it through the seam; if the seam can't express the precondition or the observation, *extend the seam* (add the fixture/DSL step). A genuine storage-guarantee test — "ciphertext at rest" — belongs at the storage-test boundary, not smuggled into a higher-boundary test.
+
+- **Never violate an anti-pattern your own repo declared for your test's type.** When `.verified/codebase/TESTING.md` declares `anti-patterns:` for the test type you are writing, those are not advisory — the repo already made the call, so a match is mechanical, not a judgment call. Write to the type's `good-example:`; that is the golden path, and it is the concrete form of the six craft rules for *this* repo. (A repo with no declared taxonomy has nothing to violate — the generic rules above still apply.)
 
 The other four rules and `single behavior` stay `warning`-level judgment calls.
 

@@ -103,20 +103,39 @@ Never say "tests pass" without showing output. Never say "should work" — run i
 
 ## Test craft (write-time — do not rely on review to catch these)
 
-When you write a test, apply the `testing` skill's Actor-BDD craft rules as you type — the
-review agent is a backstop, not your first line. Two are non-negotiable and will BLOCK review
-if they ship:
+**Before you write a test, load its golden path.** Your plan task declares a `(test: <type>)`
+type. Open `.verified/codebase/TESTING.md` `## Test Types`, find that type, and read its
+`boundary:`, its `good-example:` (open that file — it is the shape your test should have) and its
+`anti-patterns:`. That is the repo's declared golden path for the test you are about to write; it
+is the concrete form of the generic craft rules. Writing a test without reading it is how drift
+starts.
+
+Then apply the `testing` skill's Actor-BDD craft rules as you type — the review agent is a
+backstop, not your first line. Three are non-negotiable and will BLOCK review if they ship:
 
 - **Assert the specific error, not just that one occurred.** If the code returns a named
   sentinel or typed error, assert *that* error (Go `require.ErrorIs`/`errors.As`; JS
   `toThrow(SpecificError)`), never a bare `require.Error`/`toThrow()`.
-- **Assert at your test's declared taxonomy boundary, never below it.** A DAO/component-level
-  test must not reach past the seam to raw storage (e.g. raw `SELECT`/`db.Get`). Route the
-  assertion through the seam, or extend the seam. A true storage-guarantee assertion belongs
-  in a storage-boundary test, not smuggled into a higher one.
+- **Work at your test's declared taxonomy boundary — never below it, to arrange *or* assert.**
+  The boundary is your *own* test type's (from the `(test:)` trailer), not the layer the code
+  lives in. A use-case/HTTP-boundary test must not call a repository/DAO method directly to seed
+  state or read a result back (`dsl.Repository.X.SetFoo(id)` / `.GetStatus(id)`) — drive the seam
+  and observe the response. A DAO-boundary test must not drop to raw storage (`SELECT`/`db.Get`).
+  **Setup counts, not just assertion.** If the seam can't express the precondition or the
+  observation you need, *extend the seam* — add the DSL step or fixture. Reaching around it
+  because it's quicker is exactly the violation.
+- **Never violate an anti-pattern your repo declared for your test's type.** If `TESTING.md` lists
+  `anti-patterns:` for your type ("scattered raw assertions", "inline ids instead of captured
+  data", "multiple behaviors per test", "asserting internals"), a match blocks review. Write to
+  the type's `good-example:` instead.
 
-Also prefer one behavior per test (split multi-behavior functions), and match the `(test: …)`
-type the plan task declares.
+Also prefer one behavior per test (split multi-behavior functions), derive fixture variants with
+the builder (`WithMod`/`Clone`) rather than mutating a fixture after construction, and match the
+`(test: …)` type the plan task declares.
+
+**If your test can't be written on the golden path, that is a signal, not a licence.** A test that
+seems to *need* a below-boundary shortcut usually means the seam is missing a capability — extend
+the seam, or raise it as a blocker. It does not mean the rule doesn't apply to this one test.
 
 ## Comments & traceability (be economical)
 
