@@ -193,6 +193,42 @@ do not change the field syntax). For each type emit an H3 `### <type>` followed 
 - a fenced ```mermaid flowchart harness diagram showing actor → boundary →
   system-under-test → stubbed externals for that type.
 
+**`anti-patterns:` is a GATE, not a note.** `test-review` (criterion 5b) raises a violation of a
+type's declared anti-pattern as an **`error` that blocks review** — the repo already made the
+call here, so the reviewer is matching a declaration against code, not exercising taste. Two
+consequences:
+
+- **Only list mechanical, no-judgment smells.** "Reads state back through the repository instead
+  of the seam" is checkable. "Poorly named" or "not idiomatic" is not — that belongs in prose,
+  not this field.
+- **Keep the seed's boundary entries.** Every type must carry the boundary rule adapted to ITS
+  boundary: reading state back *below* the type's own boundary, seeding state below it when the
+  system's own API can drive it, and post-construction fixture mutation. These are the smells
+  that let a test look green while proving nothing, and they are the ones agents reproduce most
+  often. Drop them only if the type genuinely has no boundary (e.g. `none`).
+
+`good-example:` must point at a REAL test that exemplifies the type — the executor opens it
+before writing a new test of that type, so a wrong or aspirational pointer teaches the wrong
+shape. Prefer a test that shows the read-back-through-the-boundary pattern, not just a happy path.
+
+`primitives:` should name the repo's **observations** as well as its drivers (the `Then()` /
+assertion vocabulary, not just `Sends`). The executor reaches for what this field lists; if it
+lists only drivers, agents drive through the boundary and then reach *around* it to assert.
+
+**Record genuinely un-exposable state as a named exception, not as scattered store access.** Some
+state has no boundary surface by design — an internal audit table, or an append-only invariant
+that is *about* what lives below the API. If the repo has such a case, say so in TESTING.md prose
+and point at the single named harness observation that owns it. Two is normal; a long list means
+the boundary is under-built, not that the rule is wrong.
+
+**Oracle provenance is the repo's call.** `test-review` (criterion 9) surfaces circular oracles —
+expected values recorded from the code's own output (snapshots, golden files) or computed by
+calling the production function under test — as a **non-blocking warning** by default, because a
+repo built on approval testing could otherwise land nothing. If this repo derives its expectations
+independently and wants that enforced, add `circular oracles` to the relevant type's
+`anti-patterns:` and it becomes blocking. Do this only when the repo's existing tests already meet
+that bar; do not impose it on a corpus full of snapshots.
+
 For the actor-BDD craft rubric (what makes a *good* test of each type), REFERENCE the
 canonical rules in the `testing` skill rather than restating them here — keep the taxonomy
 descriptive of THIS repo and let the `testing` skill own the craft rules.

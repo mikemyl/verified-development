@@ -4,6 +4,36 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Boundary doctrine in the taxonomy seed (v1.20.0+)
+
+v1.19.0 made a repo-declared `anti-patterns:` entry a **blocking** finding, which retroactively
+turned `hooks/lib/test-types-seed.md` into a gate — but the seed didn't actually declare the
+boundary rule, and `/map`'s only instruction for the field was "common smells, comma-separated".
+So the gate had no floor: a repo mapped today got whatever the model invented.
+
+- **The seed now encodes the boundary doctrine** (`acceptance` + `dao` types): reading state back
+  below the test's own boundary, seeding below it when the system's own API can drive it, and
+  post-construction fixture mutation. Its header block explains the doctrine in full — measure
+  "below" against the *test's* boundary not the code's; prefer re-reading *through* the boundary
+  (a re-read proves what durably persisted, a read next to the write only proves what was
+  written); **extend the seam** rather than reach around it; and record genuinely un-exposable
+  state (an internal audit table, an append-only invariant) as ONE named harness observation with
+  its justification, not as scattered store access.
+- **`/map` treats the field as a gate**: only mechanical, no-judgment smells; keep the boundary
+  entries adapted per type; `primitives:` must name the repo's *observations*, not just its
+  drivers (list only drivers and agents drive through the boundary then reach around it to
+  assert); `good-example:` must point at a real test showing the read-back-through-the-boundary
+  shape.
+- **Oracle provenance stays opt-in.** Circular oracles are deliberately **NOT** in the seed:
+  criterion 9 is non-blocking by design (locked by `tests/test-quality-signals.test.cjs`), and
+  seeding it would block every approval-testing repo that has no taxonomy of its own. A repo may
+  escalate by declaring it — keros does. `tests/test-craft-enforcement.test.cjs` guards both
+  directions: the boundary entries must be present, circular oracles must be absent.
+
+Field-tested on `keros-platform`: ~60 below-boundary calls across 15 handler-test files → 0,
+surfacing a duplicate-AADE-registration bug and a circular oracle in the money path that a
+boundary-conformant test would have caught years earlier.
+
 ### Repo-declared golden path enforcement (v1.19.0+)
 
 Closes the hole that let a handler-boundary test ship with DAO-level setup/assertions and scattered

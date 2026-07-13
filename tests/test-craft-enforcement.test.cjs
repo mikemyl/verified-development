@@ -163,6 +163,67 @@ module.exports = [
     },
   },
   {
+    name: 'the shipped seed declares the boundary anti-patterns (they are a review gate)',
+    fn: () => {
+      const { loadSeed } = require(path.join(REPO, 'hooks/lib/taxonomy.js'));
+      const seed = loadSeed();
+      const types = seed.types || seed;
+      const acceptance = types['acceptance'];
+      assert.ok(acceptance, 'seed must declare an `acceptance` type');
+
+      const declared = (acceptance.anti_patterns || []).join(' | ').toLowerCase();
+      // These are the smells that let a test look green while proving nothing —
+      // the ones agents reproduce most often. They must survive edits to the seed.
+      for (const needle of ['below the boundary', 'seeding state', 'mutating a fixture']) {
+        assert.ok(
+          declared.includes(needle),
+          `seed acceptance anti-patterns must cover ${JSON.stringify(needle)}; got: ${declared}`,
+        );
+      }
+
+      // A DAO-boundary test must not drop to raw SQL to read its own writes back.
+      const dao = (types['dao'].anti_patterns || []).join(' | ').toLowerCase();
+      assert.ok(dao.includes('raw-sql read-back'), 'seed dao anti-patterns must cover raw-SQL read-back');
+    },
+  },
+  {
+    name: 'circular oracles stay OUT of the seed (criterion 9 is non-blocking by default)',
+    fn: () => {
+      // Listing them in the seed would make oracle provenance a BLOCKING error for
+      // every repo without its own taxonomy — contradicting criterion 9's
+      // deliberately non-blocking framing and breaking any approval-testing repo.
+      // A repo may escalate by declaring it; the seed must not impose it.
+      const { loadSeed } = require(path.join(REPO, 'hooks/lib/taxonomy.js'));
+      const types = loadSeed().types || loadSeed();
+      for (const [id, type] of Object.entries(types)) {
+        const declared = (type.anti_patterns || []).join(' | ').toLowerCase();
+        assert.ok(
+          !declared.includes('circular oracle'),
+          `seed type ${id} must not declare circular oracles (that escalation is the repo's call)`,
+        );
+      }
+      // ...and /map must explain that the escalation is opt-in.
+      const map = readSkill('map');
+      assert.ok(ci(map, 'circular oracles'), '/map must explain the circular-oracle escalation');
+      assert.ok(ci(map, 'non-blocking'), '/map must state criterion 9 is non-blocking by default');
+    },
+  },
+  {
+    name: '/map treats anti-patterns as a gate and requires the boundary entries',
+    fn: () => {
+      const map = readSkill('map');
+      mustAll(
+        map,
+        ['anti-patterns', 'blocks review', 'mechanical', 'boundary'],
+        'skills/map/SKILL.md',
+      );
+      assert.ok(
+        ci(map, 'primitives') && ci(map, 'observation'),
+        '/map must tell the taxonomy to name the repo observations, not just its drivers',
+      );
+    },
+  },
+  {
     name: 'executor carries comment-economy + feature-qualified requirement IDs',
     fn: () => {
       const e = readAgent('executor');
