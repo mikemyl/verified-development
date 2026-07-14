@@ -144,6 +144,18 @@ module.exports = [
         ci(r, 'TESTING.md'),
         '/review must point test-review at the repo TESTING.md type table',
       );
+
+      // /quick keeps its own minimal review table, so it needs the rule stated separately —
+      // it dispatches test-review with a hand-written brief exactly like /review does.
+      const q = readSkill('quick');
+      assert.ok(
+        ci(q, 'additive, never a substitute'),
+        '/quick must state that a change brief is additive, not a substitute for the rubric',
+      );
+      assert.ok(
+        ci(q, 'TESTING.md') && ci(q, 'Test Types'),
+        '/quick must point test-review at the repo TESTING.md type table',
+      );
     },
   },
   {

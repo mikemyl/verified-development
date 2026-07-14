@@ -79,6 +79,8 @@ git diff --name-only HEAD~1
 
 Minimum: always run **test-review** (verify the new test is good) and **complexity-review** (verify the fix didn't increase complexity).
 
+When you brief an agent on what changed, that brief is **additive, never a substitute** for the agent's own rubric — an agent that answers only your question and skips its standing criteria is the failure mode this rule exists to prevent. In particular, point **test-review** at the repo's `## Test Types` table in `.verified/codebase/TESTING.md` so it resolves each changed test to its declared type and judges craft against that type's `good-example:` / `anti-patterns:`.
+
 Skip these for quick fixes (they need full feature context):
 - spec-compliance-review (no spec to comply with)
 - domain-review (overkill for small changes)
