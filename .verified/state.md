@@ -2,7 +2,7 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-12 - Roadmap #5 (atdd-loop-closure) shipped: bdd-convention + down-payments (v1.18.0)
+last_activity: 2026-07-16 - finding-injection shipped (v1.21.0): 0 errors, 5 warnings fixed, Farley 8.7, 348 tests
 active_phase: ""
 next_action: ""
 next_phases: []
@@ -11,7 +11,26 @@ schema_version: 2
 
 # Verified Development State
 
-## Current feature: structured-finding-layer (roadmap #4, full workflow)
+## Current feature: finding-injection
+
+Consumer half of `structured-finding-layer` (v1.17.0). `/review` Stage 2 injects the persisted
+`findings/v1` envelope as a keys-only suppression list (`file:line:rule_id`) so quality agents stop
+re-reporting lint noise a linter already caught. `/verify` persists
+`.verified/features/<f>/findings.json` + `git_head`; `/review` reads behind a staleness guard
+(stale/absent/malformed/skip → inject nothing, degrade to today). Keys-only dissolves the v1.17.0
+security constraint (no untrusted linter prose enters the prompt). Per-identity suppression, not
+per-line; non-gating. New `findings.js` `suppressionKeys()`.
+- spec.md — approved (7 scenarios, 9 reqs, 5 edge cases, 7 SC)
+- discussion.md — Q1b (persist+staleness), Q2a (keys-only)
+- Next: /plan
+
+## Roadmap remaining (post-v1.20.1)
+- finding-injection (current) — consumer of the SARIF envelope.
+- tdd-subphase-freeze (#6) — RED/GREEN/REFACTOR sub-phase state emitter + refactor-freeze hook.
+- static self-heal loop — autofix→verify→agent (cap 2), also consumes the envelope.
+- effort-band migration — model: pins → effort: bands (gated on native CC support check).
+
+## Prior feature: structured-finding-layer (roadmap #4, full workflow)
 
 SARIF unified-finding envelope from agentic-dev-team (#808/#811). Producer-only scope (Q2=4a):
 `hooks/lib/findings.js` (`findings/v1`, pure SARIF→envelope parser) + Go/golangci-lint SARIF

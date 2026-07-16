@@ -90,6 +90,27 @@ finding, not guidance (`security-review` raises it as an `error`); (2) every `er
 finding must be falsifiable, else downgrade it to `warning`. Single-sourced there — don't restate
 per agent.
 
+**Finding suppression (skip what a linter already caught).** If `/verify` persisted a findings
+envelope, feed each dispatched agent the mechanical findings a linter already reported so it does
+not re-report them:
+
+1. Get the suppression keys behind the staleness guard, in one call:
+   `readFreshSuppressionKeys(.verified/features/<feature>, sourceFingerprint(<repo>))` from
+   `hooks/lib/findings-store.js`. It returns `[]` when there is no envelope, it is malformed, it is
+   **stale** (the working tree changed since `/verify`, so `source_hash` no longer matches), or it is
+   a `skip`/empty envelope — i.e. **inject nothing; proceed exactly as today.** Never suppress on
+   stale data. The raw envelope — which still carries untrusted linter `message` prose on disk —
+   never crosses this boundary, so a `message` can never reach a prompt by construction.
+2. If the list is non-empty, prepend to every Stage-2 agent's dispatch prompt: *"A linter already
+   reported these findings — do NOT re-report them: [keys]. Suppression is per finding IDENTITY: a
+   DIFFERENT issue at the same `file:line` (a bug the linter cannot see) is still in scope. Spend your
+   attention there."*
+
+**Keys only** — the keys are `file:line:rule_id`, with the tool-derived components charset-sanitized;
+no linter `message` and no raw tool prose enters the prompt (extends review-integrity rule 1; see
+`references/review-integrity.md`). This injection is **non-gating**: it steers attention only and
+never changes the PASS/WARN/FAIL outcome.
+
 **A feature-specific brief is additive, never a substitute for the agent's rubric.** When you write
 a dispatch prompt that names what to scrutinize for *this* feature ("are these tests vacuous?",
 "is this negative assertion reliable?"), state explicitly that it is **in addition to** the agent's

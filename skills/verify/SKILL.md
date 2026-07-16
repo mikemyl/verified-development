@@ -43,6 +43,14 @@ This phase is interruptible. Wire format: see `skills/pause/SKILL.md`. On entry,
    found problems" and degrades gracefully: a missing or broken linter is listed in the envelope's
    `skipped`, never a failure. If `status` is `skip` (no applicable tool), just note that.
 
+   **Persist the envelope for `/review` (when a feature is active).** So `/review` can suppress
+   findings a linter already caught without re-running the linters, persist the envelope to the
+   feature's dir via `hooks/lib/findings-store.js`: compute `sourceFingerprint(<repo>)` (a
+   working-tree-inclusive hash — HEAD + `git diff HEAD` + untracked) and `persistEnvelope(
+   .verified/features/<feature>, envelope, fingerprint)`. This writes
+   `.verified/features/<feature>/findings.json` (schema `findings-persisted/v1`) atomically. If no
+   feature is active, skip persistence. This never affects the gate — it is a handoff artifact only.
+
 4. If all targets pass:
    - Report the results summary (coverage %, any warnings)
    - Confirm the codebase is verified

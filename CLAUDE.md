@@ -4,6 +4,15 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Finding injection (v1.21.0+)
+
+The consumer half of the SARIF envelope (v1.17.0 was producer-only). `/review` Stage 2 injects the mechanical findings a linter already caught as a **keys-only suppression list**, so quality agents stop re-reporting lint noise and spend attention on what a linter can't see.
+
+- **`hooks/lib/findings.js` `suppressionKeys(envelope) → string[]`** — one `file:line:rule_id` key per finding, de-duped. **Keys only, never `message`** — and the tool-derived components (`rule_id`/`file`, from SARIF `ruleId`/`uri`) are charset-sanitized (`[\w./-]`, len-capped), so no untrusted linter prose can reach a review prompt by any field. Suppression is per finding IDENTITY, not per line: a different rule at the same `file:line` stays in scope.
+- **`hooks/lib/findings-store.js`** (NEW — the verify→review handoff, contract `findings-persisted/v1`, ADR 0004) — `sourceFingerprint(cwd, git)` is a **working-tree-inclusive** hash (HEAD + `git diff HEAD` + untracked, **excluding `.verified/`** so persisting the record doesn't self-invalidate it — see CONCERNS.md); `persistEnvelope` (atomic, randomized tmp); `readFreshEnvelope` (staleness/malformed/absent guard → envelope|null); `readFreshSuppressionKeys` (the injection-safe read — the raw `message`-bearing envelope never crosses this boundary). Injectable git seam → unit-testable, plus real-git integration tests for the tree interactions.
+- **`/verify`** persists the envelope for the active feature; **`/review`** reads it behind the staleness guard and injects the keys into every Stage-2 agent — stale/absent/malformed/skip → inject nothing, degrade to today. **Non-gating** (never changes PASS/WARN/FAIL).
+- ADR: `.verified/decisions/0004-persisted-findings-record.md`. Tests: `tests/finding-injection.test.cjs`. The static self-heal loop (also reads `findings.json`) remains a separate follow-up.
+
 ### Boundary doctrine in the taxonomy seed (v1.20.0+)
 
 v1.19.0 made a repo-declared `anti-patterns:` entry a **blocking** finding, which retroactively
