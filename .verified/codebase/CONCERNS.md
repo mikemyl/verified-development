@@ -34,3 +34,18 @@ fake git that returned static strings and could not see the new file.
 not change the fingerprint). **Lesson:** any fingerprint that stamps an artifact stored inside the
 scanned tree must exclude that artifact, and a fake-seam unit test cannot catch this — use a real-git
 integration test for the seam's tree interactions.
+
+## `**/` in the shared glob compiler must match zero-or-more dirs
+
+**Symptom:** `hooks/lib/test-weakening.js` (and `test-corpus.js` classification) failed to match a
+**top-level** test file (e.g. `foo_test.go`) against the adapter glob `**/*_test.go`.
+
+**Cause:** `hooks/lib/lang-loader.js` `globToRegExp` compiled `**` → `.*` char-by-char, so `**/`
+became `.*/` — which *requires* a slash, excluding paths with no directory. Standard glob semantics:
+`**/` matches zero or more path segments.
+
+**Fix:** special-case `**/` → `(?:.*/)?` (the slash is optional). Guarded by
+`tests/lang-loader.test.cjs` (`globToRegExp` matches both `x_test.go` and `pkg/sub/x_test.go`).
+**Lesson:** this bug lived latently in `test-corpus.js`'s private copy of `globToRegExp` until it was
+shared and given a direct test — a shared seam needs direct, non-trivial coverage, not just
+transitive/trivial-pattern exercise.

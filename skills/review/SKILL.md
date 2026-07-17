@@ -122,6 +122,16 @@ table and require it to resolve each changed test file to its declared type *bef
 that type's `boundary:`, `good-example:` and `anti-patterns:` are the rubric it reviews against.
 Do not paraphrase the craft rules into the prompt; a paraphrase displaces the real rubric.
 
+Also run the test-weakening detector over the review range and pass its flags to `test-review`
+(criterion 12):
+```
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/test-weakening.js scan $BASE_SHA
+```
+It emits a `test-weakening/v1` envelope of test files that **lost assertions** in this change
+(possible regression-hiding weakening). This is a **non-blocking** signal — `test-review` judges
+each flag (legitimate consolidation / actor-BDD fixture-chaining vs. real coverage removal) and it
+never moves PASS/WARN/FAIL. If there are no flags, say nothing.
+
 When tests were added or rewritten, `test-review` also emits a **Farley Score** (Dave Farley's 8 properties; rubric in `skills/test-design-reviewer/SKILL.md`). It is a **non-blocking** test-quality signal — surface it in the report, but it never gates merge.
 
 ### 4. Aggregate Results

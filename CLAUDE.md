@@ -4,6 +4,16 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Test-weakening detection (v1.22.0+)
+
+Roadmap #6, reshaped from a PreToolUse refactor-freeze hook to a **detector** (the challenge rejected the hook: global blast radius + self-reported state — see the feature's discussion.md). Flags a test file that **lost assertions** in a change (a possible regression-hiding weakening — a failing test "fixed" by deleting/loosening assertions instead of reverting the code).
+
+- **`hooks/lib/test-weakening.js`** (contract `test-weakening/v1`) — pure `analyze(entries)` (each `entry = {file, before, after}`) computes the assertion-count delta via the `hooks/lib/lang/*` adapters' `countAssertions`; flags a net decrease (deletion → `removed: true`), never a new file or an equal/higher count; unsupported language → `not_analyzed`. `scan(baseRef, cwd)` + CLI owns the git+fs IO (diff, classify, resolve before via `git show` / after via fs). Assertion count is a deterministic **proxy**; the legitimate-vs-weakening verdict is a judgment.
+- **`hooks/lib/lang-loader.js`** (NEW) — the adapter loader + `globToRegExp`, extracted from `test-corpus.js` so both share one copy (extracting it surfaced a latent `**/` glob bug — see CONCERNS.md).
+- **`test-review` criterion 12 (non-blocking)** — surfaces flagged files as `warning`; the criterion text names the dominant *legitimate* causes so reviewers don't re-derive them: **assertion consolidation** (table-driven) and this repo's **actor-BDD fixture-chaining** (`Sends`/`Receives` lower the raw count while improving the test). `/review` runs `test-weakening.js scan` over the review range. NEVER gates — the non-blocking invariant is locked in `tests/test-quality-signals.test.cjs` (now four signals).
+- **Classification** reuses repo-declared taxonomy `match-paths` only when `source: 'repo'` (the seed's are plugin-specific), else per-language adapter `testFileGlobs`.
+- Deliberately NOT built (SC-006): the PreToolUse refactor-freeze hook and the TDD sub-phase state machine (the rejected Option A/B). Tests: `tests/test-weakening.test.cjs`, `tests/lang-loader.test.cjs`.
+
 ### Finding injection (v1.21.0+)
 
 The consumer half of the SARIF envelope (v1.17.0 was producer-only). `/review` Stage 2 injects the mechanical findings a linter already caught as a **keys-only suppression list**, so quality agents stop re-reporting lint noise and spend attention on what a linter can't see.

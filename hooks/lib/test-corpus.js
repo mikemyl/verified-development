@@ -91,43 +91,9 @@ const SCHEMA = 'test-corpus/v1';
 // (selected by extension) takes precedence and these files become analyzable.
 const UNSUPPORTED_TEST_RE = /(^|[\/\\])(test_\w+\.py|\w+_test\.py|.+\.test\.[jt]sx?|.+\.spec\.[jt]sx?|\w+_spec\.rb|\w+Test\.java)$/;
 
-// Directory holding the drop-in language adapters.
-const LANG_DIR = path.join(__dirname, 'lang');
-
-/**
- * Load every language adapter under hooks/lib/lang/. An adapter is any module
- * there that exports an `extensions` array; shared helpers without one (e.g.
- * cfamily.js) are skipped. Result is cached for the process.
- *
- * @returns {Array<{id:string, extensions:string[], discover:Function, countAssertions:Function}>}
- */
-let _adapters = null;
-function loadAdapters() {
-  if (_adapters) return _adapters;
-  const out = [];
-  for (const entry of fs.readdirSync(LANG_DIR)) {
-    if (!entry.endsWith('.js')) continue;
-    const mod = require(path.join(LANG_DIR, entry));
-    if (mod && Array.isArray(mod.extensions)) out.push(mod);
-  }
-  out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  _adapters = out;
-  return out;
-}
-
-/** Build an extension→adapter map from the loaded adapters. */
-function adapterByExtension() {
-  const map = {};
-  for (const adapter of loadAdapters()) {
-    for (const ext of adapter.extensions) map[ext] = adapter;
-  }
-  return map;
-}
-
-/** Sorted list of supported-language ids (for the unsupported-language note). */
-function supportedLanguageIds() {
-  return loadAdapters().map((a) => a.id);
-}
+// The per-language adapter loader is shared with test-weakening.js — see
+// hooks/lib/lang-loader.js (extracted so both modules use one loader).
+const { adapterByExtension, supportedLanguageIds, globToRegExp } = require('./lang-loader.js');
 
 /**
  * Walk a directory tree, returning absolute-or-as-given file paths. Recurses
@@ -193,38 +159,6 @@ function discover(rootPath) {
 // --- Classification ----------------------------------------------------------
 
 // Regex metacharacters to escape when compiling a literal glob char.
-const REGEX_SPECIALS = new Set('\\^$.|?+()[]{}'.split(''));
-
-/**
- * Compile a portable path glob into an anchored RegExp. Deterministic and
- * Node-version-independent (D-c) — no dependency on any host glob engine.
- *   • `**` matches across path segments (including `/`).
- *   • `*`  matches within a single segment (never crosses `/`).
- *   • every other character is matched literally.
- *
- * @param {string} glob
- * @returns {RegExp}
- */
-function globToRegExp(glob) {
-  let re = '';
-  for (let i = 0; i < glob.length; i++) {
-    const c = glob[i];
-    if (c === '*') {
-      if (glob[i + 1] === '*') {
-        re += '.*';
-        i++; // consume the second star
-      } else {
-        re += '[^/]*';
-      }
-    } else if (REGEX_SPECIALS.has(c)) {
-      re += '\\' + c;
-    } else {
-      re += c;
-    }
-  }
-  return new RegExp('^' + re + '$');
-}
-
 /** True iff any glob in `globs` matches `file`. */
 function anyGlobMatches(globs, file) {
   for (const g of globs) {

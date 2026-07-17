@@ -194,6 +194,22 @@ the collaborator so the behavior is observable through a public API; (b) relax v
 if production genuinely needs it; (c) test through the public API. It's an architecture smell, not
 a hygiene nit. Non-blocking.
 
+### 12. Test Weakening in a Change (test-quality signal — non-blocking)
+
+When reviewing a change (not a fresh file), a test file that **lost assertions** relative to the
+base is worth a look: a failing test may have been "fixed" by deleting or loosening assertions
+instead of reverting the code — a regression-hiding weakening. `hooks/lib/test-weakening.js`
+(run by `/review`) flags these deterministically by assertion-count delta; you judge whether the
+drop is legitimate.
+
+**Name the legitimate causes before flagging** — a decrease is a prompt to look, not a verdict.
+The dominant benign causes: **assertion consolidation** (several asserts folded into one
+table-driven case or a single struct/diff comparison) and — in this repo's actor-BDD style —
+**fixture-chaining that replaces raw asserts with `Sends`/`Receives`**, which legitimately lowers
+the raw count while improving the test. Flag a drop as a `warning` only when it looks like coverage
+was actually removed (an error path, a boundary, a specific expected value no longer checked).
+Non-blocking.
+
 ## Output Format
 
 ```markdown
@@ -233,4 +249,4 @@ a hygiene nit. Non-blocking.
 - Don't flag test helpers or fixtures as "untested code"
 - Farley Score (criterion 7) is non-blocking: it informs, it never gates. PASS/WARN/FAIL comes from error/warning findings only. Compute it only when tests were added or rewritten.
 - Test Taxonomy Fit (criterion 8) is non-blocking too: a test that does not match a sanctioned test type (or that scatters assertions) is a non-blocking `warning` only — it never moves the PASS/WARN/FAIL gate on its own.
-- Oracle provenance (9), unarmored regions (10), and reflection into privates (11) are all non-blocking `warning` signals as well — same framing as Farley/taxonomy: they inform worst-first triage but NEVER move PASS/WARN/FAIL on their own. Only criteria 1–6 (and the two 5b craft violations) gate.
+- Oracle provenance (9), unarmored regions (10), reflection into privates (11), and test weakening in a change (12) are all non-blocking `warning` signals as well — same framing as Farley/taxonomy: they inform worst-first triage but NEVER move PASS/WARN/FAIL on their own. Only criteria 1–6 (and the two 5b craft violations) gate.

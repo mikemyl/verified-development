@@ -2,11 +2,16 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-16 - finding-injection shipped (v1.21.0): 0 errors, 5 warnings fixed, Farley 8.7, 348 tests
+last_activity: 2026-07-17 - test-weakening-detection shipped (v1.22.0): 0 errors, 6 warnings fixed (incl. a real globToRegExp bug), Farley 8.2, 366 tests. ROADMAP COMPLETE.
 active_phase: ""
 next_action: ""
 next_phases: []
 schema_version: 2
+
+# NOTE: roadmap #6 (tdd-subphase-freeze) was reshaped to test-weakening-detection — the challenge
+# rejected the global PreToolUse refactor-freeze hook (blast radius + self-reported state) in favor
+# of a post-hoc detector: flag a test that lost assertions in a change, non-blocking test-review
+# signal. No hook, no sub-phase state machine (SC-006). See features/test-weakening-detection/discussion.md.
 ---
 
 # Verified Development State

@@ -69,4 +69,30 @@ module.exports = [
       assert.match(t, /test-review\.md.*criteria 9/i);
     },
   },
+  {
+    // test-weakening-detection/AS-7 + SC-005 — the fourth non-blocking signal joins the lock
+    name: 'test-weakening: test-review carries a NON-BLOCKING test-weakening criterion',
+    fn: () => {
+      const t = read('agents/test-review.md');
+      assert.match(t, /test-weakening|weakened|lost assertions/i, 'the criterion is present');
+      // The gate framing must STILL name only 1–6 + 5b as gating — this signal does not gate.
+      assert.match(t, /Only criteria 1–6 \(and the two 5b craft violations\) gate/);
+    },
+  },
+  {
+    // test-weakening-detection/design-Sug1 — name the dominant legitimate cause (esp. actor-BDD)
+    name: 'test-weakening: the criterion names consolidation / fixture-chaining as legit causes',
+    fn: () => {
+      const t = read('agents/test-review.md');
+      assert.match(t, /consolidat|table-driven/i, 'assertion consolidation named');
+      assert.match(t, /Sends|Receives|fixture[- ]chain/i, 'actor-BDD fixture-chaining named');
+    },
+  },
+  {
+    // test-weakening-detection/AS-7 — /review runs the scan over the review range
+    name: 'test-weakening: /review runs test-weakening.js scan over the git range',
+    fn: () => {
+      assert.match(read('skills/review/SKILL.md'), /test-weakening\.js scan/);
+    },
+  },
 ];
