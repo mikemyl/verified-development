@@ -9,6 +9,10 @@
  *      in prose without updating the math (or vice-versa), this fails.
  *   2. The rubric documents all 8 properties and the score bands.
  *   3. The signal is wired into test-review / review / verify as NON-BLOCKING.
+ *   4. The scoring anchors are published: a score needs a citation, `Unknown`
+ *      drops a property from BOTH numerator and denominator, and the worked
+ *      example's arithmetic is actually correct (a rubric that demands shown
+ *      arithmetic and then shows wrong arithmetic teaches the defect).
  */
 
 const assert = require('node:assert/strict');
@@ -19,6 +23,8 @@ const REPO = path.resolve(__dirname, '..');
 const readSkill = name => fs.readFileSync(path.join(REPO, 'skills', name, 'SKILL.md'), 'utf8');
 const readAgent = name => fs.readFileSync(path.join(REPO, 'agents', `${name}.md`), 'utf8');
 const ci = (h, n) => h.toLowerCase().includes(n.toLowerCase());
+// Markdown emphasis and line wrapping must not break a content assertion.
+const flat = t => t.replace(/\*/g, '').replace(/\s+/g, ' ');
 
 // The canonical formula string, as published in the rubric. Both the rubric and
 // the test-review agent must contain it verbatim — that is the drift lock.
@@ -98,6 +104,103 @@ module.exports = [
       const verify = readSkill('verify');
       assert.ok(ci(verify, 'Farley Score'), '/verify must mention the Farley signal');
       assert.ok(ci(verify, 'non-blocking'), '/verify must mark it non-blocking');
+    },
+  },
+
+  // --- scoring anchors (ported from agentic-dev-team #1816) ------------------
+  {
+    name: 'rubric publishes cross-property scoring anchors and the citation rule',
+    fn: () => {
+      const rubric = readSkill('test-design-reviewer');
+      assert.ok(
+        /##\s*Scoring anchors/i.test(rubric),
+        'rubric must publish the scoring-anchor bands, not just the per-property bands',
+      );
+      assert.ok(
+        ci(rubric, 'A score with no citation is a guess'),
+        'rubric must state that every score needs a citation',
+      );
+      assert.ok(
+        /9-10 requires no counter-example/i.test(flat(rubric)),
+        'rubric must state what earns the top band',
+      );
+    },
+  },
+  {
+    name: 'rubric forbids inventing a score for a property with no evidence',
+    fn: () => {
+      const rubric = readSkill('test-design-reviewer');
+      assert.ok(rubric.includes('`Unknown`'), 'rubric must define the Unknown outcome');
+      assert.ok(
+        /never substitute a default/i.test(flat(rubric)),
+        'rubric must forbid substituting a default (e.g. 5) for missing evidence',
+      );
+      assert.ok(
+        /numerator and (?:the )?(?:weight total|denominator)/i.test(flat(rubric)),
+        'rubric must state that Unknown drops the property from BOTH numerator and denominator',
+      );
+    },
+  },
+  {
+    name: 'an Unknown property renormalizes: the divisor is the weights actually scored',
+    fn: () => {
+      // The published rule, reimplemented: excluding First (weight 1.0) from a
+      // uniform-8 suite must still yield 8 — not 8×8/9, which is what dropping
+      // the numerator term alone would give.
+      const scored = { U: 8, M: 8, R: 8, A: 8, N: 8, G: 8, F: 8 }; // T (First) = Unknown
+      const weights = Object.entries(WEIGHTS).filter(([k]) => k !== 'T');
+      const num = weights.reduce((acc, [k, w]) => acc + scored[k] * w, 0);
+      const den = weights.reduce((acc, [, w]) => acc + w, 0);
+      assert.equal(den, 8);
+      assert.equal(num / den, 8);
+      assert.notEqual(num / SUM, 8, 'dropping only the numerator term would silently deflate the score');
+    },
+  },
+  {
+    name: 'rubric states the 1-10 scale is never a percentage',
+    fn: () => {
+      const rubric = readSkill('test-design-reviewer');
+      assert.ok(
+        /never multiply it by 10 and never present it as a percentage/i.test(flat(rubric)),
+        'rubric must forbid presenting the score as a percentage',
+      );
+    },
+  },
+  {
+    name: 'rubric ships a worked example whose arithmetic is CORRECT',
+    fn: () => {
+      const rubric = readSkill('test-design-reviewer');
+      assert.ok(/##\s*Worked Example/i.test(rubric), 'rubric must ship a worked example');
+      // Extract "a×w + a×w + …" from the example and re-add it. A rubric that
+      // demands shown arithmetic must not itself show arithmetic that is wrong.
+      const m = rubric.match(/Farley Score = \(([^)]*×[^)]*)\)\s*\/\s*9\.0/);
+      assert.ok(m, 'worked example must show the weighted sum');
+      const total = m[1]
+        .split('+')
+        .map(term => term.split('×').map(x => parseFloat(x.trim())))
+        .reduce((acc, [score, weight]) => acc + score * weight, 0);
+      const shown = rubric.match(/=\s*([\d.]+)\s*\/\s*9\.0\s*=\s*\*\*([\d.]+)/);
+      assert.ok(shown, 'worked example must show the total and the final score');
+      assert.equal(total, parseFloat(shown[1]), 'the weighted rows do not add up to the shown total');
+      assert.equal(
+        Math.round((total / 9) * 10) / 10,
+        parseFloat(shown[2]),
+        'the shown Farley Score does not match total / 9.0',
+      );
+    },
+  },
+  {
+    name: 'rubric disambiguates the properties that produce unreproducible scores',
+    fn: () => {
+      const rubric = readSkill('test-design-reviewer');
+      assert.ok(
+        /same result object are one behavior/i.test(flat(rubric)),
+        'Atomic: multiple assertions on one result object must not be penalized',
+      );
+      assert.ok(
+        /must name the other test/i.test(flat(rubric)),
+        'Necessary: a duplication claim must name the duplicate',
+      );
     },
   },
 ];

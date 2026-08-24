@@ -73,6 +73,43 @@ non-blocking framing — it never gates on its own.
 - **4-6**: Unclear if test-first; tests feel like afterthoughts
 - **1-3**: Clearly written after code; tests follow implementation structure
 
+## Scoring anchors — score from evidence, not intuition
+
+Every property score must be justified by a specific line, assertion, or absence you can point at.
+**A score with no citation is a guess — re-read the test before assigning it.** The per-property
+bands above say what each property looks like; these anchors say what earns a band, and apply to
+all eight:
+
+| Band | Meaning |
+|------|---------|
+| 9-10 (Exemplary) | No counter-example found AND an affirmative strength cited |
+| 7-8 (Solid) | An affirmative strength cited, plus a specific counter-example that is a minor gap, not a violation |
+| 5-6 (Partial) | The property holds in general but this test has a specific counter-example |
+| 3-4 (Weak) | A real strength is present, but a violation still dominates |
+| 1-2 (Critical) | The property is actively violated |
+
+**9-10 requires no counter-example. Below 9 requires a specific counter-example** — unless a cited
+strength is what pulls a 1-2 score up into the 3-6 range.
+
+### Property-specific rules
+
+These remove the ambiguity that produces unreproducible scores:
+
+- **First (T)** — commit history is the primary evidence. When it is unavailable (a working tree
+  with no VCS access, a snapshot), do **not** guess a number. Fall back to the observable proxy:
+  does the test name describe *behavior* (`rejects an invalid email format`) or *mechanism*
+  (`calls validateEmail with a regex`)? A behavior-named test scores **7-8 on the proxy alone** —
+  never 9-10, because the proxy is weaker evidence than commit history. If neither commit history
+  nor a readable test name is available, mark the property **`Unknown`**, drop it from **both the
+  numerator and the weight total**, and state in the output that it was excluded. **Never
+  substitute a default (e.g. 5) for missing evidence** — a default is an invented measurement.
+- **Necessary (N)** — "duplicates another test" must **name the other test** by identifier. Never
+  mark a test unnecessary from a hunch that "something else probably covers this".
+- **Atomic (A)** — multiple assertions on the *same* result object are **one** behavior, not a
+  violation. Do not penalize it. Multiple assertions across *different* behaviors are the violation.
+- **Repeatable (R)** — an uninjected clock, RNG, network call, or shared mutable fixture is a
+  violation (1-2), not a gap. Cite the specific call.
+
 ## The Farley Score Formula
 
 Calculate the final Farley Score using this weighted formula:
@@ -80,6 +117,11 @@ Calculate the final Farley Score using this weighted formula:
 ```
 Farley Score = (U×1.5 + M×1.5 + R×1.25 + A×1.0 + N×1.0 + G×1.0 + F×0.75 + T×1.0) / 9
 ```
+
+The divisor is the **sum of the weights actually scored** — 9.0 when all eight properties are
+scored, and the reduced total when a property is `Unknown` (recompute numerator and denominator
+without it, and say which property was excluded). The result is a **1-10 scale**: never multiply it
+by 10 and never present it as a percentage.
 
 **Rationale for weights:**
 - Understandable (1.5×): Tests as documentation is paramount
@@ -139,6 +181,63 @@ Structure your review as follows:
 This review is based on Dave Farley's Properties of Good Tests:
 https://www.linkedin.com/pulse/tdd-properties-good-tests-dave-farley-iexge/
 ```
+
+## Worked Example
+
+The same test scored the correct way, then the way that gets sent back. Use the correct version as
+the literal template. The language here is incidental — the shape is not.
+
+**Test under review:**
+
+```
+test('rejects an invalid email format', () => {
+  const result = validateEmail('not-an-email');
+  expect(result.isValid).toBe(false);
+  expect(result.error).toBe('INVALID_FORMAT');
+});
+```
+
+### Correct scoring output
+
+```markdown
+| Property | Score | Weight | Citation |
+|----------|-------|--------|----------|
+| Understandable | 9 | 1.5 | Name states the behavior; one arrange-act-assert block, no hidden setup |
+| Maintainable | 8 | 1.5 | Asserts the public `result` shape, not internals — but the literal `'not-an-email'` is inlined rather than named, so a reader must infer why that string was chosen |
+| Repeatable | 10 | 1.25 | Pure function call — no clock, network, or shared state |
+| Atomic | 9 | 1.0 | One behavior (rejecting a bad format); both assertions target the same result object |
+| Necessary | 8 | 1.0 | Real edge case; no other test in the file asserts `INVALID_FORMAT`, but the test doesn't say why this malformed string over another |
+| Granular | 8 | 1.0 | Asserts the specific error code, but no message text — a failure still needs the source to interpret why |
+| Fast | 10 | 0.75 | Unit test, no I/O |
+| First | 7 | 1.0 | No commit history available; name proxy applies — behavior-named, so 7-8, not 9-10 |
+
+Farley Score = (9×1.5 + 8×1.5 + 10×1.25 + 9×1.0 + 8×1.0 + 8×1.0 + 10×0.75 + 7×1.0) / 9.0
+             = 77.5 / 9.0 = **8.6 (Excellent)**
+
+| Test | Score | Weakest Property | Suggestion |
+|------|-------|------------------|------------|
+| `rejects an invalid email format` | 8.6 | First (7) | Confirm the test predates the implementation via commit history when it is available |
+```
+
+### Incorrect / ambiguous output — avoid this
+
+```markdown
+| Test | Score | Weakest Property | Suggestion |
+|------|-------|------------------|------------|
+| `rejects an invalid email format` | 7 | — | Looks fine overall |
+```
+
+Three concrete defects, each of which forces a correction:
+
+1. **No per-property breakdown.** A single number with no property scores and no citations cannot
+   be audited or reproduced — there is no way to tell whether `7` came from the weighted formula or
+   was guessed.
+2. **`Weakest Property` left blank.** Naming the weakest property is what makes the suggestion
+   actionable; `—` gives the reader nothing to act on.
+3. **No arithmetic shown.** The correct output's total (77.5 / 9.0 = 8.6) can be re-added from the
+   eight weighted rows. `7` with no visible sum is unverifiable, and per the scoring anchors above,
+   a score with no citation is a guess.
+
 
 ## Guidelines
 

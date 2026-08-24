@@ -4,6 +4,52 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Review-loop convergence + deterministic lens resolution (v1.23.0+)
+
+Four mechanisms ported from `agentic-dev-team` (#1625/#1626/#1516/#1816), all aimed at `/review`.
+Two are new model-free libs; two are rubric/prose changes.
+
+- **`hooks/lib/finding-signature.js`** (contract `finding-signature/v1`) — finding IDENTITY across
+  correction rounds. The old loop was "re-run the agents that found issues, max 2 iterations": it
+  could not tell "the same problem again" from "the fix introduced a new one", so it could churn
+  unnoticed. `signature()` hashes `(agent, file, category, normalized message)`; the **line is
+  deliberately outside the hash** (a hashed bucket is not the ±3 proximity relation it approximates
+  — lines 6 and 7 would land in different buckets and read as two findings), and `sameFinding()`
+  applies the real `LINE_TOLERANCE` test. `normalizeMessage()` layers finding-specific stripping
+  (line/col refs, digests, **quoted spans**, bare numbers) on top of `repair-routing.js`'s
+  `stripVolatile` — one shared implementation, directly tested. `classifyRound()` returns
+  `decision: continue|converged|escalate` from three first-match-wins rules: **round-cap** (4 =
+  initial panel + 3 → escalate with the ledger as evidence), **loop-until-dry** (zero new-signature
+  findings), **severity-floor** (no *new* error/warning at high/medium confidence — suggestions are
+  logged, never chased). `fixProvenance()` counts how many new findings landed inside the previous
+  round's fix delta — the judgment-free "the fix introduced it" signal, no LLM.
+- **`hooks/lib/review-scope.js`** (contract `review-scope/v1`) — the deterministic Stage-2 resolver
+  CLAUDE.md flagged as a possible upgrade in v1.14.0. Reads the same self-declared `scope:` /
+  `context_needs:` frontmatter, matches via `lang-loader.js`'s shared `globToRegExp`, orders
+  **cheap-first** (haiku → sonnet → opus), and reports every drop with a reason. **Include-biased
+  by construction**: a read failure widens the roster and lands in `warnings`; only a lens provably
+  with nothing to look at is dropped. A **docs-and-assets-only** diff skips the behaviour lenses —
+  but prompts/skills/agents/hooks/`CLAUDE.md`/`.verified/` markdown are *the program*, not docs, and
+  config/manifests/lockfiles stay executable (a dependency bump is a security change).
+  `security-review` is **never** skip-eligible: prose is the prompt-injection vector.
+  Also hosts `scopeGrowth()` — the correction loop's escape hatch (a fix touching a file the panel
+  never reviewed forces a full re-panel; missing input fails safe toward the full re-dispatch).
+- **Farley scoring anchors** (`skills/test-design-reviewer/SKILL.md`) — the rubric had per-property
+  bands but no rule for what *earns* a band, which produces unreproducible scores. Adds
+  cross-property anchors (9-10 needs no counter-example **and** a cited strength), "a score with no
+  citation is a guess", property disambiguation (`First` name-proxy caps at 7-8; `Necessary` must
+  name the duplicate test; `Atomic` does not penalize multiple assertions on one result object),
+  the **`Unknown`** outcome (drop the property from *both* numerator and denominator — never
+  default to 5), "never a percentage", and a correct/incorrect **worked example**.
+  `tests/farley-score.test.cjs` now re-adds the worked example's own arithmetic — a rubric that
+  demands shown arithmetic must not ship arithmetic that is wrong.
+- Tests: `tests/finding-signature.test.cjs`, `tests/review-scope.test.cjs` (both with CLI-seam
+  tests), extended `tests/farley-score.test.cjs`.
+- Deliberately NOT ported: `/repo-review` + its drift nudge (all four of its agents are ones we
+  don't ship), `/fix` (built on their `/triage` + `/pr`, and PR-shaped), `verify_tier.py`
+  (per-agent cheap tier for verification dispatches — only pays off inside a multi-round loop, so
+  it is downstream of the round ledger), `change_impact.py` (gates an `arch-review` we don't have).
+
 ### Test-weakening detection (v1.22.0+)
 
 Roadmap #6, reshaped from a PreToolUse refactor-freeze hook to a **detector** (the challenge rejected the hook: global blast radius + self-reported state — see the feature's discussion.md). Flags a test file that **lost assertions** in a change (a possible regression-hiding weakening — a failing test "fixed" by deleting/loosening assertions instead of reverting the code).

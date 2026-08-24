@@ -145,6 +145,11 @@ that comes solely from the error/warning findings above. A high Farley Score wit
 assertions is still a warning; report both ("high Farley + weak assertions = brittle
 confidence"). Skip the score entirely for changes that don't touch tests — don't invent one.
 
+Score from evidence: every property score needs a citation (a line, an assertion, or a named
+absence), and a property with no available evidence is `Unknown` — dropped from **both** the
+numerator and the weight total, never defaulted to a middle number. The rubric's scoring anchors
+and worked example are the contract; don't restate them here, read them there.
+
 ### 8. Test Taxonomy Fit (test-quality signal — non-blocking)
 
 The *judgment* question, distinct from 5b's mechanical one: does a test's actual shape **fit** the
