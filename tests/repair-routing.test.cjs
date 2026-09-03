@@ -202,7 +202,10 @@ module.exports = [
     fn: () => {
       const text = executor();
       assert.match(text, /SAME signature[\s\S]{0,40}STOP/, 'dead-end stop sentence present');
-      assert.match(text, /checkpoint-commit/, 'checkpoint-commit-on-dead-end present');
+      // v1.24.0: the dead-end snapshot is a checkpoint.js create, NOT a commit — executors never commit,
+      // and "checkpoint-commit" contradicted that rule (destructive-git-guard/AS-014).
+      assert.match(text, /checkpoint\.js create[\s\S]{0,80}-stuck/, 'checkpoint-snapshot-on-dead-end present');
+      assert.doesNotMatch(text, /checkpoint-commit/);
     },
   },
   {

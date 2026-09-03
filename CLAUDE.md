@@ -4,6 +4,54 @@ This is a Claude Code plugin. Changes here affect all projects that install it.
 
 ## Workflow features
 
+### Destructive-git guard + working-tree checkpoints (v1.24.0+)
+
+From the keros-platform `manual-reservation-override` retro (2026-09-03): an executor ran
+`git checkout <path>` to undo a temporary edit and destroyed four tasks of uncommitted work; an
+earlier `git stash` on the shared tree was a near-miss. The orchestrator had banned `stash` by
+name — the second command was not on the list. Prose failed twice; the fix is mechanical.
+
+- **`hooks/git-guard.js` + `hooks/lib/git-guard.js`** (contract `git-guard/v1`) — a PreToolUse
+  hook on `Bash` that denies the **class** "can discard uncommitted work in the working tree":
+  `stash` (except `list`/`show`/`create`), `checkout`, `switch`, `restore` (except `--staged`),
+  `reset --hard|--merge|--keep`, `clean`, `rebase`, `worktree remove`, `--abort` on
+  merge/rebase/cherry-pick/revert/am. History rewrites (`branch -D`, `push --force`, `--amend`)
+  are outside the class on purpose — the reflog keeps those. The classifier reads literal command
+  text (tokenizer handles `&&`/`;`/`|`/`$( )`, quotes, heredoc bodies, comments, `sudo`/`env`/
+  `command` prefixes, `-C`/`-c`/`--git-dir` globals, `/usr/bin/git`) — no self-reported state,
+  which is what distinguished this from the rejected refactor-freeze hook. **Scoped**: active
+  only when `.verified/` exists at or above cwd; opt out with `hooks.git_guard: false` in
+  `.verified/config.json` or `VERIFIED_GIT_GUARD=0`. Fail direction: malformed hook input /
+  non-Bash / empty command → allow; malformed config → guard. The deny reason names the restore
+  command, so recovery is one step from the failure.
+- **`hooks/lib/checkpoint.js`** (contract `checkpoint/v1`) — the restore point the "no commit
+  before /verify + /review" rule leaves out. `create` writes the whole working tree (tracked +
+  untracked, `.gitignore` honoured) as a commit object under
+  `refs/verified/checkpoints/<feature>/<seq>-<label>` through a **temporary index**
+  (`GIT_INDEX_FILE`), so HEAD, branch, index and tree are byte-identical afterwards and nothing is
+  published. `list` (newest first), `diff <ref>` (checkpoint vs working tree, untracked included,
+  built the same way), `restore <ref> <path>…` (by content, only those paths). `/implement`
+  snapshots at `wave-N-start`/`wave-N-end`, `/review` before each `review-round-N`, `/quick`
+  before GREEN, the executor when it hits a repair dead-end.
+- **Orchestration prose** (`/implement`): `ListAgents` before every dispatch; never redirect a
+  running/completed agent via `SendMessage` (a resumed agent and a fresh one fought over four
+  files for ~35 min on keros — new instructions are a new task); the resolved test type's
+  `boundary:`/`primitives:`/`anti-patterns:` go at the TOP of the brief as a hard constraint with
+  "extend the DSL, never fall back to raw asserts" (executors that read `TESTING.md` unaided still
+  drifted to `require` chains).
+- **Round cap severity override** — `classifyRound` gains `blocking_new_errors` (new `error`
+  findings at high/medium confidence in the capped round). `/review` renders **FAIL** when it is
+  non-zero: a cap never means "ship a demonstrated error". Only the user raises `--max-rounds`.
+- **`test-review` criterion 13 (non-blocking)** — a hand-written consumer double (mock/MSW/fixture)
+  that omits a field the change added to a serialized contract keeps the suite green while the
+  real payload fails to decode (three such regressions shipped past 846 passing UI tests on keros).
+- Tests: `tests/git-guard.test.cjs` (classifier table + real stdin hook seam),
+  `tests/checkpoint.test.cjs` (every scenario on a real git repo — seam rule),
+  `tests/destructive-git-guard.test.cjs` (ledger field + prose anchors).
+- Deliberately NOT done: committing at phase boundaries (the owner's call — the checkpoint removes
+  the urgency), a codegen-freshness CI check and the `deadcode` exported-method blind spot
+  (keros-specific).
+
 ### Review-loop convergence + deterministic lens resolution (v1.23.0+)
 
 Four mechanisms ported from `agentic-dev-team` (#1625/#1626/#1516/#1816), all aimed at `/review`.

@@ -135,9 +135,36 @@ green, revert to the failed task's resolved rollback point rather than unwinding
 block) — they flag a task that reached beyond its declared `(files: …)` surface. Invariant
 *commands* are not writes, so they never appear here.
 
+#### Checkpoint before every wave (deterministic — never skip)
+
+Nothing is committed until `/verify` + `/review` pass, so for the length of a feature the working
+tree is the only copy of the work. Snapshot it at every wave boundary:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create \
+  --feature {feature-name} --label wave-{N}-start
+```
+
+It writes the whole tree (tracked + untracked) as a commit object under
+`refs/verified/checkpoints/{feature-name}/` through a temporary index — HEAD, the branch, the
+index and the working tree are untouched, nothing is published. Repeat with `--label
+wave-{N}-end` after collecting the wave. A file an executor destroys is then one command away:
+`checkpoint.js restore <ref> <path>` (`checkpoint.js diff <ref>` shows what a snapshot would
+give back). Record the ref in the wave progress line. The `git-guard` PreToolUse hook denies the
+git commands that discard uncommitted work (`stash`, `checkout`, `restore`, `reset --hard`,
+`clean`, …) — do not route around a denial for an executor; fix the brief.
+
 #### Spawning Executors
 
 For each wave, spawn `executor` agents (subagent_type: `verified-development:executor`):
+
+**Before every dispatch, run `ListAgents`.** Dispatch only when no executor is still running on
+a file the new task declares — an in-flight agent that later resumes will write over the
+newcomer, and the newcomer will report the other agent's edits as "the plan is wrong".
+**Never redirect a running or completed agent with `SendMessage`** to change its scope or
+requirement (a mid-flight rule change, an extra file): a resumed agent and a fresh one then fight
+over the same files. New instructions are a new task, dispatched after the current one is
+confirmed idle.
 
 - **Parallel wave**: Spawn one executor per task (or group related tasks into one executor if they share files)
 - **Sequential wave**: Spawn one executor for the sequential chain
@@ -147,6 +174,15 @@ Each executor receives:
 - Its assigned tasks (T-numbers, descriptions, file paths)
 - The spec.md (for acceptance scenario context)
 - Instruction to read `.verified/codebase/TESTING.md` and `CONVENTIONS.md` for project patterns
+- **The resolved test type's golden path, FIRST and as a hard constraint** — for each `(test: <type>)`
+  the task declares, paste that type's `boundary:`, `primitives:` and `anti-patterns:` from
+  `TESTING.md` at the top of the brief, with the instruction: when the fixture/DSL cannot express
+  a precondition or observation, *extend the DSL* (add the `Sends`/`Receives` step) — never fall
+  back to raw read-backs and scattered asserts. Executors that read `TESTING.md` on their own
+  still drifted to `require` chains on keros; the constraint must be the first thing they see,
+  not a line they find.
+- The class rule on git: no command that can discard uncommitted work (see `agents/executor.md`
+  Rules) — the hook enforces it; the brief says why.
 - Instruction to follow TDD: RED → GREEN → REFACTOR (except for config/schema/generated code)
 - Instruction to mark tasks `[x]` in plan.md when complete
 
@@ -157,7 +193,8 @@ After each wave completes:
 - Run the full test suite to verify nothing broke
 - If an executor reported BLOCKED tasks, decide: fix the blocker and re-dispatch, or flag for user. If you cannot resolve a blocker now, add it to handoff `blockers` with `severity: blocking` (so a `/continue` later cannot proceed past it without addressing) or `severity: advisory`.
 - **Update handoff.json**: move just-completed tasks from `remaining_tasks` to `completed_tasks` via `hooks/lib/handoff.js update`. Refresh `git_head` to current short SHA. This is the per-wave checkpoint — if context dies between waves, `/continue` lands here.
-- Show progress: "Wave {N} complete. {completed}/{total} tasks done. {remaining} remaining."
+- Snapshot: `checkpoint.js create --feature {feature-name} --label wave-{N}-end`.
+- Show progress: "Wave {N} complete. {completed}/{total} tasks done. {remaining} remaining. Checkpoint: {ref}"
 - Update state.md `last_activity`.
 
 #### When NOT to Spawn Agents

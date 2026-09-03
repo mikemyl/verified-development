@@ -2,7 +2,7 @@
 feature: none
 phase: idle
 status: complete
-last_activity: 2026-07-17 - test-weakening-detection shipped (v1.22.0): 0 errors, 6 warnings fixed (incl. a real globToRegExp bug), Farley 8.2, 366 tests. ROADMAP COMPLETE.
+last_activity: 2026-09-03 - destructive-git-guard shipped (v1.24.0): PreToolUse git guard + working-tree checkpoints + round-cap FAIL override, from the keros manual-reservation-override retro. 454 tests.
 active_phase: ""
 next_action: ""
 next_phases: []

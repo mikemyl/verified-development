@@ -218,6 +218,10 @@ If errors or warnings found:
 - **Push back with reasoning** if a finding is technically wrong — don't implement incorrect suggestions
 
 **When implementing fixes:**
+- **Snapshot first**: `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create --feature
+  {feature-name} --label review-round-{N}` before the round's first edit — the tree is still
+  uncommitted, and a fix that goes wrong must be recoverable by content, not by a git command
+  that discards work (the `git-guard` hook denies those).
 - One fix at a time, test after each
 - Follow TDD for behavioral changes (new test for new behavior)
 - Don't bundle unrelated improvements into review fixes
@@ -258,14 +262,15 @@ Three termination rules, evaluated at each round boundary, **first match wins**:
 
 | Rule | Trigger | Effect |
 |------|---------|--------|
-| `round-cap` | `round >= 4` (initial panel + 3) | **Escalate to the user**, attaching the round ledger as evidence: which rounds found what, and how much of it the fixes themselves introduced. Do not keep fixing. |
+| `round-cap` | `round >= 4` (initial panel + 3) | **Escalate to the user**, attaching the round ledger as evidence: which rounds found what, and how much of it the fixes themselves introduced. Do not keep fixing. If `blocking_new_errors > 0` the report **Status is FAIL** — a cap never means "ship a demonstrated error"; say plainly which errors remain. Only the user raises the cap (`--max-rounds N` on the next `round` call); never raise it yourself. |
 | `loop-until-dry` | round ≥ 2 and zero new-signature findings | Converged — leave the loop. Carried findings that survived a fix attempt are reported, not chased. |
 | `severity-floor` | round ≥ 2 and no *new* finding is `error`/`warning` at high/medium confidence | Converged. Suggestion-tier and low-confidence findings from round ≥ 2 are **logged in the report, never chased.** |
 
 Round 1 never terminates here — its actionability is step 4's severity table. The script returns
 `decision: continue | converged | escalate` with the `reason`; follow it. A `converged` exit is a
 clean outcome; an `escalate` exit is not — report the remaining findings and the churn evidence,
-and let the user decide.
+and let the user decide. `blocking_new_errors` is the count of new `error` findings at high/medium
+confidence in the round that hit the cap: it is what the loop would otherwise ship.
 
 ### 6. Close Handoff and Update State
 

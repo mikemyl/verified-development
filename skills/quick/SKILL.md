@@ -43,6 +43,10 @@ Run it using the project's test command. Show the failing output.
 
 **GREEN:** Write the minimum fix/change.
 Run the test again. Show the passing output.
+Before the first production edit, snapshot the tree (nothing is committed yet):
+`node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create --feature quick --label <slug>-green`.
+Never undo an edit with `git checkout`/`restore`/`stash` — the `git-guard` hook denies them;
+`checkpoint.js restore <ref> <path>` is the recovery path.
 
 **REFACTOR:** Improve if needed. Run tests again.
 

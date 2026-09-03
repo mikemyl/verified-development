@@ -243,6 +243,9 @@ function fixProvenance(newFindings, diffText) {
  * FIRST MATCH WINS:
  *
  *   1. round-cap      round >= maxRounds → escalate to a human, ledger attached.
+ *                     `blocking_new_errors` says what the cap would ship: a
+ *                     new error at high/medium confidence. Non-zero → the
+ *                     report is FAIL; only the user raises --max-rounds.
  *   2. loop-until-dry round >= 2 and zero new-signature findings → converged.
  *   3. severity-floor round >= 2 and no NEW finding is error/warning at
  *                     high/medium confidence → converged. Suggestion-tier and
@@ -264,6 +267,7 @@ function classifyRound(input) {
   const cap = Number.isFinite(Number(maxRounds)) ? Number(maxRounds) : MAX_ROUNDS;
   const { new: fresh, carried } = matchCarried(previous, current);
   const actionable = fresh.filter(clearsFloor);
+  const blockingNewErrors = actionable.filter(f => String(f.severity || 'error').toLowerCase() === 'error').length;
   const provenance = fixProvenance(fresh, fixDiff);
 
   let decision = 'continue';
@@ -288,6 +292,7 @@ function classifyRound(input) {
     new: fresh.length,
     carried: carried.length,
     actionable_new: actionable.length,
+    blocking_new_errors: blockingNewErrors,
     fix_provenance_new: provenance.inside,
     new_findings: fresh,
     carried_findings: carried,

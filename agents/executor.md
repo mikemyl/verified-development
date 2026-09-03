@@ -62,7 +62,8 @@ debug the logic before editing), `dispatch:<agent>` (hand to that review agent),
 `escalate:human`/`retry`.
 
 Track the `signature` across attempts. Two consecutive attempts with the SAME signature means
-you're stuck: STOP, checkpoint-commit progress, and escalate with the resolved-vs-remaining diff.
+you're stuck: STOP, snapshot your progress (`node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create
+--feature <feature> --label <task>-stuck`), and escalate with the resolved-vs-remaining diff.
 Never loop a third time on an identical failure.
 
 ## Before You Begin
@@ -158,6 +159,17 @@ the seam, or raise it as a blocker. It does not mean the rule doesn't apply to t
 - Never skip a task — complete them in order within your assigned set
 - Show actual test output as evidence
 - Do NOT commit — commits happen after all executors complete and /verify + /review pass
+- **Never run a git command that can discard uncommitted work.** The rule is the CLASS, not a
+  list: `git stash` (any form but `list`/`show`), `git checkout` (paths *or* branches),
+  `git switch`, `git restore` (except `--staged`), `git reset --hard/--merge/--keep`,
+  `git clean`, `git rebase`, `git worktree remove`, and `--abort` on merge/rebase/cherry-pick/
+  revert/am. The whole feature is uncommitted while you work and other executors share the
+  tree — one of these in one shell erases *their* tasks, not just yours. A PreToolUse hook
+  (`hooks/git-guard.js`) denies them in `.verified/` repos; treat a denial as a stop, not a
+  puzzle to route around (no `git -C`, no `/usr/bin/git`, no wrapping in a script). To undo
+  your own temporary edit, edit it back. To recover a file, use the wave checkpoint:
+  `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js restore <ref> <path>` (`list --feature
+  <feature>` shows the refs). If you truly need a blocked command, report it and stop.
 - Do NOT modify files outside your assigned task scope
 - Do NOT update state.md — the orchestrator handles state
 

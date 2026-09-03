@@ -56,6 +56,8 @@ SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
 | `/progress` · `/update-plan` · `/session-report` | Status · revise spec/plan · session summary |
 | `/install-hooks` | Project-specific enforcement (lint on write, pre-commit gate) |
 
+Always-on in `.verified/` repos: a PreToolUse **git guard** denies git commands that can discard uncommitted work (`stash`, `checkout`, `restore`, `reset --hard`, `clean`, …), and every `/implement` wave, `/review` round and `/quick` fix is **checkpointed** under `refs/verified/checkpoints/` so a lost file is one `checkpoint.js restore` away. See [docs/configuration.md](docs/configuration.md).
+
 ## Installation
 
 ```bash

@@ -215,6 +215,17 @@ the raw count while improving the test. Flag a drop as a `warning` only when it 
 was actually removed (an error path, a boundary, a specific expected value no longer checked).
 Non-blocking.
 
+### 13. Contract Doubles That Omit a New Field (test-quality signal — non-blocking)
+
+A green consumer suite is not evidence that a serialized contract is right when the test doubles
+are hand-written. When the change **adds or renames a field on a serialized contract** — a JSON
+tag, an API response type, a schema, a generated client type — check that the *consumer-side*
+doubles (mocks, MSW handlers, fixtures, golden payloads) carry the new field. A hand-written mock
+that omits it keeps every test green while the real payload fails to decode (`additionalProperties:
+false`, a strict `Convert`, a non-optional field). Flag as a `warning`: name the field, the
+producer that emits it, and the double that lacks it. Where the repo has codegen for the type
+(`just <x>-types`, `openapi-generator`), a stale generated file is the same finding. Non-blocking.
+
 ## Output Format
 
 ```markdown
@@ -247,11 +258,11 @@ Non-blocking.
 
 - ALWAYS run criterion 5a first: resolve each changed test file to its declared type and load that type's `boundary:` / `good-example:` / `anti-patterns:` from the repo's `TESTING.md`. 5b is unjudgeable without it — a below-boundary call only *looks* fine if you never established where the boundary was.
 - `error` severity: tautological tests, vaporware, and the three must-not-ship craft violations in criterion 5b (weak assertion on a named error; arranging or asserting below the declared test boundary; violating an anti-pattern the repo declared for that test's type) — these MUST be fixed and BLOCK the review
-- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy fit (criterion 8), circular oracles (criterion 9), unarmored regions (criterion 10), reflection into privates (criterion 11) — SHOULD be fixed
+- `warning` severity: missing boundaries, untested error paths, multi-behavior tests, taxonomy fit (criterion 8), circular oracles (criterion 9), unarmored regions (criterion 10), reflection into privates (criterion 11), contract doubles missing a new field (criterion 13) — SHOULD be fixed
 - `suggestion` severity: missing property tests, structure improvements — nice to have
 - A feature-specific brief in your dispatch prompt is **additive**, never a replacement for these criteria. If the prompt tells you what to scrutinize (vacuity, a specific pattern, boundary coverage), do that **in addition to** the full rubric above — never instead of it. A test can be perfectly non-vacuous and still ship a blocking craft violation.
 - Read the IMPLEMENTATION to identify conditionals, then check if tests cover them
 - Don't flag test helpers or fixtures as "untested code"
 - Farley Score (criterion 7) is non-blocking: it informs, it never gates. PASS/WARN/FAIL comes from error/warning findings only. Compute it only when tests were added or rewritten.
 - Test Taxonomy Fit (criterion 8) is non-blocking too: a test that does not match a sanctioned test type (or that scatters assertions) is a non-blocking `warning` only — it never moves the PASS/WARN/FAIL gate on its own.
-- Oracle provenance (9), unarmored regions (10), reflection into privates (11), and test weakening in a change (12) are all non-blocking `warning` signals as well — same framing as Farley/taxonomy: they inform worst-first triage but NEVER move PASS/WARN/FAIL on their own. Only criteria 1–6 (and the two 5b craft violations) gate.
+- Oracle provenance (9), unarmored regions (10), reflection into privates (11), test weakening in a change (12), and contract doubles that omit a new field (13) are all non-blocking `warning` signals as well — same framing as Farley/taxonomy: they inform worst-first triage but NEVER move PASS/WARN/FAIL on their own. Only criteria 1–6 (and the two 5b craft violations) gate.

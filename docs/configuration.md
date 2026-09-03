@@ -14,6 +14,14 @@ Workflow behavior is controlled by `workflows.*` flags:
 
 `challenge` and `plan_critics` can also be turned off per-run with `--no-challenge` / `--no-critics`.
 
+Hook behavior is controlled by `hooks.*` flags (e.g. `hooks.git_guard`):
+
+| Flag | Default | Effect when `false` |
+|------|---------|---------------------|
+| `git_guard` | `true` | Disables the PreToolUse guard that denies git commands able to discard uncommitted work (`stash`, `checkout`, `switch`, `restore`, `reset --hard`, `clean`, `rebase`, `worktree remove`, `--abort`) while a `.verified/` repo is being worked on |
+
+The guard is active only when a `.verified/` directory exists at or above the working directory. `VERIFIED_GIT_GUARD=0` turns it off for one session. When you genuinely need one of those commands, run it yourself in a terminal (the `!` prefix in Claude Code runs a command outside the tool the hook guards). Recovery never needs them: `/implement`, `/review` and `/quick` snapshot the working tree at every wave/round boundary under `refs/verified/checkpoints/<feature>/` and `hooks/lib/checkpoint.js restore <ref> <path>` brings a file back by content.
+
 ## Teaching the plugin your stack
 
 The plugin does not bundle a toolchain for every language — it stays language-agnostic by learning each repo's mechanics instead of hardcoding them. You teach a repo's test mechanics, idioms, and verify command in one of two places:

@@ -34,7 +34,7 @@ This is one of three cases:
 
 Run `git rev-parse --short HEAD`. Compare with `git_head` in handoff.
 
-If they differ, the working tree has moved since the pause. Warn the user, list what changed (`git log --oneline <handoff-head>..HEAD`), and offer: "(a) continue anyway, (b) rewind to handoff sha, (c) `/continue --force`". Do not pick for them. Stop unless they answer.
+If they differ, the working tree has moved since the pause. Warn the user, list what changed (`git log --oneline <handoff-head>..HEAD`), and offer: "(a) continue anyway, (b) inspect what the last checkpoint would give back (`node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js list --feature <feature>`, then `checkpoint.js diff <ref>`), (c) `/continue --force`". Do not pick for them, and never rewind with `git checkout`/`reset --hard` — the `git-guard` hook denies them and a rewind discards uncommitted work. Stop unless they answer.
 
 ### 4. Refuse if blocking blockers exist
 
