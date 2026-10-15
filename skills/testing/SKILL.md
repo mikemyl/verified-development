@@ -27,13 +27,23 @@ The canonical, language-neutral rubric for actor-BDD test craft. Single source �
 5. **captured data** — use captured/supplementary data for SUT-generated identifiers; never fetch-and-assert ids inline. Prevents brittle id plumbing.
 6. **single behavior** — one behavior per test, short and readable: one reason to fail. Prevents multi-assert tests that obscure the cause of failure.
 
+### DSL layers and expectations
+
+The six rules assume three layers, and the layers are what keep a test suite cheap to maintain:
+
+- **Driver** — talks to the system under test. It only sends and receives; it holds no test state and runs no assertions. When the SUT's API changes but the behaviour does not, only the driver changes.
+- **DSL** — the domain-language API on top of the driver. It owns test state (aliases, captured data), message matching, invariants that always hold, and every wait or poll for asynchronous behaviour.
+- **Test** — linear domain language in Given/When/Then. No loops, no reused locals, no technical detail; it names messages and expectations and lets the DSL enact them.
+
+Expectations are **full matches**: with good fixtures every field is known, so a partial match hides a regression (only generated ids, timestamps and transport headers are matched loosely). Use **separate instances** for the message sent and the expectation received — never one object the DSL can send and then assert on. Fixtures expose builders, never raw production objects, and the same fixtures serve the acceptance and the core suites.
+
 ### Must-not-ship anti-patterns (blocking)
 
 Three craft violations are mechanical enough to block review outright — no judgment call — so `test-review` raises them as `error`, not `warning`. Never write a test that does any of them:
 
 - **Assert the specific error, not merely that one occurred.** When the code under test returns a *named* sentinel or typed error, a test that asserts only "some error happened" (Go `require.Error`; JS `expect(fn).toThrow()` with no matcher) passes for the *wrong* error and lets a regression slip through. Assert the exact sentinel/type — Go `require.ErrorIs(err, ErrX)` / `errors.As`; JS `toThrow(SpecificError)` or match the message.
 
-- **Work at your own test's declared boundary — never reach below it, to arrange *or* to assert.** Take the boundary from the test's *own* declared type (its `(test:)` trailer / the `boundary:` of its type in `.verified/codebase/TESTING.md`), not from the layer the code happens to live in. Reaching below it couples the test to internals the seam already exposes, and it is a violation *whichever* layer you land on:
+- **Work at your own test's declared boundary — never reach below it, to arrange *or* to assert.** Take the boundary from the test's *own* declared type (the `boundary:` of its type in `.verified/codebase/TESTING.md`), not from the layer the code happens to live in. Reaching below it couples the test to internals the seam already exposes, and it is a violation *whichever* layer you land on:
   - an HTTP/use-case-boundary test that calls a **repository or DAO method directly** to seed state or read a result back (`dsl.Repository.X.SetFoo(id)` / `.GetStatus(id)`) instead of driving the seam and observing the response;
   - a DAO/component-boundary test that drops to **raw storage** (a raw `SELECT`, `db.Get`) instead of reading back through the DAO.
 
@@ -169,7 +179,7 @@ Exercise behavior through a **sanctioned boundary** — the test types your taxo
 
 ## Don't Extract for Testability
 
-Never extract a function into its own file purely to give it its own unit test. Extract for readability (a descriptive name clarifies intent), for DRY (same **knowledge** used in multiple places — see the `refactoring` skill's "DRY = Knowledge, Not Code" rule), or for separation of concerns. Not for testability.
+Never extract a function into its own file purely to give it its own unit test. Extract for readability (a descriptive name clarifies intent), for DRY (same **knowledge** used in multiple places — DRY is about knowledge, not code), or for separation of concerns. Not for testability.
 
 If code is inline in a function, it gets coverage through that function's behavioral tests. Every layer has behavioral tests — domain functions have vitest unit tests, components have browser tests, pages have integration tests. There is no gap.
 

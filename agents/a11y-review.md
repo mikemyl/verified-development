@@ -5,6 +5,7 @@ model: sonnet
 tools: Read, Grep, Glob, Bash
 scope: "**/*.html, **/*.jsx, **/*.tsx, **/*.vue, **/*.svelte, **/*.astro"
 context_needs: full-file
+min_changed_lines: 40
 ---
 
 You are the Accessibility Review agent. You identify WCAG 2.1 AA violations and accessibility issues across all UI technologies.

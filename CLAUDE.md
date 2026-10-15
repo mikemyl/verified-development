@@ -2,407 +2,83 @@
 
 This is a Claude Code plugin. Changes here affect all projects that install it.
 
-## Workflow features
-
-### Destructive-git guard + working-tree checkpoints (v1.24.0+)
-
-From the keros-platform `manual-reservation-override` retro (2026-09-03): an executor ran
-`git checkout <path>` to undo a temporary edit and destroyed four tasks of uncommitted work; an
-earlier `git stash` on the shared tree was a near-miss. The orchestrator had banned `stash` by
-name — the second command was not on the list. Prose failed twice; the fix is mechanical.
-
-- **`hooks/git-guard.js` + `hooks/lib/git-guard.js`** (contract `git-guard/v1`) — a PreToolUse
-  hook on `Bash` that denies the **class** "can discard uncommitted work in the working tree":
-  `stash` (except `list`/`show`/`create`), `checkout`, `switch`, `restore` (except `--staged`),
-  `reset --hard|--merge|--keep`, `clean`, `rebase`, `worktree remove`, `--abort` on
-  merge/rebase/cherry-pick/revert/am. History rewrites (`branch -D`, `push --force`, `--amend`)
-  are outside the class on purpose — the reflog keeps those. The classifier reads literal command
-  text (tokenizer handles `&&`/`;`/`|`/`$( )`, quotes, heredoc bodies, comments, `sudo`/`env`/
-  `command` prefixes, `-C`/`-c`/`--git-dir` globals, `/usr/bin/git`) — no self-reported state,
-  which is what distinguished this from the rejected refactor-freeze hook. **Scoped**: active
-  only when `.verified/` exists at or above cwd; opt out with `hooks.git_guard: false` in
-  `.verified/config.json` or `VERIFIED_GIT_GUARD=0`. Fail direction: malformed hook input /
-  non-Bash / empty command → allow; malformed config → guard. The deny reason names the restore
-  command, so recovery is one step from the failure.
-- **`hooks/lib/checkpoint.js`** (contract `checkpoint/v1`) — the restore point the "no commit
-  before /verify + /review" rule leaves out. `create` writes the whole working tree (tracked +
-  untracked, `.gitignore` honoured) as a commit object under
-  `refs/verified/checkpoints/<feature>/<seq>-<label>` through a **temporary index**
-  (`GIT_INDEX_FILE`), so HEAD, branch, index and tree are byte-identical afterwards and nothing is
-  published. `list` (newest first), `diff <ref>` (checkpoint vs working tree, untracked included,
-  built the same way), `restore <ref> <path>…` (by content, only those paths). `/implement`
-  snapshots at `wave-N-start`/`wave-N-end`, `/review` before each `review-round-N`, `/quick`
-  before GREEN, the executor when it hits a repair dead-end.
-- **Orchestration prose** (`/implement`): `ListAgents` before every dispatch; never redirect a
-  running/completed agent via `SendMessage` (a resumed agent and a fresh one fought over four
-  files for ~35 min on keros — new instructions are a new task); the resolved test type's
-  `boundary:`/`primitives:`/`anti-patterns:` go at the TOP of the brief as a hard constraint with
-  "extend the DSL, never fall back to raw asserts" (executors that read `TESTING.md` unaided still
-  drifted to `require` chains).
-- **Round cap severity override** — `classifyRound` gains `blocking_new_errors` (new `error`
-  findings at high/medium confidence in the capped round). `/review` renders **FAIL** when it is
-  non-zero: a cap never means "ship a demonstrated error". Only the user raises `--max-rounds`.
-- **`test-review` criterion 13 (non-blocking)** — a hand-written consumer double (mock/MSW/fixture)
-  that omits a field the change added to a serialized contract keeps the suite green while the
-  real payload fails to decode (three such regressions shipped past 846 passing UI tests on keros).
-- Tests: `tests/git-guard.test.cjs` (classifier table + real stdin hook seam),
-  `tests/checkpoint.test.cjs` (every scenario on a real git repo — seam rule),
-  `tests/destructive-git-guard.test.cjs` (ledger field + prose anchors).
-- Deliberately NOT done: committing at phase boundaries (the owner's call — the checkpoint removes
-  the urgency), a codegen-freshness CI check and the `deadcode` exported-method blind spot
-  (keros-specific).
-
-### Review-loop convergence + deterministic lens resolution (v1.23.0+)
-
-Four mechanisms ported from `agentic-dev-team` (#1625/#1626/#1516/#1816), all aimed at `/review`.
-Two are new model-free libs; two are rubric/prose changes.
-
-- **`hooks/lib/finding-signature.js`** (contract `finding-signature/v1`) — finding IDENTITY across
-  correction rounds. The old loop was "re-run the agents that found issues, max 2 iterations": it
-  could not tell "the same problem again" from "the fix introduced a new one", so it could churn
-  unnoticed. `signature()` hashes `(agent, file, category, normalized message)`; the **line is
-  deliberately outside the hash** (a hashed bucket is not the ±3 proximity relation it approximates
-  — lines 6 and 7 would land in different buckets and read as two findings), and `sameFinding()`
-  applies the real `LINE_TOLERANCE` test. `normalizeMessage()` layers finding-specific stripping
-  (line/col refs, digests, **quoted spans**, bare numbers) on top of `repair-routing.js`'s
-  `stripVolatile` — one shared implementation, directly tested. `classifyRound()` returns
-  `decision: continue|converged|escalate` from three first-match-wins rules: **round-cap** (4 =
-  initial panel + 3 → escalate with the ledger as evidence), **loop-until-dry** (zero new-signature
-  findings), **severity-floor** (no *new* error/warning at high/medium confidence — suggestions are
-  logged, never chased). `fixProvenance()` counts how many new findings landed inside the previous
-  round's fix delta — the judgment-free "the fix introduced it" signal, no LLM.
-- **`hooks/lib/review-scope.js`** (contract `review-scope/v1`) — the deterministic Stage-2 resolver
-  CLAUDE.md flagged as a possible upgrade in v1.14.0. Reads the same self-declared `scope:` /
-  `context_needs:` frontmatter, matches via `lang-loader.js`'s shared `globToRegExp`, orders
-  **cheap-first** (haiku → sonnet → opus), and reports every drop with a reason. **Include-biased
-  by construction**: a read failure widens the roster and lands in `warnings`; only a lens provably
-  with nothing to look at is dropped. A **docs-and-assets-only** diff skips the behaviour lenses —
-  but prompts/skills/agents/hooks/`CLAUDE.md`/`.verified/` markdown are *the program*, not docs, and
-  config/manifests/lockfiles stay executable (a dependency bump is a security change).
-  `security-review` is **never** skip-eligible: prose is the prompt-injection vector.
-  Also hosts `scopeGrowth()` — the correction loop's escape hatch (a fix touching a file the panel
-  never reviewed forces a full re-panel; missing input fails safe toward the full re-dispatch).
-- **Farley scoring anchors** (`skills/test-design-reviewer/SKILL.md`) — the rubric had per-property
-  bands but no rule for what *earns* a band, which produces unreproducible scores. Adds
-  cross-property anchors (9-10 needs no counter-example **and** a cited strength), "a score with no
-  citation is a guess", property disambiguation (`First` name-proxy caps at 7-8; `Necessary` must
-  name the duplicate test; `Atomic` does not penalize multiple assertions on one result object),
-  the **`Unknown`** outcome (drop the property from *both* numerator and denominator — never
-  default to 5), "never a percentage", and a correct/incorrect **worked example**.
-  `tests/farley-score.test.cjs` now re-adds the worked example's own arithmetic — a rubric that
-  demands shown arithmetic must not ship arithmetic that is wrong.
-- Tests: `tests/finding-signature.test.cjs`, `tests/review-scope.test.cjs` (both with CLI-seam
-  tests), extended `tests/farley-score.test.cjs`.
-- Deliberately NOT ported: `/repo-review` + its drift nudge (all four of its agents are ones we
-  don't ship), `/fix` (built on their `/triage` + `/pr`, and PR-shaped), `verify_tier.py`
-  (per-agent cheap tier for verification dispatches — only pays off inside a multi-round loop, so
-  it is downstream of the round ledger), `change_impact.py` (gates an `arch-review` we don't have).
-
-### Test-weakening detection (v1.22.0+)
-
-Roadmap #6, reshaped from a PreToolUse refactor-freeze hook to a **detector** (the challenge rejected the hook: global blast radius + self-reported state — see the feature's discussion.md). Flags a test file that **lost assertions** in a change (a possible regression-hiding weakening — a failing test "fixed" by deleting/loosening assertions instead of reverting the code).
-
-- **`hooks/lib/test-weakening.js`** (contract `test-weakening/v1`) — pure `analyze(entries)` (each `entry = {file, before, after}`) computes the assertion-count delta via the `hooks/lib/lang/*` adapters' `countAssertions`; flags a net decrease (deletion → `removed: true`), never a new file or an equal/higher count; unsupported language → `not_analyzed`. `scan(baseRef, cwd)` + CLI owns the git+fs IO (diff, classify, resolve before via `git show` / after via fs). Assertion count is a deterministic **proxy**; the legitimate-vs-weakening verdict is a judgment.
-- **`hooks/lib/lang-loader.js`** (NEW) — the adapter loader + `globToRegExp`, extracted from `test-corpus.js` so both share one copy (extracting it surfaced a latent `**/` glob bug — see CONCERNS.md).
-- **`test-review` criterion 12 (non-blocking)** — surfaces flagged files as `warning`; the criterion text names the dominant *legitimate* causes so reviewers don't re-derive them: **assertion consolidation** (table-driven) and this repo's **actor-BDD fixture-chaining** (`Sends`/`Receives` lower the raw count while improving the test). `/review` runs `test-weakening.js scan` over the review range. NEVER gates — the non-blocking invariant is locked in `tests/test-quality-signals.test.cjs` (now four signals).
-- **Classification** reuses repo-declared taxonomy `match-paths` only when `source: 'repo'` (the seed's are plugin-specific), else per-language adapter `testFileGlobs`.
-- Deliberately NOT built (SC-006): the PreToolUse refactor-freeze hook and the TDD sub-phase state machine (the rejected Option A/B). Tests: `tests/test-weakening.test.cjs`, `tests/lang-loader.test.cjs`.
-
-### Finding injection (v1.21.0+)
-
-The consumer half of the SARIF envelope (v1.17.0 was producer-only). `/review` Stage 2 injects the mechanical findings a linter already caught as a **keys-only suppression list**, so quality agents stop re-reporting lint noise and spend attention on what a linter can't see.
-
-- **`hooks/lib/findings.js` `suppressionKeys(envelope) → string[]`** — one `file:line:rule_id` key per finding, de-duped. **Keys only, never `message`** — and the tool-derived components (`rule_id`/`file`, from SARIF `ruleId`/`uri`) are charset-sanitized (`[\w./-]`, len-capped), so no untrusted linter prose can reach a review prompt by any field. Suppression is per finding IDENTITY, not per line: a different rule at the same `file:line` stays in scope.
-- **`hooks/lib/findings-store.js`** (NEW — the verify→review handoff, contract `findings-persisted/v1`, ADR 0004) — `sourceFingerprint(cwd, git)` is a **working-tree-inclusive** hash (HEAD + `git diff HEAD` + untracked, **excluding `.verified/`** so persisting the record doesn't self-invalidate it — see CONCERNS.md); `persistEnvelope` (atomic, randomized tmp); `readFreshEnvelope` (staleness/malformed/absent guard → envelope|null); `readFreshSuppressionKeys` (the injection-safe read — the raw `message`-bearing envelope never crosses this boundary). Injectable git seam → unit-testable, plus real-git integration tests for the tree interactions.
-- **`/verify`** persists the envelope for the active feature; **`/review`** reads it behind the staleness guard and injects the keys into every Stage-2 agent — stale/absent/malformed/skip → inject nothing, degrade to today. **Non-gating** (never changes PASS/WARN/FAIL).
-- ADR: `.verified/decisions/0004-persisted-findings-record.md`. Tests: `tests/finding-injection.test.cjs`. The static self-heal loop (also reads `findings.json`) remains a separate follow-up.
-
-### Boundary doctrine in the taxonomy seed (v1.20.0+)
-
-v1.19.0 made a repo-declared `anti-patterns:` entry a **blocking** finding, which retroactively
-turned `hooks/lib/test-types-seed.md` into a gate — but the seed didn't actually declare the
-boundary rule, and `/map`'s only instruction for the field was "common smells, comma-separated".
-So the gate had no floor: a repo mapped today got whatever the model invented.
-
-- **The seed now encodes the boundary doctrine** (`acceptance` + `dao` types): reading state back
-  below the test's own boundary, seeding below it when the system's own API can drive it, and
-  post-construction fixture mutation. Its header block explains the doctrine in full — measure
-  "below" against the *test's* boundary not the code's; prefer re-reading *through* the boundary
-  (a re-read proves what durably persisted, a read next to the write only proves what was
-  written); **extend the seam** rather than reach around it; and record genuinely un-exposable
-  state (an internal audit table, an append-only invariant) as ONE named harness observation with
-  its justification, not as scattered store access.
-- **`/map` treats the field as a gate**: only mechanical, no-judgment smells; keep the boundary
-  entries adapted per type; `primitives:` must name the repo's *observations*, not just its
-  drivers (list only drivers and agents drive through the boundary then reach around it to
-  assert); `good-example:` must point at a real test showing the read-back-through-the-boundary
-  shape.
-- **Oracle provenance stays opt-in.** Circular oracles are deliberately **NOT** in the seed:
-  criterion 9 is non-blocking by design (locked by `tests/test-quality-signals.test.cjs`), and
-  seeding it would block every approval-testing repo that has no taxonomy of its own. A repo may
-  escalate by declaring it — keros does. `tests/test-craft-enforcement.test.cjs` guards both
-  directions: the boundary entries must be present, circular oracles must be absent.
-
-Field-tested on `keros-platform`: ~60 below-boundary calls across 15 handler-test files → 0,
-surfacing a duplicate-AADE-registration bug and a circular oracle in the money path that a
-boundary-conformant test would have caught years earlier.
-
-### Repo-declared golden path enforcement (v1.19.0+)
-
-Closes the hole that let a handler-boundary test ship with DAO-level setup/assertions and scattered
-raw `require`s while `test-review` returned WARN + Farley 7.7 "Excellent" (keros `per-apartment-str-owner`).
-Three compounding causes, all fixed:
-
-- **The reviewer never saw the repo's own rubric.** `TESTING.md`'s per-type `good-example:` /
-  `anti-patterns:` / `boundary:` fields (added v1.8.0) were consumed **only by `/test-audit`**. New
-  `test-review` **criterion 5a** makes resolving each changed test to its declared type (via
-  `match-paths`/`match-markers`/the `(test:)` trailer) and loading that type's golden path a
-  *precondition* for judging craft. `agents/executor.md` reads the same rubric at write-time.
-- **The boundary rule was anchored on the wrong axis.** It was written as "a DAO-level test reaching
-  down to raw SQL", so a *use-case*-boundary test calling `dsl.Repository.X.SetFoo(id)` didn't match
-  the example and never fired. Now stated relative to the test's **own** declared type boundary, in
-  both directions, and it **covers arrange, not just assert** (seeding a precondition through a lower
-  layer is the same violation).
-- **A bespoke dispatch prompt displaced the standing rubric.** `/review` hand-wrote a
-  vacuity-focused brief; the agent answered it and skipped its own criteria. `/review` + `test-review`
-  now both state that a feature-specific brief is **additive, never a substitute**.
-
-**Severity:** violating an anti-pattern the repo *declared* for a test's type is an `error` (blocking) —
-the repo already made the call in its own `TESTING.md`, so it's a declaration match, not a judgment
-call. This is deliberately distinct from **criterion 8 (taxonomy _fit_)**, which stays a non-blocking
-`warning` judgment call. The Farley/oracle/unarmored/reflection signals remain non-blocking — that
-framing is still locked by `tests/farley-score.test.cjs` and `tests/test-quality-signals.test.cjs`.
-The `testing` skill now single-sources **three** must-not-ship anti-patterns (was two).
-Tests: `tests/test-craft-enforcement.test.cjs`.
-
-### ATDD loop closure (v1.18.0+)
-
-Adapted from `agentic-dev-team` #537, reshaped for the language-agnostic core: detect a repo's acceptance-test convention and **record a decision**, never force a Gherkin export on a testdsl/page-object repo.
-
-- **`hooks/lib/bdd-convention.js`** (contract `bdd-convention/v1`, model-free) — `classify({featureFileCount, manifestText})` → `{convention: "gherkin"|"none", export: bool, signals}`. `gherkin` when `.feature` files exist OR a cucumber-family runner (godog/cucumber/reqnroll/behave/pytest-bdd) is in a manifest; else `none`. CLI: `bdd-convention.js detect <path>`.
-- **`/plan` step 8a-ter** runs it and records a `## Scenario Persistence` decision: `export:false` (default for testdsl repos) → scenarios stay prose, kept honest by the test-gate's `UNSERVED_SCENARIO` traceability; `export:true` → note that approved Given/When/Then scenarios should be materialized as `.feature` files (the mechanical exporter is a follow-up). A decision record, never a gate.
-- **Down-payments:** (1) `/review` step 8c seeds new `learnings.md` lessons with `_(status: unvalidated)_` — the hook for a future lesson-validation pass (→ `validated`/`harmful`); (2) a single-sourced **provenance footer** (`plans/shared/provenance-footer.md`: repo/branch/SHA/plugin-version/date + `_Not applicable_` empty-section rule) referenced by `/review` and `/test-audit` report writers.
-- Tests: `tests/bdd-convention.test.cjs`, `tests/atdd-loop-closure.test.cjs`.
-
-### Structured finding layer (v1.17.0+)
-
-Ported from `agentic-dev-team` (#808/#811). Turns `/verify`'s opaque pass/fail into a structured, deduped finding stream via SARIF — the **producer only** (the `/review` finding-injection and the static self-heal loop are deliberately separate follow-ups).
-
-- **`hooks/lib/findings.js`** (contract `findings/v1`, model-free, no deps) — `normalize(sarifText, {tool, lang})` parses SARIF into unified findings with tool-prefixed rule ids (`<tool>.<lang>.<rule>`); `dedup()` (within-adapter — cross-tool suppression deferred, see ADR 0003); `buildEnvelope()` → `{schema, scope, findings, summary, skipped, status}` where `status` is `ok`|`skip` and **never `fail`** (findings are data, not a gate); `scan(scopeFiles, {adapters})` loads adapters, probes language-conditionally, and degrades gracefully; a `scan <path>` CLI (exit 0 ok/skip, 1 usage — never non-zero for "found problems").
-- **Adapters** live in `hooks/lib/findings/` (a NEW dir, decoupled from the test-corpus `hooks/lib/lang/` adapters), auto-loaded by extension. `go.js` runs `golangci-lint run --out-format sarif ./...` at **module scope** via an injectable spawn seam; `normalize` is pure (fixture-tested, no tool). A new language is a drop-in adapter.
-- **Graceful degradation is first-class**: no tool → `status: skip`, exit 0; a missing/crashing/malformed-output linter → a `{lang, tool, reason, hint}` entry in `skipped`, never a failure; only-unsupported scope → skip + explicit `note`. A broken linter never blocks a green build.
-- **`/verify`** step 3b surfaces the envelope as a **non-blocking** section — the repo's existing verify command stays the sole gate (same framing as the Farley score).
-- ADR: `.verified/decisions/0003-findings-envelope-contract.md`. Tests: `tests/findings.test.cjs`, `tests/findings-go.test.cjs`, `tests/findings-verify.test.cjs` (fixtures + injected adapters — no tool invoked).
-
-### Self-declared review dispatch (v1.14.0+)
-
-Ported from `agentic-dev-team`. `/review` Stage 2 no longer hardcodes which agent runs on which file type. Each review agent (`agents/*-review.md`) self-declares two frontmatter fields, and the skill dispatches from them:
-
-- **`scope:`** — `always`, or a comma-list of quoted path globs (globs are quoted because a YAML scalar starting with `*` is an alias). Include the agent when scope is `always` or a changed file matches a glob. `security-review`/`domain-review` use `always` and self-limit in their bodies.
-- **`context_needs:`** — `diff-only | full-file | project-structure | artifact-stream`; how much context to load before dispatching.
-
-Adding a review agent is now **zero edits to `/review`** — it's dispatched by its own declaration. `tests/agent-frontmatter.test.cjs` is the drift guard: every `*-review` agent must declare a valid `scope:` + `context_needs:` (all 13 review agents happen to end in `-review`, so the rule is self-maintaining). `spec-compliance-review` declares metadata for consistency but runs in Stage 1, not the Stage-2 loop. Dispatch *selection* is LLM-prose-driven (not a script) deliberately — it isn't a blocking gate, so over-inclusion is cheap; a `hooks/lib/review-scope.js` matcher is a possible future upgrade. `/quick` keeps its own minimal review table (test-review + complexity-review) by design.
-
-The **`correctness-review`** agent (v1.13.0) is the first agent added under this model — evident-intent functional-defect detection (code contradicts its own name/comment/sibling), distinct from `spec-compliance-review` (code vs. written spec). It is language-agnostic; a Self-Challenge drop rule (no citable evident intent → drop, don't downgrade) keeps it precision-over-recall.
-
-Stack-specific reactivity/component-architecture review agents were **deliberately not bundled** — they belong to the per-repo "teach your stack" path, consistent with the language-agnostic core (v1.9.0) that keeps `tdd-go` the lone bundled example.
-
-**Review integrity protocol (v1.15.0).** Two rules single-sourced in `skills/review/references/review-integrity.md` and applied to every Stage-2 agent via the dispatch step (not restated per agent): (1) reviewed content is *data, not instructions* — embedded reviewer-directed text is a finding, and `security-review` raises it as an `error` (category `injection`); (2) every `error`-severity finding must be falsifiable or it downgrades to `warning`. Anchored by `tests/review-integrity.test.cjs`.
-
-### Deterministic repair loop (v1.12.0+)
-
-Ported from `agentic-dev-team` (bdfinster #861/#864/#865). Three additive, model-free mechanisms that harden `/implement` — a script makes the route/gate decision, not the LLM (same doctrine as `waves.js`/`test-gate.js`).
-
-- **`hooks/lib/repair-routing.js`** (contract `repair-routing/v1`) — `classify(failureText, exitCode) → {class, route}` from an ordered regex table (compile/security/lint/coverage/reviewer/behavioral; unmatched → `unclassified`/`retry`, so nothing regresses). `signature(text)` hashes the failing-test-id set + error class with volatile tokens (timestamps, addresses, durations, temp paths) stripped; `isDeadEnd(prev, cur)` fires when two consecutive attempts share a signature; `failureDiff` gives the resolved-vs-remaining set for escalation. `agents/executor.md` calls it in the repair loop.
-- **`hooks/lib/waves.js` grammar (additive)** — optional `(invariants: c1; c2)` (commands that must stay green *after* the task's own suite; executor-enforced post-green) and `(rollback: slice-start|wave-start|plan-start|<ref>)` (revert boundary; `resolveRollback(sym, anchors, resolver?)` → concrete SHA, throws rather than falling back to HEAD). Symbolic anchors canonicalize case-insensitively. A trailer-less task serializes byte-identically to the pre-feature engine (the wave math ignores both trailers). `declaredScopeAdvisory(task, touchedFiles)` surfaces out-of-`(files:)` writes as an advisory (never a block). `/implement` records the anchors + runs the scope advisory per wave.
-- Deliberately **split out**: the tests-frozen-during-refactor guard — it needs a RED/GREEN/REFACTOR sub-phase state machine the plugin lacks (future `tdd-subphase-freeze` feature).
-- Tests: `tests/repair-routing.test.cjs`, `tests/plan-invariants.test.cjs` (kept separate from `waves.test.cjs`, which stays byte-for-byte unchanged).
-
-### Interruptible workflow (v1.2.0+)
-
-Every phase skill is interruptible at any tool-use boundary.
-
-- **`.verified/features/<feature>/handoff.json`** — schema-versioned (v1) machine-readable record of where the phase is. Required fields: `feature`, `phase`, `completed_tasks`, `remaining_tasks`, `git_head`, `timestamp`. Optional: `blockers` (with `severity: blocking|advisory`), `decisions_made`, `reason`. Schema at `hooks/schemas/handoff.schema.json`; helper at `hooks/lib/handoff.js` (atomic writes, validation).
-- **`.verified/features/<feature>/continue-here.md`** — narrative companion. If JSON and MD disagree, trust the JSON.
-- **`/pause`** captures handoff + continue-here, then ends the turn. Standalone skill — clear trigger.
-- **`/continue`** reads handoff + state, briefs the user, recommends the next action. Refuses if any `blockers[].severity == "blocking"`. (Named `continue` rather than `resume` because the latter collides with Claude Code's built-in `--resume`.)
-- **`state.md` schema v2** — adds `active_phase` (set while a phase is mid-execution), `next_action` (slash command or recommendation), `next_phases` (branch options). Lazy upgrade: legacy v1 files are read without error and bumped on next write.
-- **Statusline** distinguishes scenes: in-flight (magenta `:phase`), idle-with-next-action (`↪/cmd`), legacy idle.
-
-### Adversarial critique (v1.3.0+)
-
-Two stress-test gates inside the workflow.
-
-- **Spec-time challenge (in `/specify`)** — Socratic Q&A interrogating the *problem* before `spec.md` is written. Six categories: ambiguity, surface area, alternatives, edge cases, dependencies, out-of-scope. Max 8 questions, one at a time. Audit trail at `.verified/features/<feature>/discussion.md` (preserves rejected options, not just chosen). Opt out with `--no-challenge` or `.verified/config.json` `workflows.challenge: false`.
-- **Plan-time critics (in `/plan`)** — up to five agents (`plan-critic-acceptance`, `plan-critic-design`, `plan-critic-strategic` always; `plan-critic-ux` only when `ui-spec.md` exists; `plan-critic-parallelization` only when the wave engine reports `parallel: true`) dispatched in parallel before user approval. Severity policy: `error` auto-fixes the plan, `warning` surfaces to user (max 10 visible), `suggestion` is recorded only. Audit trail at `.verified/features/<feature>/concerns.md`. Opt out with `--no-critics` or `workflows.plan_critics: false`.
-
-The five critics share a finding schema (`{critic, severity, description, tied_to, recommendation?}`) and the same severity rubric — defined once in `skills/specify/references/challenge.md` and re-used verbatim in each critic agent. If you change the rubric, update all six files (the five critics + `challenge.md`); `tests/adversarial-critique.test.cjs` will catch drift.
-
-### Process retro (v1.3.1+)
-
-`/review` step 8c writes a small **process-level** retro per feature, separate from the existing code-level capture. Two artifacts:
-
-- `.verified/features/<feature>/retro.md` — four sections (What worked / What didn't / Workflow tuning signals / Top process learning). Sections may be empty.
-- `.verified/learnings.md` — append-only digest, one line per feature, format `- YYYY-MM-DD **feature** — top learning`. Cross-feature trend signal — grep this to spot patterns.
-
-Process retro is for "what did we learn about HOW we worked on this feature." Code-level findings (gotchas, conventions, ADRs, dependencies) stay in their existing destinations (`.verified/codebase/`, `.verified/decisions/`). The skill explicitly documents the line; the prompt-anchor test enforces it survives future edits.
-
-### Deterministic wave engine (v1.6.0+)
-
-`/implement` no longer eyeballs `[P]` markers to decide what runs in parallel. `hooks/lib/waves.js` (Node, no deps; library + CLI, mirrors `handoff.js`) parses the plan and does ALL the graph math, emitting a versioned JSON contract.
-
-- **Task grammar** — every plan task declares a machine-readable surface: `(files: a, b)` (the files it creates/modifies) plus optional `(depends on T001)` / `(depends on T001-T003)`. The `[P]` marker is now a human hint only; the engine is authoritative.
-- **Contract `plan-waves/v1`** — `waves` (each inner array runs concurrently via separate executors), per-task `depends_on`/`files`/`wave`/`status`, `collisions` (same-wave tasks declaring the same file), `undeclared` (parallel-wave tasks with no declared surface), `parallel`. Algorithm: Kahn level-layering + pairwise file-set intersection.
-- **Exit codes** — `0` ok, `1` usage, `2` malformed plan (cycle / unknown dep / duplicate id, with the offender named). `/plan` (step 8a) computes + renders a `## Waves` table and refuses to present a plan that exits 2 or has collisions; `/implement` re-runs the same engine and gates each wave on `collisions`/`undeclared` before fanning out.
-- **`plan-critic-parallelization`** — the 5th plan critic, fed the engine's `collisions` array. The script proves mechanical file overlap; this critic catches the semantic coupling a script can't (a same-wave task B that consumes an interface task A introduces). Spawned only when `parallel: true`.
-- Tests: `tests/waves.test.cjs` (engine unit tests + skill-wiring anchors). The engine is fully unit-tested model-free — that is the point of moving the schedule out of the LLM.
-
-### Farley Score (v1.6.0+)
-
-A non-blocking test-quality signal, filling the gap left by removing mutation testing as a verification requirement.
-
-- **Single source of truth** — the rubric (Dave Farley's 8 properties, weighted `(U×1.5 + M×1.5 + R×1.25 + A×1.0 + N×1.0 + G×1.0 + F×0.75 + T×1.0) / 9`, score bands) lives in `skills/test-design-reviewer/SKILL.md`. Do not duplicate it; reference it.
-- **Wiring** — the `test-review` agent computes a Farley Score when a change adds or rewrites tests; `/review` surfaces it in the report and `/verify` points at it. It is **informational only** — PASS/WARN/FAIL comes from error/warning findings, never from the score. "High Farley + weak assertions" is still a warning.
-- Tests: `tests/farley-score.test.cjs` locks the formula (a pure-function reimplementation must equal the published formula string — prose and math can't drift) and asserts the non-blocking wiring.
-
-### Test-quality signals (v1.16.0+)
-
-Three more **non-blocking** test-quality signals (ported from `agentic-dev-team`), all sharing the Farley framing — they inform worst-first triage, never move PASS/WARN/FAIL:
-
-- **Oracle provenance** (`test-review` criterion 9) — classify each expected value as SPEC-DERIVED / INDEPENDENT / CIRCULAR (snapshots, golden files, ApprovalTests, AI-recorded "current output"). A circular oracle stays green through a regression, so it verifies "unchanged" not "correct". Co-located with Farley's **Necessary** property in `test-design-reviewer` (a high circular ratio drives a low N score) — single-sourced, not duplicated.
-- **Unarmored regions** (criterion 10) — changed code with *neither* coverage *nor* any historical defensive attention (no negative test, boundary assertion, or edge-case guard); higher unknown-risk than an ordinary coverage gap; surfaced worst-first.
-- **Reflection into privates** (criterion 11) — tests reaching around the public seam via reflection / `(obj as any)` casts; same "reaching around the seam" family as the blocking 5b boundary rule but a judgment call, so `warning` only.
-- `test-audit` references criteria 9–10 (single-sourced, not restated). Tests: `tests/test-quality-signals.test.cjs`; the non-blocking framing is guarded there and by `tests/farley-score.test.cjs` / `tests/test-craft-enforcement.test.cjs`.
-
-### Enforced test taxonomy (v1.7.0+)
-
-Every plan task now declares the *kind* of test it ships, and a deterministic gate refuses tasks that under-test without sanction. No LLM is in the block decision.
-
-- **Task-grammar trailers** — `(test: <type>)` (the task's sanctioned test type) and `(scenario: <id>)` (the acceptance-scenario ids it serves). Parsed by `hooks/lib/waves.js` (`test_type`/`scenarios` on the task contract); the authoritative gate is `hooks/lib/test-gate.js`. The wave math ignores both — they exist for the gate.
-- **Per-repo taxonomy** — a `## Test Types` table in `.verified/codebase/TESTING.md` defines the repo's sanctioned types, seeded from `hooks/lib/test-types-seed.md` (single source of truth: it is both the gate's fallback when a repo has no taxonomy and the scaffold `/map` and `/init` write). Resolution (`hooks/lib/taxonomy.js`): repo taxonomy authoritative, else the seed.
-- **Tiers** — `default` (no friction), `exception` (sanctioned narrow types, e.g. `dao`), `sign-off` (e.g. `unit`, `none` — blocked until the user explicitly approves, persisted in `.verified/features/<feature>/test-signoffs.json`).
-- **Gate contract `test-gate/v1`** — severity-coded `findings` (`MISSING_TEST_TYPE`, `UNKNOWN_TEST_TYPE`, `UNTRACEABLE_TASK`, `DANGLING_SCENARIO`, `UNSERVED_SCENARIO`, `MIGRATION_NEEDED`, `SIGNOFF_REQUIRED`, `DIAGRAM_MISSING`), per-task `summary`, `blocked`. Exit codes: `0` ok · `1` usage · `2` blocked (error findings) · `3` malformed taxonomy. Wired into `/plan` (step 8a-bis, renders a `## Test Boundaries` table; surfaces warnings non-blocking) and `/implement` (re-gates before dispatching each wave). Deterministic — a script makes the block decision.
-- **Coverage reframed** — coverage is a *consequence* of the taxonomy (tdd-go/testing), not a primary gate. A taxonomy/quality mismatch (declared type vs. what the test actually does) is WARN-only, surfaced by `test-review`/`test-design-reviewer`, never blocking.
-- ADR: `.verified/decisions/0001-test-taxonomy-design.md`. Tests: `tests/taxonomy.test.cjs`, `tests/test-gate.test.cjs`, grammar in `tests/waves.test.cjs`, wiring anchors in `tests/test-taxonomy*.test.cjs`.
-
-### Test audit (v1.8.0+)
-
-`/test-audit <path>` is the retroactive, advisory counterpart to the forward gate: it triages tests that already exist. Where the gate blocks new under-tested plan tasks, the audit ranks an existing corpus worst-first and deep-reviews the worst — it never blocks and never modifies a file.
-
-- **Optional taxonomy fields** (additive, forward gate ignores them; parsed by `hooks/lib/taxonomy.js`, an `ARRAY_FIELDS` const drives comma-split): `match-paths`/`match-markers` (deterministic classification signals), `good-example`/`bad-example`/`anti-patterns` (the per-type craft rubric). Seeded in `hooks/lib/test-types-seed.md`; populated per-repo by `/map`.
-- **Deterministic corpus lib** — `hooks/lib/test-corpus.js` (Node, no deps; mirrors the sibling libs). The classify/rank/summary/scope core is **language-agnostic**; per-language discovery + assertion-counting live in drop-in adapters under `hooks/lib/lang/*.js`, auto-loaded by file extension (no central registry). Adapters: `go`, `typescript` (`.ts/.tsx/.js/.jsx`), `python`, `java` — each exports `{id, extensions, testFileGlobs, discover, countAssertions}`. C-family languages share `lang/cfamily.js` (a configurable brace-balance scanner that ignores braces in strings/comments); Python uses an indentation scanner. No language toolchain required (source is parsed as text). Emits `test-corpus/v1` `{schema, scope, tests, summary, unsupported_files, note?}`. CLI: `test-corpus.js scan <path> --testing <TESTING.md|->`. Model-free, unit-tested per adapter.
-- **The command** (`skills/test-audit/SKILL.md`) requires a repo `## Test Types` (refuse → `/map`), runs the lib, deep-dives the worst top-N via `test-design-reviewer` against each test's type rubric (generic craft rules referenced from the `testing` skill + the type's exemplars/anti-patterns), and writes a ranked report to `.verified/audits/<scope>-tests.md` with the count not deep-reviewed (no silent truncation). A scope of only-unsupported languages produces an explicit note, not a misleading empty pass.
-- **Craft rules single-sourced** — the six language-neutral actor-BDD rules (fixtures-at-top, immutable fixture chaining, `Sends`/`Receives`-only, sequences, captured data, single-behavior) live once in `skills/testing/SKILL.md`; `tdd-go`, `react-testing`, `front-end-testing`, the audit skill, and `/map` reference them. A drift guard in `tests/test-audit.test.cjs` asserts they aren't restated anywhere else.
-- **Adding a language** — drop a `hooks/lib/lang/<id>.js` adapter (+ a `tests/lang-<id>.test.cjs`); the loader picks it up by extension. The core, the gate, and the taxonomy are untouched.
-- Tests: `tests/test-corpus.test.cjs` (discovery + classify + analyze), `tests/taxonomy.test.cjs` (optional fields), wiring anchors in `tests/test-audit.test.cjs`.
-
-### Language-agnostic core (v1.9.0+)
-
-The executor no longer hardcodes a language list. It loads the neutral `testing` skill and resolves the repo's test runner and idioms via a **priority ladder**: (1) `.verified/codebase/TESTING.md` is authoritative when present; (2) else infer the dominant framework/assertion style from the repo's existing tests; (3) else fall back to the neutral `testing` skill with no idiom assumptions (never a missing-skill error). Go is retained as the one bundled example — `tdd-go` is applied additionally for `go.mod` repos.
-
-- **Dangling `tdd` reference removed** — the bare `` `tdd` `` skill never existed (the neutral skill is `testing`). Every occurrence across `agents/` and `skills/` was repointed to `testing`, and a drift guard in `tests/language-agnostic-core.test.cjs` fails the build if it reappears.
-- **No-new-per-language-file invariant (SC-004)** — the change adds zero `tdd-<lang>` skills and zero `docs/<lang>-stack.md` files beyond the existing Go example; asserted by the same test file.
-- **Per-repo stack mechanics** live in `.verified/codebase/` (written by `/map`) or a repo skill, not in bundled per-language toolchains — see docs/configuration.md "Teaching the plugin your stack". The executor infers from these.
-- ADR: `.verified/decisions/0002-language-agnostic-executor.md`. Tests: `tests/language-agnostic-core.test.cjs`.
-
-### Test-craft prevention + comment economy (v1.11.0+)
-
-Two levers, both aimed at the *executor* (where tests and comments are written) plus a selective review gate:
-
-- **Two must-not-ship craft anti-patterns are now blocking.** Single-sourced in `skills/testing/SKILL.md` ("Must-not-ship anti-patterns"): (1) asserting only that *some* error occurred when the code returns a *named* sentinel/type (Go `require.Error` where `require.ErrorIs` is right); (2) asserting *below* the declared test boundary (raw `SELECT`/`db.Get` inside a DAO/component test). `test-review` criterion **5b** raises exactly these two as `error` — they BLOCK review. The other four craft rules + `single behavior` (multi-behavior tests) stay `warning` (prevention only). This is deliberately narrow: only mechanical, no-judgment violations block. Farley (criterion 7) and taxonomy-fit (criterion 8) remain non-blocking — that framing is locked by `tests/farley-score.test.cjs` and must not regress.
-- **Executor prevents them at write-time** via a new "Test craft (write-time)" section in `agents/executor.md` — review is the backstop, not the first line.
-- **Comment economy + feature-qualified IDs.** `agents/executor.md` "Comments & traceability": comment *why* not *what*, no multi-line "scope of this file / covers FR-a, AS-b, EC-c…" header dumps, requirement IDs go on the *test* not implementation prose, and every requirement ID is **feature-qualified** — `<feature-slug>/FR-015`, never a bare `FR-015` (ambiguous once a repo has many `.verified/features/`). The density is emergent (the model cross-references the plan's `(scenario:)` trailers + the spec's IDs), so it needs an explicit counter-instruction, not a deletion.
-- Tests: `tests/test-craft-enforcement.test.cjs`.
-
-### Hook output envelopes
-
-Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare `{"additionalContext": "..."}` is silently dropped. All our hooks (`session-start.sh`, `context-monitor.js`) emit:
+## What v2 is
+
+Three commands and the libs that feed them. `/review` (independent review before commit), `/plan`
+(a chat plan stress-tested by three critics), `/map` (the repo's test taxonomy). The design record
+for the cut from v1 is the README's "Why v2 is smaller" section and `tests/review-v2.test.cjs`'s
+header; the v1 feature history is in git (`git log v1.24.0`).
+
+Doctrine that survived, in one line each:
+
+- **Independent review is the value.** The agents found the would-ship defects; the gates did not.
+  Keep them, measure them (`hooks/lib/review-ledger.js`), size-gate the ones that return nothing.
+- **A script makes the mechanical decision, the model makes the judgment.** Panel resolution
+  (`review-scope.js`), round termination (`finding-signature.js`), assertion deltas
+  (`test-weakening.js`), the taxonomy (`taxonomy.js`) are model-free and unit-tested.
+- **Language-agnostic core.** No bundled toolchain beyond the `tdd-go` example; the repo's
+  `TESTING.md` and verify command teach the plugin its stack.
+- **Blocking is narrow.** Only mechanical, no-judgment findings are `error`: the three must-not-ship
+  test anti-patterns (`skills/testing/SKILL.md`), falsifiable correctness/security errors. Farley,
+  taxonomy fit, oracle provenance, weakening, contract doubles stay non-blocking (locked by
+  `tests/farley-score.test.cjs`, `tests/test-quality-signals.test.cjs`).
+- **No artifact the model writes and only the model reads.** The ledger is the one file `/review`
+  writes; `/plan` writes none; `/map` writes the rubric.
+- **Never a git command that can discard uncommitted work.** `hooks/git-guard.js` denies the class;
+  `checkpoint.js` is the restore path.
+
+## Surface
+
+`tests/v2-surface.test.cjs` pins the shipped skills, agents, libs and hook files and fails on any
+reference to a cut piece. Add to its lists when you add a file; do not weaken the dangling-reference
+guard.
+
+## Hook output envelopes
+
+Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`. Bare
+`{"additionalContext": "..."}` is silently dropped. `context-monitor.js` emits:
 
 ```json
-{"hookSpecificOutput": {"hookEventName": "PostToolUse|SessionStart", "additionalContext": "..."}}
+{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "..."}}
 ```
 
 ## Development
 
-### Testing Changes
+### Testing changes
 
 After modifying skills, agents, or hooks:
 1. Bump version in `.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json`
 2. Run `claude plugin update verified-development@verified-development` in a target project
 3. Start a new Claude Code session to pick up changes
 
-### Reading Conversations from Other Projects
+### Reading conversations from other projects
 
-Claude Code stores conversation history as JSONL files. Use this to troubleshoot plugin behavior in other projects:
+Claude Code stores conversation history as JSONL under `~/.claude/projects/<dashed-path>/`
+(`/Users/mike/go/src/keros-platform` → `-Users-mike-go-src-keros-platform`). Subagent transcripts
+sit next to each session under `<session-id>/subagents/agent-*.jsonl`. Two scripts from the v2
+assessment compute per-session tokens, skills, agents and per-agent sub-agent cost; recreate them
+from `tests/review-v2.test.cjs`'s numbers if needed. The `usage` block on each assistant line has
+`input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`.
 
-```bash
-# Find recent conversations for a project
-ls -lt ~/.claude/projects/-Users-mike-go-src-keros-platform/*.jsonl | head -5
+### Skill trigger behavior
 
-# Parse conversation messages (user + assistant text + tool calls)
-python3 -c "
-import json
-with open('PATH_TO_JSONL') as f:
-    lines = f.readlines()
-for i, line in enumerate(lines):
-    obj = json.loads(line)
-    t = obj.get('type', '')
-    if t in ('user', 'assistant'):
-        msg = obj.get('message', {})
-        content = msg.get('content', [])
-        if isinstance(content, list):
-            for c in content:
-                if isinstance(c, dict):
-                    if c.get('type') == 'text' and len(c.get('text','')) > 20:
-                        print(f'L{i} {t.upper()}: {c[\"text\"][:300]}')
-                    elif c.get('type') == 'tool_use':
-                        name = c.get('name','')
-                        inp = c.get('input', {})
-                        if name == 'Skill':
-                            print(f'L{i} SKILL: {inp.get(\"skill\",\"?\")}')
-                        elif name == 'Agent':
-                            print(f'L{i} AGENT: type={inp.get(\"subagent_type\",\"?\")} desc={inp.get(\"description\",\"\")[:80]}')
-"
-```
+The `description` field in SKILL.md frontmatter controls auto-loading. Aggressive language triggers
+more broadly; `/review`'s says "Required for non-trivial changes" and the project-rules template
+says it again in `CLAUDE.md` — on measured sessions the `CLAUDE.md` rule was what made the agents
+run (168 dispatches with no skill loaded at all).
 
-**Project path mapping:** Claude Code converts paths to directory names with dashes. `/Users/mike/go/src/keros-platform` becomes `-Users-mike-go-src-keros-platform`.
+### Version bumping
 
-**What to look for when troubleshooting:**
-- Which skills triggered (search for `SKILL:` in output)
-- Whether our skills or third-party skills loaded (check the `Base directory` path)
-- Whether the workflow was followed (specify → plan → implement → verify → review)
-- Whether the LLM prompted to commit before review
-- Whether state.md was updated correctly
-
-### Plugin Installation
-
-Plugins from registered marketplaces can auto-load skills even when not in `enabledPlugins`. To fully prevent a plugin's skills from triggering, remove its marketplace:
-
-```bash
-# Remove a marketplace (e.g., superpowers)
-rm -rf ~/.claude/plugins/marketplaces/superpowers-dev
-rm -rf ~/.claude/plugins/cache/claude-plugins-official/superpowers
-
-# Check what marketplaces exist
-ls ~/.claude/plugins/marketplaces/
-```
-
-### Skill Trigger Behavior
-
-The `description` field in SKILL.md frontmatter controls when Claude auto-loads a skill. Aggressive language ("You MUST use this") triggers more broadly than passive ("Use when the user invokes /command"). Our core skills use aggressive triggers to ensure the workflow is followed.
-
-### Version Bumping
-
-Always bump BOTH files in sync:
-- `.claude-plugin/plugin.json`
-- `.claude-plugin/marketplace.json`
-
+Always bump BOTH files in sync: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`.
 The plugin cache is version-keyed — same version = no re-install.
 
 ### Tests
 
-Plain Node test runner at `tests/run.cjs`. Each `*.test.cjs` exports `[{name, fn}]`. No npm dependencies. Run with `node tests/run.cjs`. CI runs both `node scripts/lint-descriptions.cjs` and the test runner via `.github/workflows/lint.yml`.
+Plain Node test runner at `tests/run.cjs`. Each `*.test.cjs` exports `[{name, fn}]`. No npm
+dependencies. Run with `node tests/run.cjs`. CI runs `node scripts/lint-descriptions.cjs` and the
+runner via `.github/workflows/lint.yml`. Libs with an external seam (git, a CLI) get a direct
+subprocess test, not only a unit test.
 
 ### Skill description budget
 
-Hard cap of 100 chars per `description:` field, enforced by `scripts/lint-descriptions.cjs`. Anti-patterns to avoid: "Triggers:" keyword stuffing, flag enumerations (move to `argument-hint`), multi-sentence prose. Aggressive imperative language ("Required before…", "You MUST use this…") still fits within the budget.
+Hard cap of 100 chars per `description:` field, enforced by `scripts/lint-descriptions.cjs`.

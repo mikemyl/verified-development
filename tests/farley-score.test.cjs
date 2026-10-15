@@ -98,14 +98,6 @@ module.exports = [
       assert.ok(ci(review, 'non-blocking'), '/review must mark it non-blocking');
     },
   },
-  {
-    name: '/verify points at the Farley signal without gating on it',
-    fn: () => {
-      const verify = readSkill('verify');
-      assert.ok(ci(verify, 'Farley Score'), '/verify must mention the Farley signal');
-      assert.ok(ci(verify, 'non-blocking'), '/verify must mark it non-blocking');
-    },
-  },
 
   // --- scoring anchors (ported from agentic-dev-team #1816) ------------------
   {

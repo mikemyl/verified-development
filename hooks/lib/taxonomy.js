@@ -48,6 +48,7 @@
  *
  * Usage from a skill (the LLM invokes node):
  *   node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/taxonomy.js resolve <testing.md|->
+ *   node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/taxonomy.js extract <testing.md|->   # the `## Test Types` section only
  *
  * Library usage:
  *   const { resolve } = require('./taxonomy.js');
@@ -132,6 +133,34 @@ function sliceTestTypesSection(lines) {
     }
   }
   return lines.slice(start, end);
+}
+
+/**
+ * The `## Test Types` section alone — heading included, up to the next H2 or
+ * end-of-file — as text. This is what a reviewer's brief should carry: the
+ * taxonomy, not the 80 KB of patterns and coverage notes around it.
+ *
+ * @param {string} md
+ * @returns {string|null} null when the doc has no Test Types section
+ */
+function extractTestTypes(md) {
+  const lines = String(md || '').split('\n');
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (TEST_TYPES_H2_RE.test(lines[i])) {
+      start = i;
+      break;
+    }
+  }
+  if (start === -1) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (ANY_H2_RE.test(lines[i])) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start, end).join('\n').replace(/\s+$/, '') + '\n';
 }
 
 /**
@@ -286,8 +315,8 @@ function readSource(arg) {
 
 function main() {
   const [, , cmd, arg] = process.argv;
-  if (cmd !== 'resolve' || !arg) {
-    process.stderr.write('usage: taxonomy.js resolve <testing.md|->\n');
+  if ((cmd !== 'resolve' && cmd !== 'extract') || !arg) {
+    process.stderr.write('usage: taxonomy.js resolve <testing.md|-> | extract <testing.md|->\n');
     return 1;
   }
   let repoDoc;
@@ -297,19 +326,29 @@ function main() {
     process.stderr.write(`cannot read testing doc: ${err.message}\n`);
     return 1;
   }
+  if (cmd === 'extract') {
+    const section = extractTestTypes(repoDoc);
+    if (section === null) {
+      process.stderr.write(`no \`## Test Types\` section in ${arg}\n`);
+      return 1;
+    }
+    process.stdout.write(section);
+    return 0;
+  }
   const resolved = resolve({ repoDoc });
   process.stdout.write(JSON.stringify(resolved, null, 2) + '\n');
   return 0;
 }
 
 if (require.main === module) {
-  process.exit(main());
+  process.exitCode = main();
 }
 
 module.exports = {
   parseTaxonomy,
   loadSeed,
   resolve,
+  extractTestTypes,
   REQUIRED_FIELDS,
   ARRAY_FIELDS,
 };

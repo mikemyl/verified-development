@@ -17,7 +17,6 @@ const path = require('node:path');
 
 const REPO = path.resolve(__dirname, '..');
 const fsig = require(path.join(REPO, 'hooks', 'lib', 'finding-signature.js'));
-const repair = require(path.join(REPO, 'hooks', 'lib', 'repair-routing.js'));
 
 const f = (over = {}) => ({
   agent: 'correctness-review',
@@ -90,14 +89,13 @@ module.exports = [
     },
   },
   {
-    name: 'normalizeMessage: builds on repair-routing.stripVolatile (one shared implementation)',
+    name: 'normalizeMessage: strips run-to-run volatile tokens (durations, timestamps, addresses, temp paths)',
     fn: () => {
-      // The shared seam gets a direct test: a token repair-routing strips must
-      // also be stripped here, so the two loops cannot drift apart.
       const withDuration = fsig.normalizeMessage('handler is slow: took 250ms to settle');
       const without = fsig.normalizeMessage('handler is slow: took to settle');
       assert.equal(withDuration, without);
-      assert.equal(repair.stripVolatile('took 250ms'), repair.stripVolatile('took'));
+      assert.equal(fsig.stripVolatile('at 2026-10-15T10:00:00Z pid 4242 0xdeadbeef /tmp/x1 (0.01s)'), 'at');
+      assert.equal(fsig.stripVolatile('took 250ms'), fsig.stripVolatile('took'));
     },
   },
 
@@ -302,13 +300,9 @@ module.exports = [
     fn: () => {
       const review = fs.readFileSync(path.join(REPO, 'skills', 'review', 'SKILL.md'), 'utf8');
       assert.ok(review.includes('finding-signature.js'), '/review must run the round ledger');
-      for (const rule of ['round-cap', 'severity-floor', 'loop-until-dry']) {
-        assert.ok(review.includes(rule), `/review must state the ${rule} termination rule`);
-      }
-      assert.ok(
-        /first match wins/i.test(review),
-        '/review must state that the termination rules are evaluated first-match-wins',
-      );
+      assert.ok(review.includes('--max-rounds 2'), '/review caps at one verification round');
+      assert.ok(review.includes('blocking_new_errors'), '/review reads what the round would ship');
+      assert.ok(review.includes('converged'), '/review follows the ledger decision');
     },
   },
 

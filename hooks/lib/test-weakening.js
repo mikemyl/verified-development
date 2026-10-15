@@ -9,7 +9,7 @@
  * deterministic proxy (reused from the hooks/lib/lang/* adapters); whether a drop
  * is a legitimate consolidation or a real weakening is a JUDGMENT, so this is a
  * NON-BLOCKING test-review signal (never gates). Contract + rationale:
- * .verified/features/test-weakening-detection/{spec,discussion}.md.
+ * the v1.22.0 design discussion (git history).
  *
  *   analyze(entries) -> { schema, flagged[], not_analyzed[], note? }   (pure)
  *     entry = { file, before, after }   (content strings, or null when absent)
@@ -153,7 +153,7 @@ function main() {
 }
 
 if (require.main === module) {
-  process.exit(main());
+  process.exitCode = main();
 }
 
 module.exports = { analyze, scan, testMatchers, SCHEMA };

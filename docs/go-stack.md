@@ -2,7 +2,7 @@
 
 The plugin is language-agnostic — it runs whatever verify command the repo declares. This page is **one example** of wiring a stack's verify command, using Go: the bundled `tdd-go` skill and the toolchain below show what a fully-wired stack looks like, not the only stack the plugin supports. The methodology is based on [imti.co/go-ai-verified-development](https://imti.co/go-ai-verified-development/).
 
-To teach the plugin your own stack's mechanics and verify command, see [docs/configuration.md — Teaching the plugin your stack](configuration.md#teaching-the-plugin-your-stack).
+To teach the plugin your own stack's mechanics and verify command, see [How it works — Teaching the plugin your stack](how-it-works.md#teaching-the-plugin-your-stack).
 
 ## Prerequisites
 
@@ -43,11 +43,11 @@ Defined in the project's build config (read them there, don't hardcode):
 
 ## Other stacks
 
-Go is one example, not a special case. The workflow, craft rubric, and test taxonomy are language-neutral, and `/verify` runs whatever command the repo declares — so any stack works without the plugin bundling its toolchain. What the Go example above adds is convenience: a ready-made `tdd-go` skill and a pre-wired `/verify` pipeline.
+Go is one example, not a special case. The craft rubric and test taxonomy are language-neutral, and `/review` runs whatever verify command the repo declares — so any stack works without the plugin bundling its toolchain. What the Go example above adds is convenience: a ready-made `tdd-go` skill and a pre-wired verify pipeline.
 
 Some of that convenience is already shared across languages. Test-corpus analysis (`/test-audit`) reads **Go, TypeScript, Python, and Java** via drop-in adapters (`hooks/lib/lang/*.js`), and the table below shows where each language sits relative to the bundled Go example:
 
-| Stack | `/test-audit` adapter | Bundled TDD skill | Bundled `/verify` toolchain |
+| Stack | `/test-audit` adapter | Bundled TDD skill | Bundled verify toolchain |
 |-------|:---:|:---:|:---:|
 | Go | ✅ | `tdd-go` | ✅ golangci-lint · revive · gosec · govulncheck |
 | TypeScript | ✅ | `react-testing` / `front-end-testing` | — (declare your own) |
@@ -55,4 +55,4 @@ Some of that convenience is already shared across languages. Test-corpus analysi
 | Java | ✅ | — | — (declare your own) |
 | Rust | — | — | — (declare your own) |
 
-Anything in the "declare your own" column is not a gap to be filled by the plugin — it is the per-repo extension point: see [docs/configuration.md — Teaching the plugin your stack](configuration.md#teaching-the-plugin-your-stack).
+Anything in the "declare your own" column is not a gap to be filled by the plugin — it is the per-repo extension point: see [How it works — Teaching the plugin your stack](how-it-works.md#teaching-the-plugin-your-stack).

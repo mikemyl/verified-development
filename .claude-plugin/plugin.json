@@ -1,20 +1,19 @@
 {
   "name": "verified-development",
-  "version": "1.24.0",
-  "description": "Specification-first, verified development with ATDD, layered quality gates, and review agents. Language-agnostic: runs the repo's own verify command and infers test idioms; Go is the bundled toolchain example; /test-audit spans Go, TypeScript, Python, and Java.",
+  "version": "2.0.0",
+  "description": "Independent review for work the model does: /review dispatches correctness, test, security and size-gated complexity/a11y agents before any commit; /plan stress-tests a chat plan with three critics; /map writes the repo's test taxonomy. Language-agnostic: runs the repo's own verify command and judges tests against its own test types; Go is the bundled toolchain example; /test-audit spans Go, TypeScript, Python, and Java.",
   "author": {
     "name": "Mike Mylonakis"
   },
   "license": "MIT",
   "keywords": [
-    "verification",
+    "code-review",
+    "review-agents",
     "tdd",
     "atdd",
     "bdd",
-    "specification",
-    "review",
+    "test-taxonomy",
     "go",
-    "quality-gates",
     "typescript",
     "react",
     "ddd",

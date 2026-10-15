@@ -60,7 +60,7 @@ module.exports = [
   {
     name: 'frontmatter: there is a discoverable set of review agents',
     fn: () => {
-      assert.ok(reviewAgents().length >= 10, 'expected the *-review agent roster');
+      assert.ok(reviewAgents().length >= 7, 'expected the *-review agent roster');
     },
   },
   {

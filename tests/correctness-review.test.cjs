@@ -55,10 +55,11 @@ module.exports = [
     },
   },
   {
-    name: 'correctness-review: distinguishes itself from spec-compliance-review',
+    name: 'correctness-review: infers intent from the code, not from a written spec (no spec gate exists)',
     fn: () => {
-      // Intent inferred from the CODE (name/comment/sibling), not a written spec.
-      assert.match(agent(), /spec-compliance/i);
+      const t = agent();
+      assert.match(t, /\*\*not\*\* from a written spec/i);
+      assert.doesNotMatch(t, /spec-compliance/i);
     },
   },
   {
@@ -78,10 +79,10 @@ module.exports = [
     },
   },
   {
-    name: 'wiring: /review Stage 2 is declaration-driven, not a hardcoded table',
+    name: 'wiring: /review dispatch is declaration-driven, not a hardcoded table',
     fn: () => {
       const t = reviewSkill();
-      assert.match(t, /self-declared/i, 'Stage 2 reads agent scope: declarations');
+      assert.match(t, /self-declare/i, 'the panel reads agent scope: declarations');
       assert.match(t, /context_needs/, 'Stage 2 honors context_needs');
       // The old per-agent dispatch table must be gone (that was the drift source).
       assert.doesNotMatch(t, /\| Any source code \|/, 'hardcoded dispatch table removed');

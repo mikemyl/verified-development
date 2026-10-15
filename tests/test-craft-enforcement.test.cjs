@@ -73,17 +73,6 @@ module.exports = [
     },
   },
   {
-    name: 'executor prevents the two craft violations at write-time',
-    fn: () => {
-      const e = readAgent('executor');
-      mustAll(
-        e,
-        ['Test craft (write-time', 'specific error', 'declared taxonomy boundary'],
-        'agents/executor.md',
-      );
-    },
-  },
-  {
     name: 'testing skill blocks violating a repo-declared anti-pattern for the test type',
     fn: () => {
       const s = readSkill('testing');
@@ -141,36 +130,8 @@ module.exports = [
         '/review must state that a feature-specific brief is additive, not a substitute',
       );
       assert.ok(
-        ci(r, 'TESTING.md'),
-        '/review must point test-review at the repo TESTING.md type table',
-      );
-
-      // /quick keeps its own minimal review table, so it needs the rule stated separately —
-      // it dispatches test-review with a hand-written brief exactly like /review does.
-      const q = readSkill('quick');
-      assert.ok(
-        ci(q, 'additive, never a substitute'),
-        '/quick must state that a change brief is additive, not a substitute for the rubric',
-      );
-      assert.ok(
-        ci(q, 'TESTING.md') && ci(q, 'Test Types'),
-        '/quick must point test-review at the repo TESTING.md type table',
-      );
-    },
-  },
-  {
-    name: 'executor loads the declared type golden path before writing a test',
-    fn: () => {
-      const e = readAgent('executor');
-      mustAll(
-        e,
-        ['good-example', 'anti-patterns', 'golden path', '(test:'],
-        'agents/executor.md',
-      );
-      // Extend-the-seam escape hatch, not a below-boundary shortcut.
-      assert.ok(
-        ci(e, 'extend the seam'),
-        'executor must route a missing capability to extending the seam',
+        ci(r, 'TESTING.md') && ci(r, 'taxonomy.js extract'),
+        '/review must hand test-review the extracted Test Types table',
       );
     },
   },
@@ -196,6 +157,42 @@ module.exports = [
       // A DAO-boundary test must not drop to raw SQL to read its own writes back.
       const dao = (types['dao'].anti_patterns || []).join(' | ').toLowerCase();
       assert.ok(dao.includes('raw-sql read-back'), 'seed dao anti-patterns must cover raw-SQL read-back');
+
+      // A core test drives ONE component at every edge through stub actors, in
+      // process, on a controlled clock (TransFICC's adaptor core tests). The
+      // mechanical smells that break that contract are a gate too.
+      const core = types['core'];
+      assert.ok(core, 'seed must declare a `core` type');
+      const coreDeclared = (core.anti_patterns || []).join(' | ').toLowerCase();
+      for (const needle of ['below the boundary', 'mutating a fixture', 'real clock', 'one component', 'partial match']) {
+        assert.ok(coreDeclared.includes(needle), `seed core anti-patterns must cover ${JSON.stringify(needle)}; got: ${coreDeclared}`);
+      }
+    },
+  },
+  {
+    name: 'the seed, /map and the taxonomy doc all draw the acceptance / core line the same way',
+    fn: () => {
+      const { loadSeed } = require(path.join(REPO, 'hooks/lib/taxonomy.js'));
+      const types = loadSeed().types;
+      // acceptance: the whole system through its public interfaces; core: one component at every edge.
+      assert.match(types.acceptance.when_to_use, /whole system|system as a whole/i);
+      assert.match(types.core.when_to_use, /one component/i);
+      assert.match(types.core.boundary, /edge/i);
+      const map = readSkill('map');
+      assert.ok(ci(map, 'core'), '/map must tell the mapper how to recognise a core test');
+      assert.ok(ci(map, 'every edge') || ci(map, 'all its edges'), '/map: a core test drives one component at every edge');
+      const doc = fs.readFileSync(path.join(REPO, 'docs/test-taxonomy.md'), 'utf8');
+      assert.match(doc, /\| `core` \|/, 'docs/test-taxonomy.md lists the core type');
+      assert.match(doc, /controlled clock/i);
+    },
+  },
+  {
+    name: 'the testing skill carries the DSL layer rules: driver never asserts, full-match expectations, separate send/expect instances',
+    fn: () => {
+      const t = readSkill('testing');
+      assert.match(t, /driver/i);
+      assert.match(t, /partial match/i);
+      assert.match(t, /separate instance|different instances/i);
     },
   },
   {
@@ -232,22 +229,6 @@ module.exports = [
       assert.ok(
         ci(map, 'primitives') && ci(map, 'observation'),
         '/map must tell the taxonomy to name the repo observations, not just its drivers',
-      );
-    },
-  },
-  {
-    name: 'executor carries comment-economy + feature-qualified requirement IDs',
-    fn: () => {
-      const e = readAgent('executor');
-      mustAll(
-        e,
-        ['Comments & traceability', 'Feature-qualify', '<feature-slug>/FR-015', 'self-documenting'],
-        'agents/executor.md',
-      );
-      // The instruction to put IDs on the test, not the implementation narration.
-      assert.ok(
-        ci(e, 'requirement IDs on the test'),
-        'executor must steer requirement IDs onto tests, not implementation prose',
       );
     },
   },

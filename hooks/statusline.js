@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Verified Development Statusline
-// Shows: model | feature/phase | directory | context usage
+// Shows: model | directory | context usage
 
 const fs = require('fs');
 const path = require('path');
@@ -40,50 +40,8 @@ process.stdin.on('end', () => {
       }
     }
 
-    // Verified development state (feature + phase + active/next signals)
-    //
-    // Three "scenes" in priority order:
-    //   1. active_phase set    → render phase in highlight colour ("in flight")
-    //   2. next_action set     → render phase dim + show ↪<next_action>
-    //   3. plain feature:phase → legacy idle state
-    //
-    // active_phase is populated only while a phase skill is mid-execution.
-    // next_action is populated at phase boundaries.
-    const unquote = s => (s ?? '').replace(/^["']|["']$/g, '').trim();
-    let vd = '';
-    const statePath = path.join(dir, '.verified', 'state.md');
-    if (fs.existsSync(statePath)) {
-      try {
-        const content = fs.readFileSync(statePath, 'utf-8');
-        const feature = unquote(content.match(/^feature:\s*(.+)$/m)?.[1]);
-        const phase = unquote(content.match(/^phase:\s*(.+)$/m)?.[1]);
-        const activePhase = unquote(content.match(/^active_phase:\s*(.+)$/m)?.[1]);
-        const nextAction = unquote(content.match(/^next_action:\s*(.+)$/m)?.[1]);
-
-        if (feature && feature !== 'none') {
-          const phaseShort = {
-            'specify': 'spec',
-            'ui-spec': 'ui',
-            'plan': 'plan',
-            'implement': 'impl',
-            'verify': 'vfy',
-            'review': 'rev',
-            'quick': 'quick',
-          };
-          const renderPhase = phaseShort[activePhase] || phaseShort[phase] || phase || '';
-          // Bright magenta when in flight, dim grey otherwise.
-          const phaseColor = activePhase ? '\x1b[35m' : '\x1b[2m';
-          vd = ` │ \x1b[36m${feature}\x1b[0m${phaseColor}:${renderPhase}\x1b[0m`;
-          if (nextAction && !activePhase) {
-            // Idle with a next action — show the suggestion.
-            vd += `\x1b[2m ↪${nextAction}\x1b[0m`;
-          }
-        }
-      } catch (e) {}
-    }
-
     const dirname = path.basename(dir);
-    process.stdout.write(`\x1b[2m${model}\x1b[0m │ \x1b[2m${dirname}\x1b[0m${vd}${ctx}`);
+    process.stdout.write(`\x1b[2m${model}\x1b[0m │ \x1b[2m${dirname}\x1b[0m${ctx}`);
   } catch (e) {
     // Silent fail
   }

@@ -150,13 +150,107 @@ module.exports = [
     },
   },
   {
-    name: 'selectLenses: an excluded agent (spec-compliance ran as Stage 1) is not re-dispatched',
+    name: 'selectLenses: an agent the caller excludes (already ran) is skipped with a reason, not re-dispatched',
     fn: () => {
       const r = rs.selectLenses(['x.go'], {
-        agents: [...AGENTS, { name: 'spec-compliance-review', scope: 'always', model: 'sonnet' }],
-        exclude: ['spec-compliance-review'],
+        agents: [...AGENTS, { name: 'already-ran-review', scope: 'always', model: 'sonnet' }],
+        exclude: ['already-ran-review'],
       });
-      assert.ok(!names(r).includes('spec-compliance-review'));
+      assert.ok(!names(r).includes('already-ran-review'));
+      assert.ok(r.skipped.some(s => s.name === 'already-ran-review' && s.reason === 'excluded-by-caller'));
+    },
+  },
+  {
+    name: 'selectLenses: nothing is excluded by default (no spec-compliance stage exists any more)',
+    fn: () => {
+      const r = rs.selectLenses(['x.go'], { agents: AGENTS });
+      assert.equal(r.skipped.some(s => s.reason === 'excluded-by-caller'), false);
+    },
+  },
+
+  // --- size gate (min_changed_lines) -----------------------------------------
+  {
+    name: 'parseAgentFile: min_changed_lines is parsed as a number; absent → null',
+    fn: () => {
+      const gated = rs.parseAgentFile('complexity-review', '---\nname: complexity-review\nscope: always\nmodel: haiku\nmin_changed_lines: 40\n---\n');
+      assert.equal(gated.min_changed_lines, 40);
+      const open = rs.parseAgentFile('test-review', '---\nname: test-review\nscope: always\nmodel: sonnet\n---\n');
+      assert.equal(open.min_changed_lines, null);
+      const junk = rs.parseAgentFile('x-review', '---\nname: x-review\nscope: always\nmin_changed_lines: forty\n---\n');
+      assert.equal(junk.min_changed_lines, null, 'an unparseable threshold is no threshold (include-biased)');
+    },
+  },
+  {
+    name: 'selectLenses: a lens declaring min_changed_lines is skipped (reason small-diff) below the threshold',
+    fn: () => {
+      const agents = [...AGENTS, { name: 'gated-review', scope: 'always', model: 'haiku', min_changed_lines: 40 }];
+      const r = rs.selectLenses(['x.go'], { agents, changedLines: 12 });
+      assert.ok(!names(r).includes('gated-review'));
+      assert.ok(r.skipped.some(s => s.name === 'gated-review' && s.reason === 'small-diff'));
+      assert.ok(names(r).includes('test-review'), 'ungated lenses are unaffected');
+    },
+  },
+  {
+    name: 'selectLenses: at or above the threshold the gated lens runs',
+    fn: () => {
+      const agents = [...AGENTS, { name: 'gated-review', scope: 'always', model: 'haiku', min_changed_lines: 40 }];
+      assert.ok(names(rs.selectLenses(['x.go'], { agents, changedLines: 40 })).includes('gated-review'));
+      assert.ok(names(rs.selectLenses(['x.go'], { agents, changedLines: 400 })).includes('gated-review'));
+    },
+  },
+  {
+    name: 'selectLenses: an unknown changed-line count keeps every gated lens and warns (include-biased)',
+    fn: () => {
+      const agents = [...AGENTS, { name: 'gated-review', scope: 'always', model: 'haiku', min_changed_lines: 40 }];
+      for (const changedLines of [undefined, null, 'many', NaN]) {
+        const r = rs.selectLenses(['x.go'], { agents, changedLines });
+        assert.ok(names(r).includes('gated-review'), `changedLines=${changedLines} must not drop a lens`);
+        assert.ok(r.warnings.some(w => w.startsWith('changed-lines-unknown')), `changedLines=${changedLines} must warn`);
+      }
+      const known = rs.selectLenses(['x.go'], { agents, changedLines: 100 });
+      assert.equal(known.warnings.some(w => w.startsWith('changed-lines-unknown')), false);
+    },
+  },
+  {
+    name: 'selectLenses: the size gate applies to glob-scoped lenses too',
+    fn: () => {
+      const agents = [...AGENTS, { name: 'ui-gated-review', scope: ['**/*.tsx'], model: 'sonnet', min_changed_lines: 40 }];
+      const small = rs.selectLenses(['App.tsx'], { agents, changedLines: 3 });
+      assert.ok(small.skipped.some(s => s.name === 'ui-gated-review' && s.reason === 'small-diff'));
+      const big = rs.selectLenses(['App.tsx'], { agents, changedLines: 80 });
+      assert.ok(names(big).includes('ui-gated-review'));
+    },
+  },
+  {
+    name: 'real roster: complexity-review and a11y-review declare a size gate; correctness/test/security do not',
+    fn: () => {
+      const { agents } = rs.loadAgents(path.join(REPO, 'agents'));
+      const by = name => agents.find(a => a.name === name);
+      assert.ok(by('complexity-review').min_changed_lines > 0);
+      assert.ok(by('a11y-review').min_changed_lines > 0);
+      for (const n of ['correctness-review', 'test-review', 'security-review']) {
+        assert.equal(by(n).min_changed_lines, null, `${n} must run on every diff size`);
+      }
+    },
+  },
+  {
+    name: 'CLI: select accepts --changed-lines and reports small-diff skips',
+    fn: () => {
+      const os = require('node:os');
+      const cp = require('node:child_process');
+      const bin = path.join(REPO, 'hooks', 'lib', 'review-scope.js');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-'));
+      fs.writeFileSync(path.join(dir, 'gated-review.md'), '---\nname: gated-review\nscope: always\nmodel: haiku\nmin_changed_lines: 40\n---\n');
+      const list = path.join(dir, 'files.txt');
+      fs.writeFileSync(list, 'x.go\n');
+      const run = (...args) => cp.spawnSync(process.execPath, [bin, 'select', '--files-from', list, '--agents-dir', dir, ...args], { encoding: 'utf8' });
+      const small = run('--changed-lines', '5');
+      assert.equal(small.status, 0, small.stderr);
+      assert.ok(JSON.parse(small.stdout).skipped.some(s => s.name === 'gated-review' && s.reason === 'small-diff'));
+      const big = run('--changed-lines', '90');
+      assert.ok(JSON.parse(big.stdout).selected.some(s => s.name === 'gated-review'));
+      const none = run();
+      assert.ok(JSON.parse(none.stdout).selected.some(s => s.name === 'gated-review'), 'no count → include');
     },
   },
   {
@@ -184,7 +278,7 @@ module.exports = [
     fn: () => {
       const { agents, warnings } = rs.loadAgents(path.join(REPO, 'agents'));
       assert.deepEqual(warnings, [], `real roster must parse cleanly: ${warnings.join(', ')}`);
-      assert.ok(agents.length >= 10);
+      assert.ok(agents.length >= 7);
       const a11y = agents.find(a => a.name === 'a11y-review');
       assert.ok(Array.isArray(a11y.scope) && a11y.scope.includes('**/*.tsx'));
       assert.equal(agents.find(a => a.name === 'test-review').scope, 'always');
@@ -226,11 +320,11 @@ module.exports = [
 
   // --- wiring ---------------------------------------------------------------
   {
-    name: '/review dispatches Stage 2 from the resolver and re-panels when scope grows',
+    name: '/review resolves its panel from the resolver with the diff size, and keeps it include-biased',
     fn: () => {
       const review = fs.readFileSync(path.join(REPO, 'skills', 'review', 'SKILL.md'), 'utf8');
       assert.ok(review.includes('review-scope.js'), '/review must run the resolver');
-      assert.ok(/scope grew|scope-growth|scopeGrowth/i.test(review), '/review must state the scope-growth escape hatch');
+      assert.ok(review.includes('--changed-lines'), '/review must pass the diff size to the size gate');
       assert.ok(
         /include-biased|when in doubt.*include/is.test(review),
         '/review must keep the resolver include-biased',
@@ -250,7 +344,8 @@ module.exports = [
       const out = JSON.parse(r.stdout);
       assert.equal(out.schema, 'review-scope/v1');
       assert.ok(out.selected.some(a => a.name === 'concurrency-review'), 'a .go file must reach the Go lenses');
-      assert.ok(!out.selected.some(a => a.name === 'spec-compliance-review'), 'Stage 1 agent must be excluded');
+      assert.equal(out.skipped.some(s => s.reason === 'excluded-by-caller'), false, 'nothing is excluded by default');
+      assert.equal(typeof out.changed_lines, 'object', 'no --changed-lines → null, never a guessed count');
     },
   },
   {

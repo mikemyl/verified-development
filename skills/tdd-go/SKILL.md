@@ -235,16 +235,13 @@ Never say "tests pass" without showing the output. Evidence before assertions.
 ## Integration with Verified Development
 
 ```
-Phase 3 (Implement) loop:
+For each task (from the /plan in chat, or the change you are making):
+  1. RED      — Write the failing scenario test, at the boundary its type declares in TESTING.md
+  2. GREEN    — Write the minimum implementation
+  3. REFACTOR — Improve structure; the suite stays green
+  4. Next task
 
-  For each task in plan.md:
-    1. RED    — Write failing test from acceptance scenario
-    2. GREEN  — Write minimum implementation
-    3. REFACTOR — Improve structure
-    4. COMMIT — Atomic commit for this task
-    5. Next task
-
-  When all tasks complete:
-    -> Phase 4 (Verify): run verify command
-    -> Phase 5 (Review): /review
+When all tasks complete:
+  -> run the verify command yourself, in Bash, and read its exit code
+  -> /review before any commit
 ```

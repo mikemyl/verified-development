@@ -140,7 +140,7 @@ function discover(source, file) {
   return tests;
 }
 
-/** Count assert*()/Assertions./verify() occurrences in a body. */
+/** Count assert*(), Assertions.* and Mockito verify(...) occurrences in a body. */
 function countAssertions(body) {
   const s = String(body || '');
   const a = s.match(ASSERT_CALL_RE);

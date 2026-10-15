@@ -26,7 +26,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { parseTaxonomy, loadSeed, resolve } = require('../hooks/lib/taxonomy.js');
+const { parseTaxonomy, loadSeed, resolve, extractTestTypes } = require('../hooks/lib/taxonomy.js');
 
 const CLI = path.join(__dirname, '..', 'hooks', 'lib', 'taxonomy.js');
 
@@ -115,10 +115,10 @@ const repoDocNoDiagram = `## Test Types
 
 module.exports = [
   {
-    name: 'seed parses to exactly the four seed types with all fields + diagrams',
+    name: 'seed parses to exactly the five seed types with all fields + diagrams',
     fn: () => {
       const { types } = loadSeed();
-      assert.deepEqual(Object.keys(types).sort(), ['acceptance', 'dao', 'none', 'unit']);
+      assert.deepEqual(Object.keys(types).sort(), ['acceptance', 'core', 'dao', 'none', 'unit']);
 
       for (const name of Object.keys(types)) {
         const t = types[name];
@@ -131,6 +131,7 @@ module.exports = [
 
       // tier mapping from the seed
       assert.equal(types.acceptance.tier, 'default');
+      assert.equal(types.core.tier, 'default', 'a component driven at every edge through stubs is a default choice, like acceptance');
       assert.equal(types.dao.tier, 'exception');
       assert.equal(types.unit.tier, 'sign-off');
       assert.equal(types.none.tier, 'sign-off');
@@ -153,7 +154,7 @@ module.exports = [
     fn: () => {
       const r = resolve({ repoDoc: repoDocNoSection });
       assert.equal(r.source, 'seed');
-      assert.deepEqual(Object.keys(r.types).sort(), ['acceptance', 'dao', 'none', 'unit']);
+      assert.deepEqual(Object.keys(r.types).sort(), ['acceptance', 'core', 'dao', 'none', 'unit']);
     },
   },
 
@@ -162,7 +163,7 @@ module.exports = [
     fn: () => {
       const r = resolve({ repoDoc: repoDocEmptySection });
       assert.equal(r.source, 'seed');
-      assert.deepEqual(Object.keys(r.types).sort(), ['acceptance', 'dao', 'none', 'unit']);
+      assert.deepEqual(Object.keys(r.types).sort(), ['acceptance', 'core', 'dao', 'none', 'unit']);
     },
   },
 
@@ -380,6 +381,63 @@ module.exports = [
       for (const k of ['match_paths', 'match_markers', 'anti_patterns', 'good_example', 'bad_example']) {
         assert.ok(!REQUIRED_FIELDS.includes(k), `${k} must not be a required field`);
       }
+    },
+  },
+  // --- extract (the `## Test Types` section alone, for test-review's brief) ----
+  {
+    name: 'extractTestTypes: returns the H2 heading and its section, stopping at the next H2',
+    fn: () => {
+      const md = '# Testing\n\nintro\n\n## Test Types\n\n### acceptance\n- **boundary:** http\n\n## Current Coverage\n- lots\n';
+      const out = extractTestTypes(md);
+      assert.ok(out.startsWith('## Test Types'));
+      assert.ok(out.includes('### acceptance'));
+      assert.equal(out.includes('Current Coverage'), false);
+      assert.equal(out.includes('intro'), false);
+    },
+  },
+  {
+    name: 'extractTestTypes: a doc with no Test Types section → null',
+    fn: () => {
+      assert.equal(extractTestTypes('# Testing\n\n## Patterns\n- x\n'), null);
+      assert.equal(extractTestTypes(''), null);
+    },
+  },
+  {
+    name: 'extractTestTypes: the section runs to end-of-file when it is last',
+    fn: () => {
+      const out = extractTestTypes('## Test Types\n\n### a\n- **boundary:** b\n\n```mermaid\nflowchart LR\n```\n');
+      assert.ok(out.includes('flowchart LR'));
+    },
+  },
+  {
+    name: 'CLI: extract <file> prints only the section (exit 0); absent section → exit 1 with a message',
+    fn: () => {
+      const bin = path.join(__dirname, '..', 'hooks', 'lib', 'taxonomy.js');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tax-'));
+      const withSection = path.join(dir, 'TESTING.md');
+      fs.writeFileSync(withSection, '# T\n\n## Test Types\n\n### a\n- **boundary:** b\n\n## Other\nnope\n');
+      const ok = spawnSync(process.execPath, [bin, 'extract', withSection], { encoding: 'utf8' });
+      assert.equal(ok.status, 0, ok.stderr);
+      assert.ok(ok.stdout.includes('### a'));
+      assert.equal(ok.stdout.includes('nope'), false);
+      const without = path.join(dir, 'NOPE.md');
+      fs.writeFileSync(without, '# T\n\n## Other\n');
+      const bad = spawnSync(process.execPath, [bin, 'extract', without], { encoding: 'utf8' });
+      assert.equal(bad.status, 1);
+      assert.match(bad.stderr, /Test Types/);
+    },
+  },
+  {
+    name: 'CLI: extract on this repo\'s own TESTING.md yields a section the resolver parses to the same types',
+    fn: () => {
+      const bin = path.join(__dirname, '..', 'hooks', 'lib', 'taxonomy.js');
+      const doc = path.join(__dirname, '..', '.verified', 'codebase', 'TESTING.md');
+      const out = spawnSync(process.execPath, [bin, 'extract', doc], { encoding: 'utf8' });
+      assert.equal(out.status, 0, out.stderr);
+      const full = resolve({ repoDoc: fs.readFileSync(doc, 'utf8') });
+      const slim = resolve({ repoDoc: out.stdout });
+      assert.deepEqual(Object.keys(slim.types).sort(), Object.keys(full.types).sort());
+      assert.equal(slim.source, 'repo');
     },
   },
 ];

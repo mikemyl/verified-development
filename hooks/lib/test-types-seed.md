@@ -53,13 +53,13 @@
 - **pattern:** actor-based Sends/Receives DSL
 - **location:** tests at the public boundary (e.g. `*/acceptance`, `tests/acceptance`)
 - **tier:** default
-- **when-to-use:** Default for any task that adds user-observable behavior. Drive the system through its public boundary as an external actor; assert on what the actor receives, never on internals.
+- **when-to-use:** Default for any task that adds user-observable behavior. Tests the system as a whole through its public interfaces: everything under our control is real (database, transport), third parties are stubbed and programmed by the test. Drive it as an external actor; assert on what the actor receives, never on internals. Deterministic behaviour only.
 - **primitives:** Sends, Receives, EventuallyReceives, actor/world fixtures
 - **match-paths:** **/acceptance/**, **/scenarios/**, **/*_acceptance_test.go
 - **match-markers:** Sends, Receives, EventuallyReceives
 - **good-example:** tests/acceptance/checkout_test.go::TestCustomerChecksOut
 - **bad-example:** tests/acceptance/checkout_test.go::TestCheckoutInternals (asserts on internal state)
-- **anti-patterns:** scattered raw assertions, inline ids instead of captured data, SendsAndAwaits + require, multiple behaviors per test, reading state back below the boundary (a repository/DAO/SQL read) instead of re-reading through the boundary, seeding state below the boundary when the system's own API can drive it, mutating a fixture after construction instead of deriving a new one
+- **anti-patterns:** scattered raw assertions, inline ids instead of captured data, SendsAndAwaits + require, multiple behaviors per test, reading state back below the boundary (a repository/DAO/SQL read) instead of re-reading through the boundary, seeding state below the boundary when the system's own API can drive it, mutating a fixture after construction instead of deriving a new one, a sleep or wall-clock wait in the test body instead of a DSL wait
 
 ```mermaid
 flowchart LR
@@ -67,6 +67,26 @@ flowchart LR
     boundary --> sut[System under test]
     sut -.->|stubbed| ext[(External deps)]
     sut -->|Receives| actor
+```
+
+### core
+- **boundary:** one component's protocol edges (every inbound and outbound port), in process
+- **pattern:** actor-based Sends/Receives DSL at BOTH edges — a programmable stub actor per collaborator, in-memory transport, controlled clock
+- **location:** component tests beside the component (e.g. `*CoreTest`, `*/core`, `*_core_test.go`)
+- **tier:** default
+- **when-to-use:** Default, alongside acceptance, for the exact behaviour of one component: message mapping field by field, orderings and races, timeouts, "sends nothing", error paths the real collaborators never produce. Every collaborator is a stub the test drives and observes (a venue stub sends and receives, a dealer stub receives and sends); nothing crosses a socket; time moves only when the test moves it. A datastore the component owns may be real (it is inside the component's boundary); a collaborator never is. One component per test — a scenario that needs two is an acceptance test. Fast and deterministic, so this is the main body of tests on a mature system (TransFICC's adaptor core tests). Fixtures are shared with the acceptance suite.
+- **primitives:** stub actor per collaborator (Sends, Receives, ReceivesNothing), time travel / controlled clock, alert and metric expectations, fixtures shared with acceptance
+- **match-paths:** **/*CoreTest.*, **/core/**, **/*_core_test.go, **/*.core.spec.*
+- **match-markers:** CoreTest, CoreDsl, timeTravel, receivesNothing, ReceivesNothing
+- **good-example:** adaptor/mapping/quote_request_core_test.go::TestQuoteRequestMapsSide
+- **bad-example:** adaptor/mapping/quote_request_core_test.go::TestQuoteFlowsThroughTwoAdaptors (two components under test — that is an acceptance scenario)
+- **anti-patterns:** a real socket or network transport in the harness, a real clock (sleep or wall-clock wait) instead of the controlled one, calling the component's handlers or internal methods directly instead of sending through a stub actor, asserting on a stub's internal state instead of what the stub received, a partial match on a message the fixture fully specifies, more than one component under test, reading state back below the boundary instead of observing it at an edge, seeding state below the boundary when a stub actor can drive it, mutating a fixture after construction instead of deriving a new one
+
+```mermaid
+flowchart LR
+    venue([Stub actor: upstream]) <-->|Sends / Receives| sut[One component, in process]
+    sut <-->|Receives / Sends| dealer([Stub actor: downstream])
+    clock[[Controlled clock]] -.-> sut
 ```
 
 ### dao

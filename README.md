@@ -1,62 +1,115 @@
 # verified-development
 
-A Claude Code plugin for specification-first, verified development: ATDD, layered mechanical gates, adversarial critique, and a panel of review agents. The plugin is language-agnostic: it runs the repo's own verify command and infers each repo's test idioms rather than privileging a language. The bundled Go toolchain and the `/test-audit` adapters (Go · TypeScript · Python · Java) are examples, not the supported set — per-repo mechanics live in `.verified/codebase/` docs or a repo skill.
+A Claude Code plugin that adds independent review to work the model does. It is language-agnostic:
+it runs the repo's own verify command and judges tests against the repo's own test taxonomy.
 
-## Why
+## What it is, in one paragraph
 
-AI agents produce code faster than humans can review it. Without structure, the failure modes compound:
+You build conversationally — scenario tests first, in the repo's test DSL — and run the verify
+command yourself. Before any commit, `/review` dispatches a panel of review agents that did not
+write the code: correctness, tests, security, and, on diffs large enough to warrant them,
+complexity and accessibility. For a change too big to just build, `/plan` drafts the plan in chat
+and three critics stress-test it before you start. That is the whole workflow.
 
-- **Verification gap** — untested code, weak assertions, dead code, and security holes accumulate faster than review capacity scales.
-- **Specification drift** — with no spec as source of truth, implementations diverge from intent; unrequested features get built while requirements get missed.
-- **State loss** — work-in-progress vanishes between sessions; yesterday's decisions get re-debated today.
-- **No mechanical enforcement** — standards live as suggestions the LLM can ignore; nothing stops unverified code from being committed.
+## Workflow
 
-The plugin answers each with an enforced workflow: specs define what to build, TDD drives how, mechanical gates verify, agents review, and a human signs off on behavior — not mechanical compliance.
+**Once per repo**
 
-## The workflow
+1. Install the plugin (below).
+2. Run `/map`. It reads the repo's tests and writes `.verified/codebase/TESTING.md`: one entry per
+   test type with its boundary, primitives, a real `good-example:` and the mechanical
+   `anti-patterns:` the repo bans. It also writes a minimal `.verified/config.json`.
+3. Accept the house rules it offers for the repo's `CLAUDE.md`
+   ([`templates/project-rules.md`](templates/project-rules.md)). They are what makes the review
+   run without being asked: the model reads `CLAUDE.md` every turn and a skill only when invoked.
 
-```
-SPECIFY  ->  PLAN  ->  IMPLEMENT  ->  VERIFY  ->  REVIEW
-  what       how      TDD cycle     mechanical   agent + human
-                                    gates        quality review
-```
+**Per change**
 
-1. **`/specify`** — acceptance scenarios (Given/When/Then), requirements, success criteria. An adversarial challenge interrogates the problem first.
-2. **`/plan`** — ordered, test-first tasks with file paths. A deterministic engine schedules parallel work; up to five critics stress-test the plan.
-3. **`/implement`** — RED-GREEN-REFACTOR per task, atomic commits, concurrent execution in waves.
-4. **`/verify`** — one command runs every mechanical gate: lint, test, coverage, security, dead code, build.
-5. **`/review`** — spec-compliance gate, then targeted quality agents, then doc sync + process retro.
+1. Say what you want. If it touches more than ~3 files, changes a signature or a schema, or needs
+   a migration, run `/plan`: the plan appears in chat with every acceptance scenario named as the
+   test that will exist, three critics read it in parallel, and you approve or edit. Nothing is
+   written to disk.
+2. Build. Scenario tests first, at the boundary their type declares in `TESTING.md`, in the repo's
+   DSL. Then the code, in small batches, in the main session. There is no executor agent.
+3. Run the verify command yourself, in Bash, and read its exit code. The command comes from
+   `config.json`, else the `verify` target in a Justfile or Makefile, else `package.json`.
+4. `/review`. With the house rules in place the model runs it on every non-trivial change; type it
+   to be sure. You get a report in chat: status PASS, WARN or FAIL, one row per finding with its
+   disposition, the lenses that were skipped and why. If a finding is fixed, the fixing agents
+   verify the fix delta once. There is no round 3.
+5. Commit. The plugin never commits; the house rules say the model asks first.
 
-**Code is never committed before `/verify` and `/review` both pass.** That is the central rule.
+**Now and then**
 
-→ Full detail, variants, and the pause/continue model: **[docs/workflow.md](docs/workflow.md)**
+- `/test-audit <path>` ranks an existing test corpus worst-first against the taxonomy. Advisory.
+- `node hooks/lib/review-ledger.js report` shows which review lenses pay for themselves.
+- `/install-hooks` adds a lint-on-write hook and a verify-before-commit gate to the project.
+
+What the plugin writes: `TESTING.md`, `config.json`, one line per review dispatch in
+`.verified/review-ledger.jsonl`, and an audit report when you ask for one. No spec files, no plan
+files, no state, no gotchas log.
+
+## Why v2 is smaller than v1
+
+v1 was a five-phase pipeline (specify → plan → implement → verify → review) with spec files,
+executor agents, a wave scheduler and a handoff system. Five months of use on two production repos
+measured where the value was:
+
+- The review agents found the defects that would have shipped — in one session 19 of 25 `error`
+  findings were real (a redirect loop, a half-applied migration, secrets reachable through a query
+  depth) — at 3–8% of session tokens.
+- The mechanical gates were green through every one of those bugs. Your own retro log said so,
+  24 times.
+- The spec files were never executed. 32 of 39 features had no test citing them. The one context
+  document the pipeline kept appending to grew to 230 KB and was read 53 times in six sessions.
+- Executor sub-agents cost 70–85% of a fix's sub-agent tokens; a single agent writing code and
+  test in small batches did the same work faster (also the finding of
+  [agentic-dev-team's experiments](https://github.com/bdfinst/agentic-dev-team)).
+- In the last five weeks the pipeline was not invoked once. The review agents still ran 168 times,
+  because the project `CLAUDE.md` required them.
+
+So v2 keeps the agents, the house rules that make them fire, and the deterministic libs that feed
+them. It deletes the rest.
+
+## Commands
+
+| Command | What it does |
+|---------|--------------|
+| `/review` | Verify gate (real exit code) → resolve the panel from each agent's declared scope and the diff size → dispatch in parallel → one verification round on the fix delta → report in chat, line in the ledger |
+| `/plan` | Plan a multi-file change in chat (scenarios named as the tests that will exist), then three critics in parallel: acceptance, design, strategic |
+| `/map` | Write `.verified/codebase/TESTING.md`: the repo's test types, boundaries, primitives, good examples. The only context doc the plugin reads |
+| `/test-audit <path>` | Rank an existing test corpus worst-first against that taxonomy. Advisory, read-only |
+| `/install-hooks` | Project hooks: lint on write, verify before commit |
+
+Knowledge skills load on demand: `testing` (the craft rules and the three must-not-ship
+anti-patterns), `tdd-go`, `react-testing`, `front-end-testing`, `test-design-reviewer` (the Farley
+rubric), `mutation-testing`, `domain-driven-design`, `hexagonal-architecture`, `functional`,
+`typescript-strict`, `ci-debugging`.
+
+Always on in a `.verified/` repo: a PreToolUse **git guard** that denies git commands able to
+discard uncommitted work, and `checkpoint.js` snapshots before a fix round.
+
+## House rules
+
+`/review` fires without being asked when the repo's `CLAUDE.md` says it must. `/map` offers to
+append [`templates/project-rules.md`](templates/project-rules.md): review required, gates decided
+by real exit codes, a test must be able to fail for a reason other than "I changed the code I just
+wrote", never a git command that discards work.
+
+## Measuring it
+
+Every dispatch writes one line to `.verified/review-ledger.jsonl` (agent, outcome, counts).
+`node hooks/lib/review-ledger.js report` gives yield per agent. A lens with a long run of `no-op`
+is a lens to size-gate or drop; that is how v3 gets decided.
 
 ## Documentation
 
 | Topic | What's covered |
 |-------|----------------|
-| **[Workflow](docs/workflow.md)** | The five phases, `/quick` / `/assess` / `/map` / `/ui-spec`, interruptible pause & continue |
-| **[Planning & the wave engine](docs/planning.md)** | Task grammar, deterministic parallelization, collision detection |
-| **[Review](docs/reviews.md)** | Two-stage review, every review agent, the Farley Score, process retro |
-| **[Adversarial critique](docs/adversarial-critique.md)** | Spec-time challenge and the five plan critics |
-| **[Go stack](docs/go-stack.md)** | One example of wiring a stack's verify command — toolchain, pipeline, thresholds |
-| **[Test taxonomy](docs/test-taxonomy.md)** | Test types, tiers, the deterministic test-boundary gate, scenario traceability, and `/test-audit` (Go · TypeScript · Python · Java) |
-| **[Configuration & layout](docs/configuration.md)** | `config.json` toggles, `.verified/` structure, plugin layout, contributing |
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/init` | Scaffold project configs, Justfile, linters, `.verified/` |
-| `/assess` · `/map` | Gap analysis · deep codebase analysis (existing projects) |
-| `/specify` · `/ui-spec` · `/plan` · `/implement` · `/verify` · `/review` | The five-phase workflow (`/ui-spec` is optional, for UI features) |
-| `/quick "<desc>"` | Compressed workflow for small changes |
-| `/test-audit <path>` | Triage an existing test corpus (Go/TypeScript/Python/Java) against the repo taxonomy — advisory, read-only |
-| `/pause` · `/continue` | Capture mid-phase state · resume from it |
-| `/progress` · `/update-plan` · `/session-report` | Status · revise spec/plan · session summary |
-| `/install-hooks` | Project-specific enforcement (lint on write, pre-commit gate) |
-
-Always-on in `.verified/` repos: a PreToolUse **git guard** denies git commands that can discard uncommitted work (`stash`, `checkout`, `restore`, `reset --hard`, `clean`, …), and every `/implement` wave, `/review` round and `/quick` fix is **checkpointed** under `refs/verified/checkpoints/` so a lost file is one `checkpoint.js restore` away. See [docs/configuration.md](docs/configuration.md).
+| **[How it works](docs/how-it-works.md)** | The hooks, the verify command, `config.json`, each workflow step by step with the scripts behind it, checkpoints, the ledger, plugin layout |
+| **[Review](docs/reviews.md)** | The panel, each agent, the size gate, the one verification round, blocking vs. non-blocking, the Farley Score |
+| **[Test taxonomy](docs/test-taxonomy.md)** | Test types, tiers, the optional craft fields, `/test-audit` (Go · TypeScript · Python · Java) |
+| **[Go stack](docs/go-stack.md)** | One example of a stack's verify command and TDD skill |
 
 ## Installation
 
@@ -65,30 +118,12 @@ claude plugin marketplace add https://github.com/mikemyl/verified-development
 claude plugin install verified-development
 ```
 
-Scope to a single project with `--scope project` on both commands. To develop against a local clone, see [docs/configuration.md](docs/configuration.md#hacking-on-the-plugin).
-
-## Getting started
-
-```bash
-# New project
-/init                  # Scaffold configs, Justfile, .verified/
-/install-hooks         # Enforcement: lint on write, verify on commit
-/specify my-feature    # Start the workflow
-
-# Existing project
-/assess                # What verification layers are missing
-/map                   # Produce .verified/codebase/ docs + seed the test taxonomy (Test Types + diagrams)
-/init                  # Scaffold only what's missing
-/test-audit <path>     # Triage existing tests against that taxonomy — advisory, read-only (run after /map)
-
-# Every new session
-/progress              # Current feature, phase, status, next step
-```
+Then in a project: `/map`, accept the house rules, build, `/review`.
 
 ## Influences
 
-- [imti.co/go-ai-verified-development](https://imti.co/go-ai-verified-development/) — Go verification pipeline, thresholds, CLAUDE.md rules
-- [agentic-dev-team](https://github.com/bdfinst/agentic-dev-team) — review agents, two-stage review, correction context
-- [get-shit-done](https://github.com/glittercowboy/get-shit-done) — phase workflow, fresh context per agent, file-based state
-- [spec-kit](https://github.com/github/spec-kit) — specification-first development, template-driven quality
-- [citypaul/.dotfiles](https://github.com/citypaul/.dotfiles) — TDD, testing patterns, functional patterns
+- [agentic-dev-team](https://github.com/bdfinst/agentic-dev-team) — review agents, the workflow
+  experiments, cost metering
+- [imti.co/go-ai-verified-development](https://imti.co/go-ai-verified-development/) — the Go
+  verification pipeline
+- [citypaul/.dotfiles](https://github.com/citypaul/.dotfiles) — TDD and testing patterns

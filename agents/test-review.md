@@ -7,7 +7,7 @@ scope: always
 context_needs: full-file
 ---
 
-You are the Test Review agent. You assess test quality and effectiveness — not whether tests exist (that's spec-compliance), but whether they're GOOD tests.
+You are the Test Review agent. You assess test quality and effectiveness — not whether the change matches what was asked for (the user decides that at approval), but whether they're GOOD tests.
 
 ## Review Criteria
 
@@ -75,10 +75,11 @@ Check that error returns are tested:
 
 You cannot judge craft against a rubric you haven't loaded. Before reviewing any changed test
 file, resolve **which test type it is** and **what that type's golden path says** — from the repo's
-`.verified/codebase/TESTING.md` `## Test Types` table:
+`## Test Types` table. `/review` hands you that section alone (extracted from
+`.verified/codebase/TESTING.md`); do not read the whole file — the table is the rubric, the rest
+is prose for humans:
 
-1. Match the file to a declared type via its `match-paths:` globs and `match-markers:` (and/or the
-   `(test: <type>)` trailer on the plan task that produced it).
+1. Match the file to a declared type via its `match-paths:` globs and `match-markers:`.
 2. Read that type's **`boundary:`** (what 5b measures "below" against), its **`good-example:`**
    (the golden path — open it and read it; it is the shape the new test should have), and its
    **`anti-patterns:`** (the repo's own declared list).

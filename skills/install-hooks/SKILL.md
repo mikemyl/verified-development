@@ -161,7 +161,7 @@ Read the existing `.claude/settings.local.json` (if it exists) and merge the new
 
 ### 5. Install Global Statusline
 
-The statusline shows model, directory, current feature/phase, and context usage percentage. It's a global setting (applies to all projects).
+The statusline shows model, directory and context usage. It's a global setting (applies to all projects); the plugin's `Setup` hook installs it once when the plugin is enabled, so this step only re-copies it.
 
 1. Create the hooks directory if it doesn't exist:
    ```bash
@@ -213,7 +213,7 @@ Hooks installed for verified development.
                        Timeout: {N}s
 
   Statusline:          ~/.claude/hooks/vd-statusline.js
-                       Shows model, directory, feature:phase, context %
+                       Shows model, directory, context %
 
   Project hooks:       .verified/hooks/
   Project settings:    .claude/settings.local.json

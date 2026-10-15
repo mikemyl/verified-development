@@ -10,10 +10,7 @@
  * That has no notion of finding IDENTITY, so nothing could tell "this round
  * found the same problem again" from "the fix introduced a new one" — the
  * loop could churn without anything noticing. This module decides new-vs-carried
- * and when to stop; a script makes the decision, not the model — same doctrine
- * as waves.js / test-gate.js / repair-routing.js. It is the review-side sibling
- * of repair-routing.js's dead-end detection and shares its volatile-token
- * stripping (one implementation, not two).
+ * and when to stop; a script makes the decision, not the model.
  *
  * Public API (library):
  *   normalizeMessage(text)              -> string     (volatile stripped, lowercased)
@@ -38,7 +35,23 @@
 
 const fs = require('fs');
 const crypto = require('crypto');
-const { stripVolatile } = require('./repair-routing.js');
+// Tokens that vary run-to-run but carry no diagnostic identity. Stripped before
+// a signature is computed so a genuinely-unchanged finding hashes identically.
+const VOLATILE = [
+  /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, // ISO timestamps
+  /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/g, // clock times
+  /0x[0-9a-fA-F]+/g, // hex addresses
+  /\(\d+(?:\.\d+)?s\)/g, // go's trailing "(0.01s)" — before bare durations, so the parens go too
+  /\b\d+(?:\.\d+)?(?:ns|µs|us|ms|s)\b/g, // durations
+  /\bpid\s*\d+\b/gi, // pids
+  /\/(?:tmp|var\/folders|private\/tmp)\/\S+/g, // absolute temp paths
+];
+
+function stripVolatile(text) {
+  let t = String(text || '');
+  for (const re of VOLATILE) t = t.replace(re, '');
+  return t.replace(/[ \t]+/g, ' ').trim();
+}
 
 const SCHEMA = 'finding-signature/v1';
 
@@ -57,7 +70,7 @@ const BELOW_FLOOR_CONFIDENCE = new Set(['low', 'none']);
 
 // --- message normalization ---------------------------------------------------
 
-// Volatile within a finding message, on top of what repair-routing.stripVolatile
+// Volatile within a finding message, on top of what stripVolatile
 // already removes (timestamps, durations, addresses, temp paths).
 const MESSAGE_VOLATILE = [
   /:\d+:\d+/g, // file:line:col references
@@ -351,9 +364,10 @@ function main() {
   return 0;
 }
 
-if (require.main === module) process.exit(main());
+if (require.main === module) process.exitCode = main();
 
 module.exports = {
+  stripVolatile,
   normalizeMessage,
   signature,
   findingKey,

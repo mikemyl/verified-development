@@ -5,6 +5,7 @@ model: haiku
 tools: Read, Grep, Glob, Bash
 scope: always
 context_needs: full-file
+min_changed_lines: 40
 ---
 
 You are the Complexity Review agent. You identify overly complex code that linters might not catch or that was added since the last lint run.

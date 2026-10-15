@@ -6,7 +6,7 @@
  * Deterministic, LANGUAGE-AGNOSTIC test-corpus analysis for the /test-audit
  * command. The library parses test source as TEXT (no language toolchain) so it
  * can run in any user's Claude Code runtime with zero dependencies, mirroring
- * its sibling libs (waves.js, taxonomy.js). It does ALL the mechanical work —
+ * its sibling libs (taxonomy.js, review-scope.js). It does ALL the mechanical work —
  * discovery, classification, smell-ranking, summary, scope — and emits a
  * versioned JSON contract the skill renders from. The model never re-derives the
  * corpus from raw source.
@@ -102,11 +102,17 @@ const { adapterByExtension, supportedLanguageIds, globToRegExp } = require('./la
  * @param {string} dir
  * @returns {string[]}
  */
+// Directories that hold vendored or generated code, never the repo's own tests.
+// Without this a scan of a JS workspace counts every test shipped inside
+// node_modules (keros-platform analytics: 7,875 of 10,023 "tests" were vendored).
+const SKIPPED_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist']);
+
 function walkFiles(dir) {
   const out = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (SKIPPED_DIRS.has(entry.name)) continue;
       out.push(...walkFiles(full));
     } else if (entry.isFile()) {
       out.push(full);
@@ -463,7 +469,7 @@ function main() {
 }
 
 if (require.main === module) {
-  process.exit(main());
+  process.exitCode = main();
 }
 
 module.exports = {

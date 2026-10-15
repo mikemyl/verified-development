@@ -1109,4 +1109,26 @@ module.exports = [
       }
     },
   },
+
+  {
+    name: 'discover: skips node_modules, vendor, dist and .git (vendored tests are not the repo\'s)',
+    fn: () => {
+      const { discover } = loadCorpus();
+      const dir = mkTmp();
+      try {
+        write(dir, 'pkg/own_test.go', 'package pkg\n\nimport "testing"\n\nfunc TestOwn(t *testing.T) {\n\tt.Log("own")\n}\n');
+        write(dir, 'node_modules/dep/dep.test.ts', 'it("vendored", () => { expect(1).toBe(1); });\n');
+        write(dir, 'ui/node_modules/dep/dep.test.ts', 'it("nested vendored", () => { expect(1).toBe(1); });\n');
+        write(dir, 'vendor/x/x_test.go', 'package x\n\nimport "testing"\n\nfunc TestVendored(t *testing.T) {}\n');
+        write(dir, 'dist/bundle.test.js', 'it("built", () => { expect(1).toBe(1); });\n');
+        write(dir, '.git/hooks/h_test.go', 'package h\n\nimport "testing"\n\nfunc TestGit(t *testing.T) {}\n');
+
+        const result = discover(dir);
+        assert.deepEqual(result.tests.map((t) => t.name), ['TestOwn']);
+        assert.deepEqual(result.unsupported_files, []);
+      } finally {
+        rmrf(dir);
+      }
+    },
+  },
 ];

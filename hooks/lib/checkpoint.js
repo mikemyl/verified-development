@@ -6,7 +6,7 @@
  * Working-tree snapshots that are NOT commits on the branch. Model-free, no deps.
  *
  * Why: in keros-platform a 28-task feature ran with nothing committed (the
- * owner's rule: no commit before /verify + /review). One `git checkout <path>`
+ * owner's rule: no commit before the verify command and /review pass). One `git checkout <path>`
  * then cost an hour of reconstruction because nothing had the file. A
  * checkpoint is the restore point that rule leaves out: the whole working tree
  * (tracked + untracked, `.gitignore` respected) written as a commit OBJECT
@@ -219,6 +219,6 @@ function main() {
   return 0;
 }
 
-if (require.main === module) process.exit(main());
+if (require.main === module) process.exitCode = main();
 
 module.exports = { SCHEMA, NAMESPACE, create, list, diff, restore, writeWorkingTree };

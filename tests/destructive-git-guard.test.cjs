@@ -3,9 +3,9 @@
  * tests/destructive-git-guard.test.cjs — AS-013 (ledger) + AS-014 (prose anchors)
  *
  * The libs are tested in git-guard.test.cjs / checkpoint.test.cjs. This file
- * locks the wiring: the class rule (not a list) in the executor, checkpoints
- * at wave/round boundaries, no SendMessage redirects, the FAIL-at-cap rule,
- * and test-review criterion 13 staying non-blocking.
+ * locks the wiring: the project-rules template carries the class rule (not a
+ * list), /review snapshots before its one verification round, the FAIL rule
+ * for new errors, and test-review criterion 13 staying non-blocking.
  */
 const assert = require('assert');
 const fs = require('fs');
@@ -33,49 +33,24 @@ module.exports = [
     },
   },
   {
-    name: 'executor: forbids the CLASS of work-discarding git commands, names the hook and the restore path, no "checkpoint-commit" (AS-014)',
-    fn() {
-      const t = read('agents/executor.md');
-      assert.match(t, /Never run a git command that can discard uncommitted work/);
-      assert.match(t, /the CLASS, not a\s+list/);
-      for (const verb of ['git stash', 'git checkout', 'git switch', 'git restore', 'reset --hard', 'git clean', 'git rebase', 'worktree remove', '--abort']) {
-        assert.ok(t.includes(verb), `executor enumerates ${verb}`);
-      }
-      assert.match(t, /hooks\/git-guard\.js/);
-      assert.match(t, /checkpoint\.js restore <ref> <path>/);
-      assert.match(t, /not a\s+puzzle to route around/);
-      assert.doesNotMatch(t, /checkpoint-commit/, 'the repair loop must not tell an executor to commit');
-    },
-  },
-  {
-    name: 'implement: checkpoints at wave start/end, ListAgents before dispatch, no SendMessage redirect, golden path first in the brief (AS-014)',
-    fn() {
-      const t = read('skills/implement/SKILL.md');
-      assert.match(t, /checkpoint\.js create[\s\S]*--label wave-\{N\}-start/);
-      assert.match(t, /--label\s+wave-\{N\}-end/);
-      assert.match(t, /refs\/verified\/checkpoints/);
-      assert.match(t, /Before every dispatch, run `ListAgents`/);
-      assert.match(t, /Never redirect a running or completed agent with `SendMessage`/);
-      assert.match(t, /golden path, FIRST and as a hard constraint/);
-      assert.match(t, /extend the DSL/);
-    },
-  },
-  {
-    name: 'review: snapshot before each correction round; FAIL at the cap when blocking_new_errors > 0; only the user raises the cap (AS-014)',
+    name: 'review: snapshot before the verification round; FAIL when blocking_new_errors > 0; no third round (AS-014)',
     fn() {
       const t = read('skills/review/SKILL.md');
-      assert.match(t, /checkpoint\.js create --feature\s+\{feature-name\} --label review-round-\{N\}/);
-      assert.match(t, /blocking_new_errors > 0[\s\S]*Status is FAIL/);
-      assert.match(t, /never raise it yourself/);
+      assert.match(t, /checkpoint\.js create --feature review\s+--label round-2/);
+      assert.match(t, /blocking_new_errors > 0[\s\S]*Status FAIL/);
+      assert.match(t, /There is no round 3/);
     },
   },
   {
-    name: 'quick + continue: checkpoint before GREEN; no rewind via checkout/reset (AS-014)',
+    name: 'project-rules template: forbids the CLASS of work-discarding git commands and names the restore path (AS-014)',
     fn() {
-      assert.match(read('skills/quick/SKILL.md'), /checkpoint\.js create --feature quick/);
-      const c = read('skills/continue/SKILL.md');
-      assert.match(c, /checkpoint\.js list --feature <feature>/);
-      assert.doesNotMatch(c, /rewind to handoff sha/);
+      const t = read('templates/project-rules.md');
+      assert.match(t, /the class, not a list/);
+      for (const verb of ['git stash', 'git checkout', 'git switch', 'git restore', 'git reset --hard', 'git clean', 'git rebase', 'worktree remove', '--abort']) {
+        assert.ok(t.includes(verb), `template enumerates ${verb}`);
+      }
+      assert.match(t, /checkpoint\.js restore <ref> <path>/);
+      assert.match(t, /git-guard/);
     },
   },
   {
@@ -89,9 +64,9 @@ module.exports = [
     },
   },
   {
-    name: 'docs: configuration.md documents the hooks.git_guard opt-out and the env switch',
+    name: 'docs: how-it-works.md documents the hooks.git_guard opt-out and the env switch',
     fn() {
-      const d = read('docs/configuration.md');
+      const d = read('docs/how-it-works.md');
       assert.match(d, /hooks\.git_guard/);
       assert.match(d, /VERIFIED_GIT_GUARD/);
     },

@@ -9,7 +9,7 @@
  * Why a hook and not prose: in keros-platform an executor was told "no
  * `git stash`" after a near-miss and then ran `git checkout <path>`, which was
  * not on the list, destroying four tasks of uncommitted work. The class is the
- * rule, not the names — see .verified/features/destructive-git-guard/discussion.md.
+ * rule, not the names — see the v1.24.0 design discussion (git history).
  *
  * The class is "the working tree loses content git does not keep": stash,
  * checkout, switch, restore (worktree), reset --hard/--merge/--keep, clean,
@@ -37,7 +37,7 @@ const path = require('path');
 const SCHEMA = 'git-guard/v1';
 
 const RESTORE_HINT =
-  'Recover a file from the last wave checkpoint instead: ' +
+  'Recover a file from the last checkpoint instead: ' +
   'node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js list --feature <feature>, then ' +
   'node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js restore <ref> <path>. ' +
   'If you genuinely need this git command, ask the user to run it themselves in a terminal.';

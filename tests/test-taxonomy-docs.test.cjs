@@ -46,17 +46,6 @@ module.exports = [
     },
   },
   {
-    name: '/init-project scaffolds a Test Types section from the seed file',
-    fn: () => {
-      const content = read('skills/init-project/SKILL.md');
-      mustContain(
-        content,
-        ['## Test Types', 'test-types-seed.md'],
-        'skills/init-project/SKILL.md',
-      );
-    },
-  },
-  {
     name: 'tdd-go frames coverage as a consequence and drops the per-error mandate',
     fn: () => {
       const content = read('skills/tdd-go/SKILL.md');

@@ -238,7 +238,7 @@ The exact verbs (`performs`/`observes`), the API-actor object, and the fixture l
 specs: `.verified/codebase/TESTING.md` (written by `/map`) records the runner, the fixture
 location convention (e.g. DSL specs under `test/**/*.spec.tsx` vs ad-hoc `src/**/*.test.tsx`),
 and a reference exemplar to mirror. If the repo has no such convention documented, that gap
-is the first thing to fix — capture it in `TESTING.md` so the executor infers it next time —
+is the first thing to fix — capture it in `TESTING.md` so the next author infers it —
 rather than hard-coding a house style into a test.
 
 ---
