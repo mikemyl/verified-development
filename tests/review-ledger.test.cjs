@@ -21,11 +21,35 @@ const { execFileSync, spawnSync } = require('node:child_process');
 
 const REPO = path.resolve(__dirname, '..');
 const LIB = path.join(REPO, 'hooks', 'lib', 'review-ledger.js');
+const CHECKPOINT = path.join(REPO, 'hooks', 'lib', 'checkpoint.js');
 const ledger = require(LIB);
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'review-ledger-'));
   return path.join(dir, '.verified', 'review-ledger.jsonl');
+}
+
+// Stand-in for checkpoint.diff: the paths changed since `ref`.
+const changedSince = map => ref => {
+  if (!(ref in map)) throw new Error(`unknown checkpoint ref ${ref}`);
+  return map[ref];
+};
+
+function g(cwd, args) {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+  return r.stdout;
+}
+
+function gitRepo() {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'review-ledger-git-'));
+  g(d, ['init', '-q']);
+  g(d, ['config', 'user.email', 't@t']);
+  g(d, ['config', 'user.name', 't']);
+  fs.writeFileSync(path.join(d, 'a.txt'), 'a\n');
+  g(d, ['add', '.']);
+  g(d, ['commit', '-qm', 'init']);
+  return d;
 }
 
 function lines(file) {
@@ -38,7 +62,8 @@ module.exports = [
     name: 'record: appends one JSON line carrying the schema, agent, outcome and counts',
     fn: () => {
       const file = tmpFile();
-      ledger.record({ agent: 'test-review', outcome: 'fixed', errors: 1, warnings: 2, files: 3 }, { file });
+      const diff = changedSince({ 'refs/verified/checkpoints/review/001-test-review': ['a.go', 'b.go', 'c.go'] });
+      ledger.record({ agent: 'test-review', outcome: 'fixed', errors: 1, warnings: 2, since: 'refs/verified/checkpoints/review/001-test-review' }, { file, diff });
       const [line] = lines(file);
       const entry = JSON.parse(line);
       assert.equal(entry.schema, 'review-ledger/v1');
@@ -46,7 +71,9 @@ module.exports = [
       assert.equal(entry.outcome, 'fixed');
       assert.equal(entry.errors, 1);
       assert.equal(entry.warnings, 2);
-      assert.equal(entry.files, 3);
+      assert.equal(entry.files, 3, 'the script counts the files, not the caller');
+      assert.deepEqual(entry.changed, ['a.go', 'b.go', 'c.go'], 'paths kept for spot-checks');
+      assert.equal(entry.since, 'refs/verified/checkpoints/review/001-test-review');
       assert.equal(entry.suggestions, 0, 'an omitted count is 0, not undefined');
       assert.match(entry.ts, /^\d{4}-\d{2}-\d{2}T/, 'timestamp is ISO');
     },
@@ -74,21 +101,44 @@ module.exports = [
     name: 'record: a non-numeric count is rejected, not coerced to NaN',
     fn: () => {
       const file = tmpFile();
-      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed', errors: 'two', files: 1 }, { file }), /errors/);
+      const diff = () => { throw new Error('no git call on a malformed entry'); };
+      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed', errors: 'two', since: 'r' }, { file, diff }), /errors/);
     },
   },
 
   {
-    name: 'record: `fixed` without a changed-file count is rejected — the tree is the only witness to a self-reported fix',
+    name: 'record: `fixed` without --since is rejected; a caller-supplied file count is not evidence',
     fn: () => {
       const file = tmpFile();
-      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed' }, { file }), /files/);
-      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed', files: 0 }, { file }), /files/);
+      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed' }, { file }), /--since/);
+      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed', files: 4 }, { file }), /--since/);
       assert.equal(fs.existsSync(file), false, 'nothing written on a rejected record');
-      const ok = ledger.record({ agent: 'a', outcome: 'fixed', files: 2 }, { file });
-      assert.equal(ok.files, 2);
       ledger.record({ agent: 'a', outcome: 'dismissed' }, { file });
-      assert.equal(lines(file).length, 2, 'the other outcomes need no file evidence');
+      assert.equal(lines(file).length, 1, 'the other outcomes need no checkpoint');
+    },
+  },
+  {
+    name: 'record: `fixed` whose checkpoint shows no changed file is rejected, whatever --files says',
+    fn: () => {
+      const file = tmpFile();
+      const diff = changedSince({ r1: [] });
+      assert.throws(() => ledger.record({ agent: 'a', outcome: 'fixed', since: 'r1', files: 4 }, { file, diff }), /no file|changed/);
+      assert.equal(fs.existsSync(file), false);
+    },
+  },
+  {
+    name: 'record: one checkpoint cannot witness two agents\' fixes (the six-lines-one-snapshot ledger)',
+    fn: () => {
+      const file = tmpFile();
+      const diff = changedSince({ r1: ['x.go'], r2: ['y.go'] });
+      ledger.record({ agent: 'correctness-review', outcome: 'fixed', since: 'r1' }, { file, diff });
+      assert.throws(
+        () => ledger.record({ agent: 'test-review', outcome: 'fixed', since: 'r1' }, { file, diff }),
+        /already witnesses correctness-review/,
+      );
+      ledger.record({ agent: 'correctness-review', outcome: 'fixed', since: 'r1', round: 2 }, { file, diff });
+      ledger.record({ agent: 'test-review', outcome: 'fixed', since: 'r2' }, { file, diff });
+      assert.equal(lines(file).length, 3, 'same agent may reuse its ref (round 2); a fresh ref per agent is accepted');
     },
   },
 
@@ -161,9 +211,14 @@ module.exports = [
     name: 'CLI: record twice then report → per-agent JSON on stdout, exit 0',
     fn: () => {
       const file = tmpFile();
-      execFileSync('node', [LIB, 'record', '--agent', 'test-review', '--outcome', 'fixed', '--errors', '1', '--files', '2', '--file', file]);
-      execFileSync('node', [LIB, 'record', '--agent', 'test-review', '--outcome', 'no-op', '--file', file]);
+      const cwd = gitRepo();
+      const cp = JSON.parse(execFileSync('node', [CHECKPOINT, 'create', '--feature', 'review', '--label', 'test-review'], { cwd, encoding: 'utf8' }));
+      fs.writeFileSync(path.join(cwd, 'a.txt'), 'changed\n');
+      fs.writeFileSync(path.join(cwd, 'new_test.go'), 'package x\n');
+      execFileSync('node', [LIB, 'record', '--agent', 'test-review', '--outcome', 'fixed', '--errors', '1', '--since', cp.ref, '--file', file], { cwd });
+      execFileSync('node', [LIB, 'record', '--agent', 'test-review', '--outcome', 'no-op', '--file', file], { cwd });
       const out = execFileSync('node', [LIB, 'report', '--file', file], { encoding: 'utf8' });
+      assert.deepEqual(JSON.parse(lines(file)[0]).changed.sort(), ['a.txt', 'new_test.go'], 'the real checkpoint diff, read by the script');
       const r = JSON.parse(out);
       assert.equal(r.agents['test-review'].dispatches, 2);
       assert.equal(r.agents['test-review'].errors, 1);
@@ -183,13 +238,24 @@ module.exports = [
     },
   },
   {
-    name: 'CLI: record --outcome fixed without --files exits 1, names the checkpoint diff as the source, writes nothing',
+    name: 'CLI: record --outcome fixed without --since exits 1, names the checkpoint step, writes nothing',
     fn: () => {
       const file = tmpFile();
-      const res = spawnSync('node', [LIB, 'record', '--agent', 'a', '--outcome', 'fixed', '--file', file], { encoding: 'utf8' });
+      const res = spawnSync('node', [LIB, 'record', '--agent', 'a', '--outcome', 'fixed', '--files', '3', '--file', file], { encoding: 'utf8' });
       assert.equal(res.status, 1);
-      assert.match(res.stderr, /files/);
-      assert.match(res.stderr, /checkpoint\.js diff/);
+      assert.match(res.stderr, /--since/);
+      assert.match(res.stderr, /checkpoint\.js create/);
+      assert.equal(fs.existsSync(file), false);
+    },
+  },
+  {
+    name: 'CLI: record --outcome fixed against a checkpoint with no change since exits 1 and writes nothing',
+    fn: () => {
+      const file = tmpFile();
+      const cwd = gitRepo();
+      const cp = JSON.parse(execFileSync('node', [CHECKPOINT, 'create', '--feature', 'review', '--label', 'a'], { cwd, encoding: 'utf8' }));
+      const res = spawnSync('node', [LIB, 'record', '--agent', 'a', '--outcome', 'fixed', '--since', cp.ref, '--file', file], { cwd, encoding: 'utf8' });
+      assert.equal(res.status, 1);
       assert.equal(fs.existsSync(file), false);
     },
   },

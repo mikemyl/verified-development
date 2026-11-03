@@ -107,12 +107,21 @@ module.exports = [
     },
   },
   {
-    name: '/review: a `fixed` ledger line carries the changed-file count from the checkpoint diff, and says outcomes are self-reported',
+    name: '/review: a `fixed` ledger line names that agent\'s own checkpoint, and says outcomes are self-reported',
     fn: () => {
       const t = skill('review');
-      assert.match(t, /checkpoint\.js diff/);
-      assert.match(t, /--files/);
+      assert.match(t, /--label <agent>/, 'one checkpoint per agent, before its fixes');
+      assert.match(t, /--since/);
       assert.match(t, /self-reported/);
+      assert.equal(/--files <n>/.test(t), false, 'the model no longer supplies the count');
+    },
+  },
+  {
+    name: '/review: the report ends with a Ledger line and names the Stop hook that enforces step 7',
+    fn: () => {
+      const t = skill('review');
+      assert.match(t, /Ledger: <n> lines recorded for <m> dispatched agents/);
+      assert.match(t, /ledger-guard/);
     },
   },
   {

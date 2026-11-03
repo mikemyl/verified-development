@@ -46,7 +46,7 @@ node hooks/lib/taxonomy.js extract .verified/codebase/TESTING.md   # the section
 
 | Tier | Types (seed) | Meaning |
 |------|-------------|---------|
-| `default` | `acceptance` | The expected choice |
+| `default` | `acceptance`, `core` | The expected choice |
 | `exception` | `dao` | Sanctioned without discussion; prefer `acceptance` where possible |
 | `sign-off` | `unit`, `none` | The plan states the reason and the user agrees before building |
 

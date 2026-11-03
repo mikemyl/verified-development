@@ -14,21 +14,26 @@
  *
  * Outcomes are SELF-REPORTED by the model that triaged and fixed the findings,
  * and self-reports drift optimistic. The one mechanical witness is the working
- * tree: a `fixed` line must carry `files` >= 1, the number of files changed
- * since the pre-fix checkpoint (`checkpoint.js diff <ref>` → files.length).
- * A fix that changed no file is rejected here, not argued about in prose.
- * `dismissed` under-counting has no mechanical witness; spot-check yields
- * against the transcript before acting on them.
+ * tree, read by this script, not supplied by the model: a `fixed` line names
+ * `since`, the checkpoint taken before THAT agent's findings were fixed, and
+ * the script counts the files changed since it (`checkpoint.diff`). Zero
+ * changed files → rejected. A checkpoint already witnessing another agent's
+ * fix → rejected, so one snapshot cannot vouch for the whole panel (the
+ * keros-platform kernel ledger of 2026-10-15 had six `fixed` lines, all
+ * "files: 4", one timestamp). The changed paths are stored for spot-checks.
+ * Limit: a snapshot proves a file changed after it, not which finding caused
+ * the change. `dismissed` under-counting has no mechanical witness either.
  *
  * Library:
- *   record(entry, {file})         -> entry as written (throws on a bad entry)
+ *   record(entry, {file, cwd, diff}) -> entry as written (throws on a bad entry;
+ *                                     `diff(ref, cwd)` -> changed paths, default checkpoint.diff)
  *   parseLines(text)              -> { entries, malformed }
  *   report(entries, {last})       -> { schema, agents, total, window }
  *
  * CLI:
  *   review-ledger.js record --agent <name> --outcome <no-op|fixed|dismissed|escalated>
- *                           [--errors N] [--warnings N] [--suggestions N] [--files N]
- *                           [--round N] [--file <path>]
+ *                           [--errors N] [--warnings N] [--suggestions N]
+ *                           [--since <checkpoint ref> (required for fixed)] [--round N] [--file <path>]
  *   review-ledger.js report [--file <path>] [--last N]
  *
  * Default file: .verified/review-ledger.jsonl under cwd. Exit: 0 ok · 1 usage.
@@ -58,16 +63,59 @@ function validate(entry) {
   for (const k of COUNTS) out[k] = count(e, k);
   if (out.outcome === 'fixed' && out.files < 1) {
     throw new Error(
-      "outcome 'fixed' requires files >= 1: the number of files changed since the pre-fix checkpoint " +
-      '(node checkpoint.js diff <ref> → .files.length). A fix that changed no file is dismissed or escalated, not fixed',
+      "outcome 'fixed' requires a file changed since the agent's pre-fix checkpoint (--since <ref>). " +
+      'A fix that changed no file is dismissed or escalated, not fixed',
     );
   }
+  if (e.since) out.since = String(e.since);
+  if (Array.isArray(e.changed)) out.changed = e.changed.slice(0, MAX_CHANGED);
   return out;
 }
 
+const MAX_CHANGED = 20;
+
+function checkpointDiff(ref, cwd) {
+  const { diff } = require('./checkpoint.js');
+  return diff({ cwd: cwd || process.cwd(), ref }).files.map(f => f.path);
+}
+
+function readEntries(file) {
+  try {
+    return parseLines(fs.readFileSync(file, 'utf8')).entries;
+  } catch {
+    return [];
+  }
+}
+
+// `fixed` → the script, not the model, counts the files changed since the
+// agent's own checkpoint, and refuses a checkpoint another agent already used.
+function witness(entry, file, opts) {
+  const e = { ...entry };
+  if (e.outcome !== 'fixed') return e;
+  if (!e.since) {
+    throw new Error(
+      "outcome 'fixed' requires --since <checkpoint ref>: before fixing an agent's findings run " +
+      'checkpoint.js create --feature review --label <agent>, fix, then record with --since <that ref>',
+    );
+  }
+  const owner = readEntries(file).find(x => x.since === e.since && x.agent !== e.agent);
+  if (owner) {
+    throw new Error(
+      `checkpoint ${e.since} already witnesses ${owner.agent}'s fix: take one checkpoint per agent, ` +
+      'right before fixing that agent\'s findings',
+    );
+  }
+  const changed = (opts.diff || checkpointDiff)(e.since, opts.cwd);
+  e.files = changed.length;
+  e.changed = changed;
+  return e;
+}
+
 function record(entry, opts = {}) {
-  const line = validate(entry);
   const file = opts.file || DEFAULT_FILE;
+  validate({ ...entry, outcome: 'no-op' }); // agent and counts fail before any git call
+  if (!OUTCOMES.includes(entry && entry.outcome)) validate(entry);
+  const line = validate(witness(entry, file, opts));
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.appendFileSync(file, JSON.stringify(line) + '\n');
   return line;
@@ -123,7 +171,7 @@ function report(entries, opts = {}) {
 
 const USAGE =
   'usage: review-ledger.js record --agent <name> --outcome <no-op|fixed|dismissed|escalated> ' +
-  '[--errors N] [--warnings N] [--suggestions N] [--files N (required for fixed)] [--round N] [--file <path>]\n' +
+  '[--errors N] [--warnings N] [--suggestions N] [--since <checkpoint ref> (required for fixed)] [--round N] [--file <path>]\n' +
   '       review-ledger.js report [--file <path>] [--last N]\n';
 
 function parseArgs(argv) {

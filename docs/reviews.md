@@ -65,6 +65,8 @@ node hooks/lib/review-ledger.js report --last 50  # the recent window
 ```
 
 `yield` is `fixed / dispatches`. The outcomes are `no-op`, `fixed`, `dismissed`, `escalated`.
-They are self-reported by the model that triaged; `fixed` must carry the changed-file count from
-the pre-fix checkpoint diff or the script rejects it. Spot-check a few lines against the
+They are self-reported by the model that triaged. `fixed` names the checkpoint taken before that
+agent's fixes (`--since <ref>`); the script counts the changed files itself and rejects zero, or a
+ref another agent already used. A Stop hook blocks the end of the turn when a review agent reported
+and no ledger line followed. Spot-check a few lines against the
 transcript before dropping a lens on its yield.
