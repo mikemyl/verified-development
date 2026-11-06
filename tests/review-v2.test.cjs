@@ -98,30 +98,37 @@ module.exports = [
     },
   },
   {
-    name: '/review: records every dispatch in the review ledger (find/fix/no-op)',
+    name: '/review v2.3: the model writes nothing to the ledger — the Stop hook does, from the agents\' reports',
     fn: () => {
       const t = skill('review');
-      assert.match(t, /review-ledger\.js record/);
-      assert.match(t, /no-op/);
-      assert.match(t, /dismissed/);
+      assert.match(t, /ledger-writer/);
+      assert.match(t, /You write nothing to it/);
+      for (const gone of [/review-ledger\.js record/, /--since <that agent/, /Ledger: <n> lines/, /outcome <no-op/]) {
+        assert.equal(gone.test(t), false, `must not mention ${gone}`);
+      }
     },
   },
   {
-    name: '/review: a `fixed` ledger line names that agent\'s own checkpoint, and says outcomes are self-reported',
+    name: '/review v2.3: one restore checkpoint before the first fix, not one per agent',
     fn: () => {
       const t = skill('review');
-      assert.match(t, /--label <agent>/, 'one checkpoint per agent, before its fixes');
-      assert.match(t, /--since/);
-      assert.match(t, /self-reported/);
-      assert.equal(/--files <n>/.test(t), false, 'the model no longer supplies the count');
+      assert.match(t, /checkpoint\.js create --feature review --label fixes/);
+      assert.equal(/--label <agent>/.test(t), false);
     },
   },
   {
-    name: '/review: the report ends with a Ledger line and names the Stop hook that enforces step 7',
+    name: '/map: puts the hook-written review ledger in .gitignore',
     fn: () => {
-      const t = skill('review');
-      assert.match(t, /Ledger: <n> lines recorded for <m> dispatched agents/);
-      assert.match(t, /ledger-guard/);
+      assert.match(skill('map'), /review-ledger\.jsonl` to `\.gitignore`/);
+    },
+  },
+  {
+    name: 'complexity-review never raises error: complexity is judgment, and judgment does not block',
+    fn: () => {
+      const t = agent('complexity-review');
+      assert.equal(/^\|\s*error\s*\|/m.test(t), false, 'no error row in the output example');
+      assert.equal(/^- `error`/m.test(t), false, 'no error rule');
+      assert.match(t, /never raises `error`/);
     },
   },
   {

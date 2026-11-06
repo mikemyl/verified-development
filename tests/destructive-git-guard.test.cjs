@@ -36,7 +36,7 @@ module.exports = [
     name: 'review: snapshot per agent before its fixes; FAIL when blocking_new_errors > 0; no third round (AS-014)',
     fn() {
       const t = read('skills/review/SKILL.md');
-      assert.match(t, /checkpoint\.js create --feature review --label <agent>/);
+      assert.match(t, /checkpoint\.js create --feature review --label fixes/);
       assert.match(t, /blocking_new_errors > 0[\s\S]*Status FAIL/);
       assert.match(t, /There is no round 3/);
     },

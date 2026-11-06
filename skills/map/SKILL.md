@@ -21,6 +21,8 @@ rubric; all of it was context. v2 writes the rubric and nothing else.
 { "verify": "<the repo's verify command>", "workflows": { "plan_critics": true }, "hooks": { "git_guard": true } }
 ```
 
+- Add `.verified/review-ledger.jsonl` to `.gitignore`: the Stop hook appends to it on every review,
+  and it is local measurement data, not source.
 - If `TESTING.md` exists, ask: update the `## Test Types` section, or regenerate the file?
 
 ## 2. Write `TESTING.md`

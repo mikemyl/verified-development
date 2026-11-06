@@ -41,19 +41,21 @@ For each complexity issue, suggest a specific refactoring:
 ```markdown
 # Complexity Review
 
-**Status:** PASS | WARN | FAIL
+**Status:** PASS | WARN
 
 ## Findings
 
 | Severity | Location | Metric | Value | Threshold | Suggested Fix |
 |----------|----------|--------|-------|-----------|---------------|
-| error    | file:line | cyclomatic | 12 | 10 | Extract validation logic |
-| warning  | file:line | nesting | 4 | 4 | Use early returns |
+| warning    | file:line | cyclomatic | 12 | 10 | Extract validation logic |
+| suggestion | file:line | nesting | 4 | 4 | Use early returns |
 ```
 
 ## Rules
 
-- `error`: Exceeds threshold — must refactor
-- `warning`: Approaching threshold (>= 80% of limit) — consider refactoring
+- This lens never raises `error`. Complexity is a judgment, and under the blocking doctrine a
+  judgment does not block a change; only falsifiable defects do, and other lenses own those.
+- `warning`: exceeds a threshold — refactor, or say why not
+- `suggestion`: approaching a threshold (>= 80% of limit) — consider refactoring
 - Only review changed files unless explicitly asked for full codebase review
 - Don't count test files against complexity thresholds

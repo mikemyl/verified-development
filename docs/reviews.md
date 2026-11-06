@@ -16,10 +16,11 @@
    `TESTING.md` (never the whole file), and the two review-integrity rules.
 4. **Dispatch** in one message, in parallel. Results are read cheap-first.
 5. **Triage** in chat. Pre-existing problems are follow-ups, not fixes.
-6. **One verification round.** Snapshot with `checkpoint.js`, fix, re-dispatch only the agents whose
+6. **One verification round.** Snapshot once with `checkpoint.js`, fix, re-dispatch only the agents whose
    findings were fixed, with the fix delta as payload. `finding-signature.js round --max-rounds 2`
    decides: converged, or FAIL with the new errors named. There is no round 3.
-7. **Ledger.** One line per dispatch in `.verified/review-ledger.jsonl`.
+7. **Ledger.** The Stop hook appends one line per finished dispatch to
+   `.verified/review-ledger.jsonl`, parsed from the agent's report. The model writes nothing.
 
 ## Review agents
 
@@ -81,13 +82,25 @@ is a `security-review` error); every `error` must be falsifiable or it downgrade
 ## The ledger
 
 ```bash
-node hooks/lib/review-ledger.js report            # yield per agent over the whole file
+node hooks/lib/review-ledger.js report            # hit rate per lens over the whole file
 node hooks/lib/review-ledger.js report --last 50  # the recent window
+node hooks/lib/review-ledger.js backfill --transcript <session.jsonl>   # add a past session's dispatches
 ```
 
-`yield` is `fixed / dispatches`. The outcomes are `no-op`, `fixed`, `dismissed`, `escalated`.
-They are self-reported by the model that triaged. `fixed` names the checkpoint taken before that
-agent's fixes (`--since <ref>`); the script counts the changed files itself and rejects zero, or a
-ref another agent already used. A Stop hook blocks the end of the turn when a review agent reported
-and no ledger line followed. Spot-check a few lines against the
-transcript before dropping a lens on its yield.
+The Stop hook `ledger-writer` writes one line per finished review dispatch (`review-ledger/v2`):
+agent, severity counts parsed from the agent's own report (its JSON findings, else its findings
+table), status, tier, diff size, and `mode` (`panel` or `verification`). The model writes nothing.
+`hit_rate` is the share of parsed panel dispatches with at least one error or warning. A lens with
+a low hit rate over many dispatches is a lens to size-gate or drop; that is how the panel changes.
+A report the hook cannot parse is counted as `unparsed`, never guessed.
+Hit rate is how often a lens speaks, not whether it was right: correctness speaks rarely and
+holds the would-ship defects, so read a high hit rate with few errors as possible noise, and a low
+one as a candidate for a size gate, never as proof either way.
+
+Why not the v1 shape: v1 lines were written by the model that triaged, with an outcome it chose
+(`fixed`, `no-op`, …). Every lens scored a 0.3–0.6 `fixed` share, complexity as high as
+correctness, because the model applies suggestions readily, and recording cost a turn per review.
+v1 lines are still read for their severity sums. Whether a finding was right is not in the ledger;
+that needs the transcript. Claude Code deletes transcripts after 30 days by default
+(`cleanupPeriodDays` in settings). The ledger is local data: keep `.verified/review-ledger.jsonl`
+in `.gitignore`.

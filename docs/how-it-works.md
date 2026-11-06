@@ -13,8 +13,8 @@ script has a versioned JSON contract and a unit test; none of them calls a model
 | Knowledge skills | `testing`, `tdd-go`, `react-testing`, `front-end-testing`, `test-design-reviewer`, `mutation-testing`, `domain-driven-design`, `hexagonal-architecture`, `functional`, `typescript-strict`, `ci-debugging` — loaded on demand by their `description:` |
 | Review agents | `correctness-review`, `test-review`, `security-review`, `complexity-review`, `a11y-review`, `error-handling-review`, `concurrency-review` ([reviews.md](reviews.md)) |
 | Plan critics | `plan-critic-acceptance`, `plan-critic-design`, `plan-critic-strategic` |
-| Hooks | `Setup` statusline, `PreToolUse` git guard, `PostToolUse` context monitor, `Stop` ledger guard |
-| Scripts (`hooks/lib/`) | `review-scope.js`, `findings.js`, `test-weakening.js`, `taxonomy.js`, `finding-signature.js`, `checkpoint.js`, `review-ledger.js`, `test-corpus.js`, `lang-loader.js`, `git-guard.js`, `ledger-guard.js` |
+| Hooks | `Setup` statusline, `PreToolUse` git guard, `PostToolUse` context monitor, `Stop` ledger writer |
+| Scripts (`hooks/lib/`) | `review-scope.js`, `findings.js`, `test-weakening.js`, `taxonomy.js`, `finding-signature.js`, `checkpoint.js`, `review-ledger.js`, `test-corpus.js`, `lang-loader.js`, `git-guard.js` |
 
 ## Hooks
 
@@ -68,22 +68,16 @@ at a phase boundary gives a cleaner summary than an automatic one mid-edit.
 Claude Code requires the `hookSpecificOutput` envelope for `additionalContext`; a bare
 `{"additionalContext": …}` is silently dropped.
 
-### Stop — the ledger guard
+### Stop — the ledger writer
 
-`ledger-guard.js` runs when the model ends a turn. It reads the session transcript and finds the
-current review batch: the plugin's `*-review` agents dispatched since the last typed prompt. When
-every agent in the batch has reported and one of them has no ledger line written after its
-dispatch, it blocks the stop once with the exact `review-ledger.js record` command to run. A line
-counts when it is in the repo's `.verified/review-ledger.jsonl` or when a `review-ledger.js record`
-call naming the agent succeeded, which covers a review of a sibling repo.
+`ledger-writer.js` runs when the model ends a turn. It reads the session transcript, finds each
+plugin `*-review` dispatch whose result is in, and appends a line for each one the repo's
+`.verified/review-ledger.jsonl` does not hold yet. When a hand-back does not parse, it reads the
+subagent's own transcript beside the session. It prints nothing, never blocks, and fails open. A
+dispatch still running is written at a later stop.
 
-It allows while any agent is still running, when the user has typed since the last result came in
-(one nudge per review, not one per turn), and on a second stop in a row (`stop_hook_active`), so
-it cannot loop. Measured reason: on 2026-10-16 a keros-web review stood in for step 7 with a shell
-loop whose body did nothing, and a second keros-web session skipped step 7 outright.
-
-- `hooks.ledger_guard: false` in `.verified/config.json` turns it off for that repo.
-- `VERIFIED_LEDGER_GUARD=0` (or `off`, `false`) turns it off for one session.
+- `hooks.review_ledger: false` in `.verified/config.json` turns it off for that repo.
+- `VERIFIED_REVIEW_LEDGER=0` (or `off`, `false`) turns it off for one session.
 
 ### Optional project hooks — `/install-hooks`
 
@@ -146,7 +140,7 @@ no idiom assumptions.
 {
   "verify": "just verify",
   "workflows": { "plan_critics": true },
-  "hooks": { "git_guard": true, "ledger_guard": true },
+  "hooks": { "git_guard": true, "review_ledger": true },
   "review": { "light_max_lines": 10 }
 }
 ```
@@ -157,7 +151,7 @@ no idiom assumptions.
 | `review.light_max_lines` | unset (off) | A diff with no source code, no prompt file and at most this many changed lines gets the light panel |
 | `workflows.plan_critics` | `true` | `false` skips the three critics in `/plan` (also `--no-critics` per run) |
 | `hooks.git_guard` | `true` | `false` disables the git guard for this repo |
-| `hooks.ledger_guard` | `true` | `false` disables the ledger guard for this repo |
+| `hooks.review_ledger` | `true` | `false` stops the Stop hook writing the review ledger for this repo |
 | `hooks.post_write_lint`, `hooks.pre_commit_verify`, `hooks.*_timeout` | unset | Written and read by `/install-hooks` only |
 
 What lives in a project:
@@ -188,11 +182,11 @@ becomes a test or a guard.
 | 3. Briefs | Linter findings become suppression keys (`file:line:rule_id`, never a message) so agents do not re-report what a linter already said. Test files that lost assertions are flagged for `test-review`. The `## Test Types` section is extracted from `TESTING.md` so `test-review` gets the rubric, not the prose. Every agent applies the two review-integrity rules. A brief is additive to the agent's standing rubric, never a substitute. | `findings.js scan <dir>` → `findings/v1` (SARIF-normalized); `test-weakening.js scan <base>`; `taxonomy.js extract TESTING.md` |
 | 4. Dispatch | One message, every selected agent, in parallel. Results read cheap-first. | — |
 | 5. Triage | Every error and warning verified against the code. Pre-existing problems become follow-ups. Report in chat: status, one row per finding with disposition, skipped lenses, resolver warnings, Farley Score. | — |
-| 6. One verification round | Per agent: snapshot the tree, then fix that agent's findings one at a time; re-run the suite and the verify command after each. Re-dispatch only the agents whose findings were fixed, with the fix hunks ±20 lines, asking for `confirmed`, `not-fixed` or `insufficient-context` plus any new error inside the delta. The round ledger matches findings across rounds by signature (agent, file, category, normalized message, line within ±3) and decides: converged, or FAIL with the new errors named. There is no round 3. | `checkpoint.js create --feature review --label <agent>`; `finding-signature.js round --round 2 --current … --previous … --fix-diff … --max-rounds 2` → `finding-signature/v1` |
-| 7. Ledger | One line per dispatched agent: outcome `no-op`, `fixed`, `dismissed` or `escalated`, with counts. `fixed` names that agent's checkpoint; the script counts the changed files. The report ends with a `Ledger:` line, and the Stop hook blocks a turn that skipped this step. | `review-ledger.js record --agent … --outcome … [--since <ref>]` → `review-ledger/v1` |
+| 6. One verification round | Snapshot the tree once, then fix the findings one at a time; re-run the suite and the verify command after each. Re-dispatch only the agents whose findings were fixed, with the fix hunks ±20 lines, asking for `confirmed`, `not-fixed` or `insufficient-context` plus any new error inside the delta. The round ledger matches findings across rounds by signature (agent, file, category, normalized message, line within ±3) and decides: converged, or FAIL with the new errors named. There is no round 3. | `checkpoint.js create --feature review --label fixes`; `finding-signature.js round --round 2 --current … --previous … --fix-diff … --max-rounds 2` → `finding-signature/v1` |
+| 7. Ledger | Automatic: the Stop hook writes one line per finished dispatch from the agent's own report. The model records nothing. | `hooks/ledger-writer.js` → `review-ledger/v2` |
 
 `/review --agent <name>` runs one agent over the same range with the same briefs. `/review` never
-commits and writes no report file; the ledger is its only artifact.
+commits and writes no file; the hook-written ledger is the only artifact.
 
 ### `/plan`
 
@@ -272,33 +266,39 @@ branch, the real index and the working tree are untouched. Nothing is pushed unl
 ref yourself.
 
 ```bash
-node hooks/lib/checkpoint.js create  --feature review --label test-review
+node hooks/lib/checkpoint.js create  --feature review --label fixes
 node hooks/lib/checkpoint.js list    --feature review
 node hooks/lib/checkpoint.js diff    <ref>                 # checkpoint vs working tree
 node hooks/lib/checkpoint.js restore <ref> <path> [<path>…] # by content, only those paths
 ```
 
-`/review` creates one per agent before fixing that agent's findings; the ref is the agent's ledger
-witness. The git guard's deny message points here.
+`/review` creates one before its first fix. The git guard's deny message points here.
 
 ## The ledger
 
 ```bash
-node hooks/lib/review-ledger.js report            # yield per agent over the whole file
+node hooks/lib/review-ledger.js report            # hit rate per lens over the whole file
 node hooks/lib/review-ledger.js report --last 50  # the recent window
+node hooks/lib/review-ledger.js backfill --transcript <session.jsonl>   # add a past session's dispatches
 ```
 
-`yield` is `fixed / dispatches`. A lens with a long run of `no-op` is a lens to size-gate or drop;
-that is how the panel changes.
+The Stop hook `ledger-writer` writes one line per finished review dispatch (`review-ledger/v2`):
+agent, severity counts parsed from the agent's own report (its JSON findings, else its findings
+table), status, tier, diff size, and `mode` (`panel` or `verification`). The model writes nothing.
+`hit_rate` is the share of parsed panel dispatches with at least one error or warning. A lens with
+a low hit rate over many dispatches is a lens to size-gate or drop; that is how the panel changes.
+A report the hook cannot parse is counted as `unparsed`, never guessed.
+Hit rate is how often a lens speaks, not whether it was right: correctness speaks rarely and
+holds the would-ship defects, so read a high hit rate with few errors as possible noise, and a low
+one as a candidate for a size gate, never as proof either way.
 
-The outcome on each line is self-reported by the model that triaged and fixed the findings, and
-self-reports drift optimistic. The mechanical check: a `fixed` line names `--since <ref>`, the
-checkpoint taken right before that agent's findings were fixed. The script runs the checkpoint diff
-itself and stores the count (`files`) and the paths (`changed`). It rejects the line when no file
-changed, and when another agent's line already used the same ref, so one snapshot cannot vouch for
-the whole panel. A snapshot proves a file changed after it, not which finding caused the change.
-Under-counted `dismissed` has no witness at all. Before acting on a yield number, spot-check a few
-lines against the session transcript or the commit diff.
+Why not the v1 shape: v1 lines were written by the model that triaged, with an outcome it chose
+(`fixed`, `no-op`, …). Every lens scored a 0.3–0.6 `fixed` share, complexity as high as
+correctness, because the model applies suggestions readily, and recording cost a turn per review.
+v1 lines are still read for their severity sums. Whether a finding was right is not in the ledger;
+that needs the transcript. Claude Code deletes transcripts after 30 days by default
+(`cleanupPeriodDays` in settings). The ledger is local data: keep `.verified/review-ledger.jsonl`
+in `.gitignore`.
 
 ## Blocking is narrow
 
@@ -324,15 +324,14 @@ verified-development/
 ├── docs/
 ├── tests/                    # plain Node runner, one *.test.cjs per concern
 └── hooks/
-    ├── hooks.json            # Setup statusline, PreToolUse git-guard, PostToolUse context-monitor, Stop ledger-guard
+    ├── hooks.json            # Setup statusline, PreToolUse git-guard, PostToolUse context-monitor, Stop ledger-writer
     ├── setup-statusline.sh statusline.js
     ├── git-guard.js          # the hook seam; classifier in lib/git-guard.js
     ├── context-monitor.js
-    ├── ledger-guard.js       # the Stop hook seam; batch logic in lib/ledger-guard.js
+    ├── ledger-writer.js      # the Stop hook: appends finished review dispatches to the ledger
     └── lib/
         ├── review-scope.js       # panel resolver (scope, size gate, tier) + verify routing
-        ├── review-ledger.js      # per-dispatch find/fix/no-op ledger
-        ├── ledger-guard.js       # Stop check: a finished review left its ledger lines
+        ├── review-ledger.js      # ledger lines from a transcript; the hit-rate report
         ├── finding-signature.js  # round ledger: new vs carried, --max-rounds
         ├── findings.js (+findings/)  # SARIF → suppression keys
         ├── test-weakening.js     # assertion-count delta per changed test file
@@ -340,7 +339,7 @@ verified-development/
         ├── test-corpus.js (+lang/)   # /test-audit discovery + ranking
         ├── lang-loader.js        # adapter loading, glob matching
         ├── checkpoint.js         # working-tree snapshots under refs/verified/checkpoints/
-        └── git-guard.js          # the destructive-git classifier (+ scope shared with ledger-guard)
+        └── git-guard.js          # the destructive-git classifier (+ scope shared with ledger-writer)
 ```
 
 ## Hacking on the plugin

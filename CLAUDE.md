@@ -22,8 +22,8 @@ Doctrine that survived, in one line each:
   test anti-patterns (`skills/testing/SKILL.md`), falsifiable correctness/security errors. Farley,
   taxonomy fit, oracle provenance, weakening, contract doubles stay non-blocking (locked by
   `tests/farley-score.test.cjs`, `tests/test-quality-signals.test.cjs`).
-- **No artifact the model writes and only the model reads.** The ledger is the one file `/review`
-  writes; `/plan` writes none; `/map` writes the rubric.
+- **No artifact the model writes and only the model reads.** The ledger is written by a Stop hook
+  from the agents' reports, never by the model; `/plan` writes none; `/map` writes the rubric.
 - **Never a git command that can discard uncommitted work.** `hooks/git-guard.js` denies the class;
   `checkpoint.js` is the restore path.
 

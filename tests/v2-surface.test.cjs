@@ -59,7 +59,6 @@ const LIBS = [
   'findings.js',
   'git-guard.js',
   'lang-loader.js',
-  'ledger-guard.js',
   'review-ledger.js',
   'review-scope.js',
   'taxonomy.js',
@@ -68,10 +67,12 @@ const LIBS = [
   'test-weakening.js',
 ];
 
-const HOOK_FILES = ['context-monitor.js', 'git-guard.js', 'hooks.json', 'ledger-guard.js', 'setup-statusline.sh', 'statusline.js'];
+const HOOK_FILES = ['context-monitor.js', 'git-guard.js', 'hooks.json', 'ledger-writer.js', 'setup-statusline.sh', 'statusline.js'];
 
 /** Names that must not be referenced anywhere in the shipped prose or code. */
 const DANGLING = [
+  /\bledger-guard\b/,
+  /review-ledger\.js record\b/,
   /\bhandoff\.js\b/,
   /\bwaves\.js\b/,
   /\btest-gate\.js\b/,
@@ -167,14 +168,14 @@ module.exports = [
     },
   },
   {
-    name: 'surface: hooks.json registers git-guard, context-monitor, ledger-guard and the statusline setup — nothing else',
+    name: 'surface: hooks.json registers git-guard, context-monitor, ledger-writer and the statusline setup — nothing else',
     fn: () => {
       const hooks = JSON.parse(fs.readFileSync(path.join(REPO, 'hooks', 'hooks.json'), 'utf8')).hooks;
       assert.deepEqual(Object.keys(hooks).sort(), ['PostToolUse', 'PreToolUse', 'Setup', 'Stop']);
       const cmds = Object.values(hooks).flat().flatMap(h => h.hooks.map(x => x.command));
       assert.ok(cmds.some(c => c.includes('git-guard.js')));
       assert.ok(cmds.some(c => c.includes('context-monitor.js')));
-      assert.ok(hooks.Stop.flatMap(h => h.hooks.map(x => x.command)).some(c => c.includes('ledger-guard.js')));
+      assert.ok(hooks.Stop.flatMap(h => h.hooks.map(x => x.command)).some(c => c.includes('ledger-writer.js')));
       assert.ok(cmds.some(c => c.includes('setup-statusline.sh')));
       assert.equal(cmds.some(c => c.includes('session-start')), false);
     },

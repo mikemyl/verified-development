@@ -42,7 +42,7 @@ and three critics stress-test it before you start. That is the whole workflow.
 **Now and then**
 
 - `/test-audit <path>` ranks an existing test corpus worst-first against the taxonomy. Advisory.
-- `node hooks/lib/review-ledger.js report` shows which review lenses pay for themselves.
+- `node hooks/lib/review-ledger.js report` shows each review lens's hit rate.
 - `/install-hooks` adds a lint-on-write hook and a verify-before-commit gate to the project.
 
 What the plugin writes: `TESTING.md`, `config.json`, one line per review dispatch in
@@ -98,9 +98,10 @@ wrote", never a git command that discards work.
 
 ## Measuring it
 
-Every dispatch writes one line to `.verified/review-ledger.jsonl` (agent, outcome, counts).
-`node hooks/lib/review-ledger.js report` gives yield per agent. A lens with a long run of `no-op`
-is a lens to size-gate or drop; that is how v3 gets decided.
+A Stop hook writes one line per review dispatch to `.verified/review-ledger.jsonl` (agent, severity
+counts parsed from the agent's report, tier, diff size); the model writes nothing.
+`node hooks/lib/review-ledger.js report` gives each lens's hit rate. A lens with a low hit rate over
+many dispatches is a lens to size-gate or drop. Keep the file in `.gitignore`.
 
 ## Documentation
 

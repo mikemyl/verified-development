@@ -6,7 +6,7 @@ version: 2.0.0
 
 Independent review of a change by agents that did not write it. Runs after the repo's verify
 command is green and before anything is committed. One panel, one verification round, a report in
-chat. The only file written is the review ledger.
+chat. You write no file; a Stop hook appends the review ledger.
 
 Why this shape: on real projects the review agents found the defects that would have shipped (a
 redirect loop, a migration that half-applied, secrets exposed through a query depth) while every
@@ -123,23 +123,18 @@ Panel: full | light (<tier_reason>)     Verify: <command → exit code>, …; no
 Skipped lenses: <name (reason)>, …     Warnings from the resolver: …
 Farley Score: <X.X/10 or n/a> — non-blocking test-quality signal
 Follow-ups (pre-existing, not in this change): …
-Ledger: <n> lines recorded for <m> dispatched agents
 ```
-
-The `Ledger:` line is not optional. A Stop hook (`ledger-guard`) blocks the end of the turn when a
-review agent reported and no ledger line followed it.
 
 ## 6. One verification round
 
 If any finding is to be fixed (an error, a warning, or a suggestion you choose to apply):
 
-1. Work one agent at a time. Before touching that agent's findings, snapshot:
-   `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create --feature review --label <agent>`.
-   Keep the returned `ref`: it is that agent's ledger witness (step 7). The tree is uncommitted;
-   the `git-guard` hook denies `checkout`/`restore`/`stash`, and `checkpoint.js restore <ref>
-   <path>` is the recovery path.
-2. Fix that agent's findings one at a time; re-run the test suite and the step-1 verify
-   command(s) for the files you touched after each. Record the agent's ledger line (step 7) before the next agent's snapshot.
+1. Before the first fix, snapshot:
+   `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create --feature review --label fixes`.
+   The tree is uncommitted; the `git-guard` hook denies `checkout`/`restore`/`stash`, and
+   `checkpoint.js restore <ref> <path>` is the recovery path.
+2. Fix the findings one at a time; re-run the test suite and the step-1 verify command(s) for the
+   files you touched after each.
 3. Re-dispatch ONLY the agents whose findings you fixed, in **verification mode**: send the finding,
    the fix diff hunks ±20 lines (the fix delta, never the full file set), and ask for one of
    `confirmed | not-fixed | insufficient-context`, plus any NEW error inside the fix delta. An
@@ -156,27 +151,17 @@ If any finding is to be fixed (an error, a warning, or a suggestion you choose t
    There is no round 3. On measured features the defects found in rounds 2–3 were introduced by the
    previous round's fixes; the answer is a smaller fix and a human decision, not another loop.
 
-## 7. Record the ledger
+## 7. The ledger (automatic)
 
-After triage, one line per dispatched agent — this is the measurement v1 never had:
+The Stop hook `ledger-writer` appends one line per finished review dispatch to
+`.verified/review-ledger.jsonl`: agent, severity counts parsed from the agent's own report, status,
+tier, diff size, panel or verification. You write nothing to it, and you do not mention it in the
+report. The counts come from the agent's findings table or JSON, so pass the agent's report through
+unedited in its output and do not ask an agent to drop its severity column.
 
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/review-ledger.js record --agent <name> \
-  --outcome <no-op|fixed|dismissed|escalated> --errors <n> --warnings <n> --suggestions <n> --round <1|2> \
-  [--since <that agent's checkpoint ref>]
-```
-
-`no-op` found nothing actionable; `fixed` a finding was acted on; `dismissed` the findings were
-wrong or pre-existing; `escalated` the user had to decide.
-
-The outcome is self-reported — you are grading your own triage — so `fixed` carries the one
-mechanical witness: `--since <ref>`, the checkpoint you took right before fixing THAT agent's
-findings. The script runs the checkpoint diff itself, stores the count and the changed paths, and
-rejects the line when no file changed or when another agent's line already used that ref. One
-snapshot cannot vouch for the whole panel. A finding you agreed with but did not change code for
-is `escalated` or `dismissed`, not `fixed`. Never stand in for this command with anything else: a
-line the script did not write is not recorded. `review-ledger.js report` shows yield per agent. A lens
-with a long run of `no-op` is a lens to size-gate or drop.
+`node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/review-ledger.js report` shows each lens's hit rate (panel
+dispatches with at least one error or warning). A lens with a low hit rate over many dispatches is a
+lens to size-gate or drop.
 
 ## Running one agent
 
@@ -185,5 +170,5 @@ with a long run of `no-op` is a lens to size-gate or drop.
 ## Important
 
 - Never commit. The user commits.
-- No report file; the report is the chat message. The ledger is the only artifact.
+- No report file; the report is the chat message. The hook-written ledger is the only artifact.
 - The gate is the verify command's exit code. The agents are the judgment. Neither replaces the other.
