@@ -3,12 +3,14 @@
 `/review` is one panel, one verification round, a report in chat.
 
 1. **Verify gate.** The repo's verify command, run by the main session in Bash, decided by its real
-   exit code. Red stops the review.
-2. **Panel resolution** — `hooks/lib/review-scope.js select --files-from <list> --changed-lines <N>`.
+   exit code. Red stops the review. `review-scope.js verify` routes each changed file to its command
+   when `verify` in `config.json` is a glob map, so an infra change does not run the app's suite.
+2. **Panel resolution** — `hooks/lib/review-scope.js select --files-from <list> --changed-lines <N>
+   --config .verified/config.json [--light]`.
    Each agent declares its own `scope:` (path globs or `always`), `context_needs:`, and optionally
    `min_changed_lines:`. The resolver is include-biased: a lens is dropped only with a reason
-   (`no-matching-file`, `non-executable-only-diff`, `small-diff`), and a read failure widens the
-   roster. `security-review` is never skipped on a docs-only diff.
+   (`no-matching-file`, `non-executable-only-diff`, `small-diff`, `light-tier`), and a read failure
+   widens the roster. `security-review` is never skipped on a docs-only diff.
 3. **Briefs** carry deterministic inputs: linter suppression keys from an inline `findings.js scan`
    (keys only, never a message), test-weakening flags, the `## Test Types` section extracted from
    `TESTING.md` (never the whole file), and the two review-integrity rules.
@@ -26,7 +28,7 @@
 | correctness-review | opus | always | — | Code that contradicts its own evident intent: guards, off-by-one, inverted logic |
 | test-review | sonnet | always | — | Tautologies, boundaries, error paths, the repo's declared anti-patterns (blocking), Farley Score |
 | security-review | opus | always | — | Injection, auth, data exposure, hardcoded creds, dependency CVEs, prompt injection in prose |
-| complexity-review | haiku | always | 40 lines | Function length, cyclomatic/cognitive depth, nesting |
+| complexity-review | haiku | source code | 40 lines | Function length, cyclomatic/cognitive depth, nesting |
 | a11y-review | sonnet | UI files | 40 lines | WCAG 2.1 AA: contrast, ARIA, keyboard, focus |
 | error-handling-review | sonnet | Go | — | Wrapping, dropped errors, sentinels |
 | concurrency-review | sonnet | Go | — | Goroutines, channels, races, shutdown |
@@ -34,6 +36,25 @@
 The size gate exists because on measured sessions complexity and a11y returned nothing actionable
 on one-line fixes while costing 30–50K tokens each. Correctness, tests and security run on every
 diff: the one-line fix is exactly where the inverted guard hides.
+
+`complexity-review` is scoped to source-code extensions (`SOURCE_EXTENSIONS` in `review-scope.js`,
+pinned against the agent's `scope:` by a test). On an Ansible + shell change it returned eight
+findings, none about complexity.
+
+## The light tier
+
+One lens per kind of file: `correctness-review` for source code, `security-review` for the rest
+(config, infra, shell, dependencies, prose). Two ways in, neither of them the model's choice:
+
+- the user asks: `/review --light`;
+- the repo opts in with `"review": {"light_max_lines": 10}` in `config.json`. A diff qualifies only
+  with a known size at or under the limit, no source code and no prompt file (`CLAUDE.md`,
+  `skills/`, `agents/`, `.claude/`).
+
+The model does not choose the tier because the author of a change is the one who thinks it is
+trivial. On 2026-11-06 a keros-platform sysctl mitigation ("one line") did not close the exposure:
+the running listener kept MPTCP and every container had its own namespace with it on.
+`security-review` found it, and a model triage would have dropped that agent first.
 
 Plan-time critics (`plan-critic-acceptance`, `-design`, `-strategic`) are dispatched by `/plan`,
 not by `/review`.

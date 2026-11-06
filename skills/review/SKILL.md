@@ -33,24 +33,46 @@ git diff --numstat <range> | awk '{a+=$1; d+=$2} END {print a+d}'   # add `wc -l
 
 ## 1. Verify gate (real exit code)
 
-Run the repo's verify command yourself: `.verified/config.json` `verify`, else the `verify` target
-in a Justfile or Makefile, else the `package.json` script, else `mvn verify` for a `pom.xml`. Run it
-in Bash and read the real exit code (`${PIPESTATUS[0]}` when piped). Never decide this gate from an
-IDE terminal, a `| tail`, a scoped package run, or an agent's self-report. Red → stop and report;
-review of broken code is noise.
+Resolve which command gates which changed file:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/review-scope.js verify --files-from /tmp/changed.txt --config .verified/config.json
+```
+
+- `source: string` or `map` → run each entry of `commands`. A `map` (`"verify": {"**/*.go":
+  "just verify", "infra/**": "just infra-check"}`) sends each file to its first matching glob, so
+  an infra change does not wait on the application's test suite. Files in `uncovered` have no gate
+  because the repo said so; name them in the report.
+- `source: none` or `invalid` → the `verify` target in a Justfile or Makefile, else the
+  `package.json` script, else `mvn verify` for a `pom.xml`. Report any `warnings`.
+
+Run each command in Bash and read the real exit code (`${PIPESTATUS[0]}` when piped). Never decide
+this gate from an IDE terminal, a `| tail`, a package run you scoped yourself, or an agent's
+self-report. Red → stop and report; review of broken code is noise.
 
 ## 2. Resolve the panel (deterministic)
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/review-scope.js select --files-from /tmp/changed.txt --changed-lines <N>
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/review-scope.js select --files-from /tmp/changed.txt --changed-lines <N> \
+  --config .verified/config.json [--light]
 ```
 
-`review-scope/v1`: `selected` (ordered cheap-first), `skipped` with a reason each, `warnings`.
+`review-scope/v1`: `selected` (ordered cheap-first), `skipped` with a reason each, `warnings`, and
+`tier` (`full` | `light`) with `tier_reason`.
+
+**The light tier** dispatches one lens per kind of file: `correctness-review` for source code,
+`security-review` for everything else (config, infra, shell, dependencies, prose). It applies when
+the user asks for it (`/review --light`, "light review") or when the repo opted in with
+`review.light_max_lines` in `config.json` and the diff has no source code, no prompt file and at
+most that many changed lines. Never pass `--light` on your own: the author of a change is the one
+who believes it is trivial, and on measured sessions the "one-line" change held the defect.
 Each agent self-declares `scope:` (path globs or `always`), `context_needs:`, and optionally
 `min_changed_lines:` — the **size gate**: `complexity-review` and `a11y-review` declare 40 and are
 skipped (`small-diff`) below it, because on measured sessions they returned nothing actionable on
 one-line fixes. `correctness-review`, `test-review` and `security-review` run on every diff.
 `security-review` is never skipped on a docs-only diff — prose is the prompt-injection vector.
+`complexity-review` is scoped to source-code extensions: on yaml, shell and Justfiles it returned
+findings outside its lane.
 
 The resolver is include-biased: a lens is dropped only with a reason, and a read failure widens the
 roster. Report every `warnings` entry; a lens that never ran is a coverage gap, not a pass. Do not add a
@@ -97,6 +119,7 @@ with a one-line reason, in the report.
 | Severity | Agent | Location | Issue | Disposition |
 |----------|-------|----------|-------|-------------|
 
+Panel: full | light (<tier_reason>)     Verify: <command → exit code>, …; no gate for <uncovered files>
 Skipped lenses: <name (reason)>, …     Warnings from the resolver: …
 Farley Score: <X.X/10 or n/a> — non-blocking test-quality signal
 Follow-ups (pre-existing, not in this change): …
@@ -115,8 +138,8 @@ If any finding is to be fixed (an error, a warning, or a suggestion you choose t
    Keep the returned `ref`: it is that agent's ledger witness (step 7). The tree is uncommitted;
    the `git-guard` hook denies `checkout`/`restore`/`stash`, and `checkpoint.js restore <ref>
    <path>` is the recovery path.
-2. Fix that agent's findings one at a time; re-run the test suite and the verify command after
-   each. Record the agent's ledger line (step 7) before the next agent's snapshot.
+2. Fix that agent's findings one at a time; re-run the test suite and the step-1 verify
+   command(s) for the files you touched after each. Record the agent's ledger line (step 7) before the next agent's snapshot.
 3. Re-dispatch ONLY the agents whose findings you fixed, in **verification mode**: send the finding,
    the fix diff hunks ±20 lines (the fix delta, never the full file set), and ask for one of
    `confirmed | not-fixed | insufficient-context`, plus any NEW error inside the fix delta. An

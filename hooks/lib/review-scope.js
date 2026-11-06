@@ -22,12 +22,28 @@
  *   parseAgentFile(name, text)                 -> { name, scope, context_needs, model }
  *   loadAgents(dir)                            -> { agents, warnings }
  *   isNonExecutable(file)                      -> boolean
- *   selectLenses(changedFiles, opts)           -> contract
+ *   selectLenses(changedFiles, opts)           -> contract (tier full|light)
+ *   isSourceCode(file)                         -> boolean
+ *   resolveVerify(verifyConfig, changedFiles)  -> { source, commands, uncovered, warnings }
  *   scopeGrowth(panelFiles, fixFiles)          -> { grew, outside }
+ *
+ * Proportional review (v2.2). The panel is sized by what changed, never by the
+ * authoring model's opinion of its own change (on 2026-11-06 a "one-line"
+ * sysctl mitigation that did not close the exposure was caught by the one
+ * agent a model triage would have dropped):
+ *   - `light` tier: one lens per kind of file — correctness-review for source
+ *     code, security-review for everything else (config, infra, deps, prose).
+ *     Chosen by the user (`--light`) or by the repo's opt-in rule
+ *     `review.light_max_lines` (no source code, no prompt files, a known diff
+ *     size at or under the limit).
+ *   - scoped verify: `verify` in config.json may map globs to commands, so an
+ *     infra change does not wait on the application's test suite.
  *
  * CLI:
  *   review-scope.js select <file> [<file> …]         -> prints the contract JSON
  *   review-scope.js select --files-from <path>       -> one changed path per line
+ *        [--changed-lines N] [--light] [--config .verified/config.json]
+ *   review-scope.js verify --files-from <path> [--config .verified/config.json]
  *   review-scope.js scope-growth --panel <path> --fix <path>
  *                                                    -> { grew, outside }
  * Exit codes: 0 ok · 1 usage error.
@@ -74,6 +90,23 @@ const FUNCTIONAL_CONFIG_PATTERNS = [
   /(^|\/)hooks\//,
   /(^|\/)plans\//,
 ];
+
+/**
+ * Source code: files a complexity or correctness lens can judge as a program.
+ * Shell, Makefiles, Justfiles, yaml and the rest are infra/config — reviewed by
+ * security-review and correctness-review, not by the complexity lens. Keep in
+ * step with `scope:` in agents/complexity-review.md (a test pins the pair).
+ */
+const SOURCE_EXTENSIONS = new Set([
+  '.go', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.java', '.kt', '.kts',
+  '.scala', '.rb', '.rs', '.cs', '.fs', '.swift', '.php', '.c', '.cc', '.cpp', '.h',
+  '.hpp', '.m', '.ex', '.exs', '.erl', '.clj', '.dart', '.lua', '.vue', '.svelte',
+  '.astro', '.templ', '.sql',
+]);
+
+/** One lens per kind of file in the light tier. */
+const LIGHT_SOURCE_LENS = 'correctness-review';
+const LIGHT_OTHER_LENS = 'security-review';
 
 /**
  * `scope: always` lenses that genuinely have nothing to say about a diff of
@@ -169,6 +202,17 @@ function isNonExecutable(file) {
   return NON_EXECUTABLE_EXTENSIONS.has(path.extname(p).toLowerCase());
 }
 
+function isSourceCode(file) {
+  const p = String(file || '').replace(/\\/g, '/');
+  if (FUNCTIONAL_CONFIG_PATTERNS.some(re => re.test(p))) return false;
+  return SOURCE_EXTENSIONS.has(path.extname(p).toLowerCase());
+}
+
+function isPromptFile(file) {
+  const p = String(file || '').replace(/\\/g, '/');
+  return FUNCTIONAL_CONFIG_PATTERNS.some(re => re.test(p));
+}
+
 function matchesAny(file, globs) {
   return globs.some(g => globToRegExp(g).test(String(file || '').replace(/\\/g, '/')));
 }
@@ -220,11 +264,42 @@ function selectLenses(changedFiles, opts = {}) {
 
   const nonExecutableOnly = !cannotNarrow && files.every(isNonExecutable);
 
+  // The tier. Light only on an explicit request or the repo's opt-in rule; the
+  // rule needs a known size, a non-empty list, no source code, no prompt file.
+  const limitRaw = Number(opts.lightMaxLines);
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : null;
+  let tier = 'full';
+  let tierReason = null;
+  if (opts.light === true) {
+    tier = 'light';
+    tierReason = 'requested';
+  } else if (
+    limit !== null &&
+    changedLines !== null &&
+    changedLines <= limit &&
+    !cannotNarrow &&
+    !files.some(isSourceCode) &&
+    !files.some(isPromptFile)
+  ) {
+    tier = 'light';
+    tierReason = `auto:no-source-code<=${limit}-lines`;
+  }
+  const lightLenses = new Set();
+  if (tier === 'light') {
+    if (cannotNarrow || files.some(isSourceCode)) lightLenses.add(LIGHT_SOURCE_LENS);
+    if (cannotNarrow || files.some(f => !isSourceCode(f))) lightLenses.add(LIGHT_OTHER_LENS);
+  }
+
   const selected = [];
   const skipped = [];
   for (const agent of agents) {
     if (exclude.has(agent.name)) {
       skipped.push({ name: agent.name, reason: 'excluded-by-caller' });
+      continue;
+    }
+    if (tier === 'light') {
+      if (lightLenses.has(agent.name)) selected.push({ ...agent, reason: 'light-tier' });
+      else skipped.push({ name: agent.name, reason: 'light-tier' });
       continue;
     }
     if (tooSmall(agent)) {
@@ -259,10 +334,52 @@ function selectLenses(changedFiles, opts = {}) {
     })),
     skipped,
     warnings,
+    tier,
+    tier_reason: tierReason,
     non_executable_only: nonExecutableOnly,
     changed_files: files.length,
     changed_lines: changedLines,
   };
+}
+
+/**
+ * Which verify command(s) gate this changeset. `verify` in config.json is a
+ * string (one command for every file — the pre-2.2 behaviour) or an object
+ * mapping a comma-list of globs to a command. Each file goes to the FIRST key
+ * that matches it (object order), so a trailing `"**"` key is the fallback. A
+ * file no key matches has no verify gate — the repo said so — and is listed in
+ * `uncovered` for the report. Absent → `none` (the skill discovers a command);
+ * malformed → `invalid` plus a warning, and the skill discovers as for absent.
+ */
+function resolveVerify(verifyConfig, changedFiles) {
+  const files = (Array.isArray(changedFiles) ? changedFiles : []).filter(Boolean);
+  const out = (source, commands, uncovered, warnings = []) => ({ schema: SCHEMA, source, commands, uncovered, warnings });
+  if (verifyConfig === undefined || verifyConfig === null) return out('none', [], files);
+  if (typeof verifyConfig === 'string') {
+    if (!verifyConfig.trim()) return out('invalid', [], files, ['verify-empty-string']);
+    return out('string', [{ command: verifyConfig, files }], []);
+  }
+  if (typeof verifyConfig !== 'object' || Array.isArray(verifyConfig)) {
+    return out('invalid', [], files, [`verify-not-string-or-map:${Array.isArray(verifyConfig) ? 'array' : typeof verifyConfig}`]);
+  }
+  const routes = Object.entries(verifyConfig);
+  const bad = routes.filter(([, cmd]) => typeof cmd !== 'string' || !cmd.trim()).map(([k]) => k);
+  if (routes.length === 0) return out('invalid', [], files, ['verify-map-empty']);
+  if (bad.length) return out('invalid', [], files, bad.map(k => `verify-map-command-not-string:${k}`));
+  const parsed = routes.map(([globs, command]) => ({ globs: globs.split(',').map(g => g.trim()).filter(Boolean), command }));
+  const byCommand = new Map();
+  const uncovered = [];
+  for (const f of files) {
+    const route = parsed.find(r => matchesAny(f, r.globs));
+    if (!route) { uncovered.push(f); continue; }
+    if (!byCommand.has(route.command)) byCommand.set(route.command, []);
+    byCommand.get(route.command).push(f);
+  }
+  const commands = parsed
+    .map(r => r.command)
+    .filter((c, i, all) => all.indexOf(c) === i && byCommand.has(c))
+    .map(command => ({ command, files: byCommand.get(command) }));
+  return out('map', commands, uncovered);
 }
 
 /**
@@ -283,8 +400,20 @@ function scopeGrowth(panelFiles, fixFiles) {
 // --- CLI shim ----------------------------------------------------------------
 
 const USAGE =
-  'usage: review-scope.js select <file>… | select --files-from <path> [--changed-lines N] [--agents-dir <dir>] | ' +
+  'usage: review-scope.js select <file>… | select --files-from <path> [--changed-lines N] [--light] ' +
+  '[--config <config.json>] [--agents-dir <dir>] | verify --files-from <path> [--config <config.json>] | ' +
   'scope-growth --panel <path> --fix <path>\n';
+
+/** config.json, or `{}` when absent or unreadable (no config is not an error). */
+function readConfig(file) {
+  if (!file) return {};
+  try {
+    const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return cfg && typeof cfg === 'object' ? cfg : {};
+  } catch {
+    return {};
+  }
+}
 
 function readList(file) {
   return fs.readFileSync(file, 'utf8').split('\n').map(s => s.trim()).filter(Boolean);
@@ -311,11 +440,39 @@ function main() {
       } else if (a === '--agents-dir') {
         opts.agentsDir = rest[i + 1];
         i += 1;
+      } else if (a === '--light') {
+        opts.light = true;
+      } else if (a === '--config') {
+        const cfg = readConfig(rest[i + 1]);
+        if (cfg.review && cfg.review.light_max_lines !== undefined) opts.lightMaxLines = cfg.review.light_max_lines;
+        i += 1;
       } else {
         files.push(a);
       }
     }
     process.stdout.write(JSON.stringify(selectLenses(files, opts), null, 2) + '\n');
+    return 0;
+  }
+  if (cmd === 'verify') {
+    const files = [];
+    let cfg = {};
+    for (let i = 0; i < rest.length; i += 1) {
+      if (rest[i] === '--files-from') {
+        try {
+          files.push(...readList(rest[i + 1]));
+        } catch {
+          process.stderr.write(`review-scope.js: cannot read ${rest[i + 1]}\n`);
+          return 1;
+        }
+        i += 1;
+      } else if (rest[i] === '--config') {
+        cfg = readConfig(rest[i + 1]);
+        i += 1;
+      } else {
+        files.push(rest[i]);
+      }
+    }
+    process.stdout.write(JSON.stringify(resolveVerify(cfg.verify, files), null, 2) + '\n');
     return 0;
   }
   if (cmd === 'scope-growth') {
@@ -348,8 +505,11 @@ module.exports = {
   loadAgents,
   isNonExecutable,
   selectLenses,
+  isSourceCode,
+  resolveVerify,
   scopeGrowth,
   SCHEMA,
+  SOURCE_EXTENSIONS,
   NON_EXECUTABLE_EXTENSIONS,
   NON_EXECUTABLE_SKIP_ELIGIBLE,
   FUNCTIONAL_CONFIG_PATTERNS,

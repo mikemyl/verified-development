@@ -30,6 +30,15 @@ const AGENTS = [
 const sel = (files, opts = {}) => rs.selectLenses(files, { agents: AGENTS, ...opts });
 const names = r => r.selected.map(a => a.name);
 
+// The keros-platform MPTCP step (2026-11-06): Ansible + shell drills + a Justfile recipe.
+const MPTCP_STEP = [
+  'Justfile',
+  'infra/ansible/master-playbook.yml',
+  'infra/ansible/5-host-security.yml',
+  'infra/drills/lib.sh',
+  'infra/drills/mptcp-off.sh',
+];
+
 module.exports = [
   // --- glob matching --------------------------------------------------------
   {
@@ -290,6 +299,180 @@ module.exports = [
       const r = rs.selectLenses(['x.go'], { agents: AGENTS, warnings: ['unreadable-agent-file:z'] });
       assert.equal(r.schema, 'review-scope/v1');
       assert.ok(r.warnings.includes('unreadable-agent-file:z'));
+    },
+  },
+
+  // --- v2.2: proportional review -------------------------------------------
+  // Evidence (keros-platform 2026-11-06, the MPTCP step): an Ansible + shell
+  // change waited ~4 min on the Go monorepo's `just lint && just test-all`, and
+  // complexity-review returned 8 findings on yaml/sh, none about complexity. The
+  // security agent found the defect that mattered (the sysctl did not close the
+  // exposure). So: scope the verify gate and the lenses by file kind, and offer
+  // a light tier — but never let the authoring model choose to skip review.
+  {
+    name: 'v2.2 lens fit: complexity-review does not run on an infra-only change (yaml, sh, Justfile)',
+    fn: () => {
+      const r = rs.selectLenses(MPTCP_STEP, { changedLines: 83 });
+      const skip = r.skipped.find(s => s.name === 'complexity-review');
+      assert.ok(skip, 'complexity-review must be skipped');
+      assert.equal(skip.reason, 'no-matching-file');
+      for (const n of ['correctness-review', 'security-review', 'test-review']) {
+        assert.ok(names(r).includes(n), `${n} must still run on infra`);
+      }
+    },
+  },
+  {
+    name: 'v2.2 lens fit: complexity-review still runs on a large source-code change',
+    fn: () => {
+      for (const f of ['internal/pay/refund.go', 'src/app.ts', 'ui/Button.tsx', 'hooks/lib/x.js', 'svc/a.py', 'A.java']) {
+        assert.ok(names(rs.selectLenses([f], { changedLines: 83 })).includes('complexity-review'), f);
+      }
+    },
+  },
+  {
+    name: 'v2.2 lens fit: complexity-review scope and SOURCE_EXTENSIONS name the same extensions',
+    fn: () => {
+      const { agents } = rs.loadAgents(path.join(REPO, 'agents'));
+      const scope = agents.find(a => a.name === 'complexity-review').scope;
+      assert.ok(Array.isArray(scope), 'complexity-review must be glob-scoped');
+      const fromScope = new Set(scope.map(g => g.replace(/^\*\*\/\*/, '')));
+      assert.deepEqual([...fromScope].sort(), [...rs.SOURCE_EXTENSIONS].sort());
+    },
+  },
+  {
+    name: 'v2.2 light tier: --light on an infra change dispatches security-review only',
+    fn: () => {
+      const r = rs.selectLenses(MPTCP_STEP, { changedLines: 83, light: true });
+      assert.deepEqual(names(r), ['security-review']);
+      assert.equal(r.tier, 'light');
+      assert.equal(r.tier_reason, 'requested');
+      for (const n of ['correctness-review', 'test-review']) {
+        assert.equal(r.skipped.find(s => s.name === n).reason, 'light-tier');
+      }
+    },
+  },
+  {
+    name: 'v2.2 light tier: --light on source code dispatches correctness-review; mixed adds security',
+    fn: () => {
+      assert.deepEqual(names(rs.selectLenses(['internal/pay/refund.go'], { changedLines: 3, light: true })), ['correctness-review']);
+      assert.deepEqual(
+        names(rs.selectLenses(['internal/pay/refund.go', 'deploy/app.yml'], { changedLines: 3, light: true })),
+        ['correctness-review', 'security-review'],
+      );
+    },
+  },
+  {
+    name: 'v2.2 light tier: a light docs-only diff still gets security-review (prose is the injection vector)',
+    fn: () => {
+      assert.deepEqual(names(rs.selectLenses(['docs/guide.md'], { changedLines: 4, light: true })), ['security-review']);
+    },
+  },
+  {
+    name: 'v2.2 auto-light: opt-in via light_max_lines; only a small diff with no source code qualifies',
+    fn: () => {
+      const cfg = { lightMaxLines: 10 };
+      const small = rs.selectLenses(['infra/ansible/5-host-security.yml'], { changedLines: 6, ...cfg });
+      assert.equal(small.tier, 'light');
+      assert.equal(small.tier_reason, 'auto:no-source-code<=10-lines');
+      assert.deepEqual(names(small), ['security-review']);
+      assert.equal(rs.selectLenses(['infra/ansible/5-host-security.yml'], { changedLines: 11, ...cfg }).tier, 'full');
+      assert.equal(rs.selectLenses(['internal/pay/refund.go'], { changedLines: 2, ...cfg }).tier, 'full', 'source code never auto-lightens');
+      assert.equal(rs.selectLenses(['infra/a.yml'], { changedLines: null, ...cfg }).tier, 'full', 'unknown size never auto-lightens');
+      assert.equal(rs.selectLenses([], { changedLines: 1, ...cfg }).tier, 'full', 'an empty list never auto-lightens');
+      assert.equal(rs.selectLenses(['infra/a.yml'], { changedLines: 1 }).tier, 'full', 'no opt-in → full');
+    },
+  },
+  {
+    name: 'v2.2 auto-light: prompt files (CLAUDE.md, skills/, agents/) are behaviour and never auto-lighten',
+    fn: () => {
+      for (const f of ['CLAUDE.md', 'skills/review/SKILL.md', 'agents/test-review.md', '.claude/settings.json']) {
+        assert.equal(rs.selectLenses([f], { changedLines: 1, lightMaxLines: 10 }).tier, 'full', f);
+      }
+    },
+  },
+  {
+    name: 'v2.2 scoped verify: a string verify covers every changed file (unchanged behaviour)',
+    fn: () => {
+      const v = rs.resolveVerify('just verify', MPTCP_STEP);
+      assert.equal(v.source, 'string');
+      assert.deepEqual(v.commands, [{ command: 'just verify', files: MPTCP_STEP }]);
+      assert.deepEqual(v.uncovered, []);
+    },
+  },
+  {
+    name: 'v2.2 scoped verify: a glob map routes each file to its first matching command; unmatched files get no gate',
+    fn: () => {
+      const v = rs.resolveVerify(
+        { '**/*.go, go.mod, go.sum': 'just verify', 'infra/**': 'just infra-check' },
+        [...MPTCP_STEP, 'str/main.go'],
+      );
+      assert.equal(v.source, 'map');
+      assert.deepEqual(v.commands.map(c => c.command), ['just verify', 'just infra-check']);
+      assert.deepEqual(v.commands[0].files, ['str/main.go']);
+      assert.equal(v.commands[1].files.length, 4);
+      assert.deepEqual(v.uncovered, ['Justfile']);
+    },
+  },
+  {
+    name: 'v2.2 scoped verify: the infra-only change does not run the Go gate',
+    fn: () => {
+      const v = rs.resolveVerify({ '**/*.go, go.mod, go.sum, **/*.templ': 'just verify', 'infra/**, Justfile': 'just infra-check' }, MPTCP_STEP);
+      assert.deepEqual(v.commands.map(c => c.command), ['just infra-check']);
+      assert.deepEqual(v.uncovered, []);
+    },
+  },
+  {
+    name: 'v2.2 scoped verify: a "**" key is the fallback when listed last',
+    fn: () => {
+      const v = rs.resolveVerify({ 'infra/**': 'just infra-check', '**': 'just verify' }, ['infra/a.yml', 'README.md']);
+      assert.deepEqual(v.commands, [
+        { command: 'just infra-check', files: ['infra/a.yml'] },
+        { command: 'just verify', files: ['README.md'] },
+      ]);
+    },
+  },
+  {
+    name: 'v2.2 scoped verify: absent or malformed config falls back to discovery, with a warning when malformed',
+    fn: () => {
+      assert.equal(rs.resolveVerify(undefined, ['a.go']).source, 'none');
+      for (const bad of [42, ['just verify'], {}, { 'a/**': 7 }, '  ']) {
+        const v = rs.resolveVerify(bad, ['a.go']);
+        assert.equal(v.source, 'invalid', JSON.stringify(bad));
+        assert.deepEqual(v.commands, []);
+        assert.ok(v.warnings.length > 0);
+      }
+    },
+  },
+  {
+    name: 'v2.2 CLI: verify and select read .verified/config.json (verify map, review.light_max_lines) and --light',
+    fn: () => {
+      const os = require('node:os');
+      const cp = require('node:child_process');
+      const bin = path.join(REPO, 'hooks', 'lib', 'review-scope.js');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-'));
+      const list = path.join(dir, 'files.txt');
+      fs.writeFileSync(list, MPTCP_STEP.join('\n') + '\n');
+      const cfg = path.join(dir, 'config.json');
+      fs.writeFileSync(cfg, JSON.stringify({ verify: { '**/*.go': 'just verify', 'infra/**, Justfile': 'just infra-check' }, review: { light_max_lines: 100 } }));
+      const run = (...a) => cp.spawnSync(process.execPath, [bin, ...a], { encoding: 'utf8' });
+
+      const v = run('verify', '--files-from', list, '--config', cfg);
+      assert.equal(v.status, 0, v.stderr);
+      assert.deepEqual(JSON.parse(v.stdout).commands.map(c => c.command), ['just infra-check']);
+
+      const auto = JSON.parse(run('select', '--files-from', list, '--changed-lines', '83', '--config', cfg).stdout);
+      assert.equal(auto.tier, 'light');
+      assert.deepEqual(auto.selected.map(a => a.name), ['security-review']);
+
+      const forced = JSON.parse(run('select', '--files-from', list, '--changed-lines', '83', '--light').stdout);
+      assert.equal(forced.tier, 'light');
+
+      const full = JSON.parse(run('select', '--files-from', list, '--changed-lines', '83').stdout);
+      assert.equal(full.tier, 'full');
+
+      const missing = run('verify', '--files-from', list, '--config', path.join(dir, 'nope.json'));
+      assert.equal(missing.status, 0, 'no config is an answer (discovery), not an error');
+      assert.equal(JSON.parse(missing.stdout).source, 'none');
     },
   },
 

@@ -97,7 +97,8 @@ verify-before-commit gate (blocks `git commit` with exit 2 when the verify comma
 
 The one gate the plugin trusts. It is resolved in this order:
 
-1. `"verify"` in `.verified/config.json` (written by `/map`);
+1. `"verify"` in `.verified/config.json` (written by `/map`): a string, or a map of globs to
+   commands (below);
 2. a `verify` target in a `Justfile` or `Makefile`;
 3. the `verify` script in `package.json`;
 4. `mvn verify` when there is a `pom.xml`.
@@ -105,6 +106,20 @@ The one gate the plugin trusts. It is resolved in this order:
 And it is decided only by its real exit code, read in Bash (`${PIPESTATUS[0]}` when piped). Never
 from an IDE terminal, a `| tail`, a scoped package run, or an agent's self-report. Red stops
 `/review` before any agent runs: review of broken code is noise.
+
+`verify` may map comma-separated globs to commands. Each changed file goes to the first key that
+matches it (key order), a trailing `"**"` key is the fallback, and a file no key matches has no gate
+and is named in the report:
+
+```json
+"verify": {
+  "**/*.go, go.mod, go.sum, **/*.templ": "just verify",
+  "infra/**, Justfile": "just infra-check"
+}
+```
+
+`node hooks/lib/review-scope.js verify --files-from <list> --config .verified/config.json` prints the
+routing (`source`: `string` | `map` | `none` | `invalid`, `commands`, `uncovered`, `warnings`).
 
 The same command is the pre-commit gate `/install-hooks` installs, and the last step `/plan` names
 before `/review`.
@@ -131,13 +146,15 @@ no idiom assumptions.
 {
   "verify": "just verify",
   "workflows": { "plan_critics": true },
-  "hooks": { "git_guard": true, "ledger_guard": true }
+  "hooks": { "git_guard": true, "ledger_guard": true },
+  "review": { "light_max_lines": 10 }
 }
 ```
 
 | Key | Default | Effect |
 |-----|---------|--------|
-| `verify` | detected as above | The command `/review` runs as its gate |
+| `verify` | detected as above | The command `/review` runs as its gate; a string, or a map of globs to commands |
+| `review.light_max_lines` | unset (off) | A diff with no source code, no prompt file and at most this many changed lines gets the light panel |
 | `workflows.plan_critics` | `true` | `false` skips the three critics in `/plan` (also `--no-critics` per run) |
 | `hooks.git_guard` | `true` | `false` disables the git guard for this repo |
 | `hooks.ledger_guard` | `true` | `false` disables the ledger guard for this repo |
@@ -166,8 +183,8 @@ becomes a test or a guard.
 | Step | What happens | Script and contract |
 |------|--------------|---------------------|
 | 0. Scope | The range: `--since <ref>`, else the working tree against `HEAD` when there is uncommitted work, else `merge-base main HEAD...HEAD`. Changed paths go to a file; changed lines are counted. | `git diff --numstat` |
-| 1. Gate | The verify command, run in Bash, real exit code. Red → stop. | — |
-| 2. Panel | Each agent declares `scope:` (globs or `always`), `context_needs:` and optionally `min_changed_lines:`. The resolver selects, orders cheap-first (haiku → sonnet → opus), and names a reason for every skip: `no-matching-file`, `non-executable-only-diff`, `small-diff`. Include-biased: a read failure widens the roster and lands in `warnings`. `security-review` never skips a docs-only diff. | `review-scope.js select --files-from <list> --changed-lines <N>` → `review-scope/v1` |
+| 1. Gate | The verify command(s) for the changed files, run in Bash, real exit code. Red → stop. | `review-scope.js verify --files-from <list> --config .verified/config.json` |
+| 2. Panel | Each agent declares `scope:` (globs or `always`), `context_needs:` and optionally `min_changed_lines:`. The resolver selects, orders cheap-first (haiku → sonnet → opus), and names a reason for every skip: `no-matching-file`, `non-executable-only-diff`, `small-diff`, `light-tier`. The light tier (user's `--light`, or the repo's `review.light_max_lines`) keeps one lens per kind of file: correctness for source code, security for the rest. Include-biased: a read failure widens the roster and lands in `warnings`. `security-review` never skips a docs-only diff. | `review-scope.js select --files-from <list> --changed-lines <N> --config .verified/config.json [--light]` → `review-scope/v1` |
 | 3. Briefs | Linter findings become suppression keys (`file:line:rule_id`, never a message) so agents do not re-report what a linter already said. Test files that lost assertions are flagged for `test-review`. The `## Test Types` section is extracted from `TESTING.md` so `test-review` gets the rubric, not the prose. Every agent applies the two review-integrity rules. A brief is additive to the agent's standing rubric, never a substitute. | `findings.js scan <dir>` → `findings/v1` (SARIF-normalized); `test-weakening.js scan <base>`; `taxonomy.js extract TESTING.md` |
 | 4. Dispatch | One message, every selected agent, in parallel. Results read cheap-first. | — |
 | 5. Triage | Every error and warning verified against the code. Pre-existing problems become follow-ups. Report in chat: status, one row per finding with disposition, skipped lenses, resolver warnings, Farley Score. | — |
@@ -313,7 +330,7 @@ verified-development/
     ├── context-monitor.js
     ├── ledger-guard.js       # the Stop hook seam; batch logic in lib/ledger-guard.js
     └── lib/
-        ├── review-scope.js       # panel resolver: declared scope + size gate
+        ├── review-scope.js       # panel resolver (scope, size gate, tier) + verify routing
         ├── review-ledger.js      # per-dispatch find/fix/no-op ledger
         ├── ledger-guard.js       # Stop check: a finished review left its ledger lines
         ├── finding-signature.js  # round ledger: new vs carried, --max-rounds

@@ -75,7 +75,7 @@ them. It deletes the rest.
 
 | Command | What it does |
 |---------|--------------|
-| `/review` | Verify gate (real exit code) → resolve the panel from each agent's declared scope and the diff size → dispatch in parallel → one verification round on the fix delta → report in chat, line in the ledger |
+| `/review` | Verify gate (real exit code, per-path commands) → resolve the panel from each agent's declared scope, the diff size and the tier (`--light`) → dispatch in parallel → one verification round on the fix delta → report in chat, line in the ledger |
 | `/plan` | Plan a multi-file change in chat (scenarios named as the tests that will exist), then three critics in parallel: acceptance, design, strategic |
 | `/map` | Write `.verified/codebase/TESTING.md`: the repo's test types, boundaries, primitives, good examples. The only context doc the plugin reads |
 | `/test-audit <path>` | Rank an existing test corpus worst-first against that taxonomy. Advisory, read-only |

@@ -3,7 +3,7 @@ name: complexity-review
 description: "Review code complexity: function length, cyclomatic/cognitive depth, nesting, args."
 model: haiku
 tools: Read, Grep, Glob, Bash
-scope: always
+scope: "**/*.go, **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.py, **/*.java, **/*.kt, **/*.kts, **/*.scala, **/*.rb, **/*.rs, **/*.cs, **/*.fs, **/*.swift, **/*.php, **/*.c, **/*.cc, **/*.cpp, **/*.h, **/*.hpp, **/*.m, **/*.ex, **/*.exs, **/*.erl, **/*.clj, **/*.dart, **/*.lua, **/*.vue, **/*.svelte, **/*.astro, **/*.templ, **/*.sql"
 context_needs: full-file
 min_changed_lines: 40
 ---

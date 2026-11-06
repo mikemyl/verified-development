@@ -125,6 +125,26 @@ module.exports = [
     },
   },
   {
+    name: '/review v2.2: the verify gate is scoped per file through review-scope.js verify',
+    fn: () => {
+      const t = skill('review');
+      assert.match(t, /review-scope\.js verify --files-from/);
+      assert.match(t, /uncovered/);
+      assert.match(t, /Verify: /, 'the report names the commands run and the files with no gate');
+    },
+  },
+  {
+    name: '/review v2.2: the light tier is the user\'s or the repo\'s choice, never the model\'s',
+    fn: () => {
+      const t = skill('review');
+      assert.match(t, /--light/);
+      assert.match(t, /--config \.verified\/config\.json/);
+      assert.match(t, /light_max_lines/);
+      assert.match(t, /Never pass `--light` on your own/);
+      assert.match(t, /Panel: full \| light/);
+    },
+  },
+  {
     name: '/review: runs the repo verify command first, with a real exit code',
     fn: () => {
       const t = skill('review');
