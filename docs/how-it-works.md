@@ -124,6 +124,9 @@ runner then picks the tests from its own import graph, so the repo, not the mode
 }
 ```
 
+A key mapped to `false` gives its files no gate (`"**/*.md": false` ahead of `"**"`), so a docs
+edit does not run the test suite; the report names them as having no gate.
+
 Route the files that change every test (runner config, setup files, the lockfile) to the full suite
 first: `related` finds no test that imports `package.json`, and `--passWithNoTests` would call that
 green.

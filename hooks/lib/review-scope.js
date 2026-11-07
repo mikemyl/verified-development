@@ -348,8 +348,8 @@ function selectLenses(changedFiles, opts = {}) {
  * string (one command for every file — the pre-2.2 behaviour) or an object
  * mapping a comma-list of globs to a command. Each file goes to the FIRST key
  * that matches it (object order), so a trailing `"**"` key is the fallback. A
- * file no key matches has no verify gate — the repo said so — and is listed in
- * `uncovered` for the report. Absent → `none` (the skill discovers a command);
+ * file no key matches, or whose first matching key maps to `false`, has no
+ * verify gate — the repo said so — and is listed in `uncovered` for the report. Absent → `none` (the skill discovers a command);
  * malformed → `invalid` plus a warning, and the skill discovers as for absent.
  */
 function resolveVerify(verifyConfig, changedFiles) {
@@ -364,7 +364,8 @@ function resolveVerify(verifyConfig, changedFiles) {
     return out('invalid', [], files, [`verify-not-string-or-map:${Array.isArray(verifyConfig) ? 'array' : typeof verifyConfig}`]);
   }
   const routes = Object.entries(verifyConfig);
-  const bad = routes.filter(([, cmd]) => typeof cmd !== 'string' || !cmd.trim()).map(([k]) => k);
+  // `false` routes a file to no gate on purpose (docs, prose); it still counts as matched.
+  const bad = routes.filter(([, cmd]) => cmd !== false && (typeof cmd !== 'string' || !cmd.trim())).map(([k]) => k);
   if (routes.length === 0) return out('invalid', [], files, ['verify-map-empty']);
   if (bad.length) return out('invalid', [], files, bad.map(k => `verify-map-command-not-string:${k}`));
   const parsed = routes.map(([globs, command]) => ({ globs: globs.split(',').map(g => g.trim()).filter(Boolean), command }));
@@ -372,13 +373,13 @@ function resolveVerify(verifyConfig, changedFiles) {
   const uncovered = [];
   for (const f of files) {
     const route = parsed.find(r => matchesAny(f, r.globs));
-    if (!route) { uncovered.push(f); continue; }
+    if (!route || route.command === false) { uncovered.push(f); continue; }
     if (!byCommand.has(route.command)) byCommand.set(route.command, []);
     byCommand.get(route.command).push(f);
   }
   const commands = parsed
     .map(r => r.command)
-    .filter((c, i, all) => all.indexOf(c) === i && byCommand.has(c))
+    .filter((c, i, all) => c !== false && all.indexOf(c) === i && byCommand.has(c))
     .map(command => withRun(command, byCommand.get(command)));
   return out('map', commands, uncovered);
 }

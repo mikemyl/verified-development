@@ -202,6 +202,19 @@ module.exports = [
     },
   },
 
+  {
+    name: 'infra/config rule: observe after the apply, no test first; commit a check only for a drift invariant or a runbook step',
+    fn: () => {
+      for (const t of [read('templates/project-rules.md'), skill('testing')]) {
+        assert.match(t, /after the\s+apply/);
+        assert.match(t, /invariant\s+across two places\s+that can drift/);
+        assert.match(t, /runbook step/);
+        assert.match(t, /Scripts with logic/);
+      }
+      assert.match(read('templates/project-rules.md'), /`after apply: <command> → <output>`/);
+    },
+  },
+
   // --- /plan (lean) -----------------------------------------------------------
   {
     name: '/plan: the plan lives in chat — no plan.md, no spec.md, no feature directory',

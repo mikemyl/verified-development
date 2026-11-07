@@ -14,6 +14,14 @@ For verifying test effectiveness through mutation analysis, load the `mutation-t
 
 **Example:** Validation code in `payment-validator.ts` gets 100% coverage by testing `processPayment()` behavior, NOT by directly testing validator functions.
 
+**Not everything gets a test first.** A declarative infra or config change (a flag, a compose or
+sysctl setting, an alert threshold, a pinned version) is verified by observing the state after the
+apply, a command and its output in the report. A committed check is worth it only for an invariant
+across two places that can drift (as a static check of the templates) or a runbook step that runs
+again. Scripts with logic are code and are tested first. Measured on keros-platform (2026-11): 11
+production "drills" in three days, red-first by construction; most of them asserted only the value
+the change had just set, and their review findings were about the drill, not the change.
+
 ---
 
 ## Actor-BDD craft rules

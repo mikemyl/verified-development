@@ -454,6 +454,17 @@ module.exports = [
     },
   },
   {
+    name: 'v2.4 false: a key mapped to false gives its files no gate, ahead of the "**" fallback',
+    fn: () => {
+      const v = rs.resolveVerify({ '**/*.md': false, '**': 'just verify' }, ['CLAUDE.md', 'docs/a.md', 'main.go']);
+      assert.deepEqual(v.commands.map(c => c.command), ['just verify']);
+      assert.deepEqual(v.commands[0].files, ['main.go']);
+      assert.deepEqual(v.uncovered, ['CLAUDE.md', 'docs/a.md']);
+      assert.equal(rs.resolveVerify({ '**/*.md': false }, ['a.md']).source, 'map', 'false is valid, not malformed');
+      assert.equal(rs.resolveVerify({ '**': true }, ['a.go']).source, 'invalid', 'true is not a command');
+    },
+  },
+  {
     name: 'v2.4 {files}: a string verify fills the placeholder with every changed file',
     fn: () => {
       assert.equal(rs.resolveVerify('go test {files}', ['a.go']).commands[0].run, 'go test a.go');

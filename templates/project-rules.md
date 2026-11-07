@@ -1,6 +1,6 @@
 # Project rules (verified-development)
 
-Append this block to the repo's `CLAUDE.md`. These four rules are what measurably caught defects on
+Append this block to the repo's `CLAUDE.md`. These rules are what measurably caught defects on
 real projects; everything else the plugin once did was ceremony around them.
 
 ## Review agents are required
@@ -26,6 +26,17 @@ typed, no mocking the function under test, no expected value computed by the cod
 snapshot recorded from current output. Write the acceptance test first, at the boundary its type
 declares in `.verified/codebase/TESTING.md`, assert through the test DSL, and extend the seam instead
 of reaching below it.
+
+## Infra and config changes: observe after the apply, do not test first
+
+A declarative change (a flag, a compose or sysctl setting, an alert threshold, a pinned version) gets
+no test written first. Before the apply it fails because nothing is deployed; after, it passes because
+you set it: the only oracle is the change. The evidence is the state observed after the apply, a
+command and its output in the report (`after apply: <command> → <output>`); without that line the
+change is unverified. Commit a check only when it will keep earning: an invariant across two places
+that can drift (a limit against an alert threshold), as a static check of the templates rather than a
+script against production; or a runbook step that runs again after maintenance. Scripts with logic
+(branches, loops, parsing, error paths) are code: test them first, like any code.
 
 ## Never run a git command that can discard uncommitted work
 

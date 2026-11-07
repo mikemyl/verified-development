@@ -44,8 +44,9 @@ echo "exit=$?"
   verify"}`). Each file goes to its first matching glob, so an infra change does not wait on the
   application's test suite. `{files}` in a command becomes the files routed to it, and
   `{files:<dir>}` makes them relative to `<dir>` (`cd ui && vitest related --run {files:ui}`), so
-  the test runner picks the tests from its own import graph. Files with no matching glob have no
-  gate because the repo said so; the script names them (`no gate for …`), and so does the report.
+  the test runner picks the tests from its own import graph. Files with no matching glob, or
+  whose glob maps to `false` (`"**/*.md": false`), have no gate because the repo said so; the
+  script names them (`no gate for …`), and so does the report.
 - A command that already exited 0 on this exact working tree is not run again (`not re-run`). Any
   edit makes it run. Do not pass `--force` unless the user asks for it.
 - Exit 3 means there is no usable `verify` in config.json. Discover the command: the `verify`
