@@ -14,7 +14,7 @@ script has a versioned JSON contract and a unit test; none of them calls a model
 | Review agents | `correctness-review`, `test-review`, `security-review`, `complexity-review`, `a11y-review`, `error-handling-review`, `concurrency-review` ([reviews.md](reviews.md)) |
 | Plan critics | `plan-critic-acceptance`, `plan-critic-design`, `plan-critic-strategic` |
 | Hooks | `Setup` statusline, `PreToolUse` git guard, `PostToolUse` context monitor, `Stop` ledger writer |
-| Scripts (`hooks/lib/`) | `review-scope.js`, `findings.js`, `test-weakening.js`, `taxonomy.js`, `finding-signature.js`, `checkpoint.js`, `review-ledger.js`, `test-corpus.js`, `lang-loader.js`, `git-guard.js` |
+| Scripts (`hooks/lib/`) | `review-scope.js`, `findings.js`, `test-weakening.js`, `taxonomy.js`, `finding-signature.js`, `checkpoint.js`, `gate-stamp.js`, `review-ledger.js`, `test-corpus.js`, `lang-loader.js`, `git-guard.js` |
 
 ## Hooks
 
@@ -112,8 +112,40 @@ and is named in the report:
 }
 ```
 
+`{files}` in a command becomes the files routed to it, repo-relative and shell-quoted;
+`{files:<dir>}` makes them relative to `<dir>`, for a command that starts with `cd <dir>`. The test
+runner then picks the tests from its own import graph, so the repo, not the model, decides the scope:
+
+```json
+"verify": {
+  "ui/package.json, ui/vitest.config.ts, ui/test/setup.ts": "just ui-check",
+  "ui/src/**, ui/test/**": "just ui-lint && just ui-typecheck && cd ui && pnpm exec vitest related --run --passWithNoTests {files:ui}",
+  "**": "just verify"
+}
+```
+
+Route the files that change every test (runner config, setup files, the lockfile) to the full suite
+first: `related` finds no test that imports `package.json`, and `--passWithNoTests` would call that
+green.
+
 `node hooks/lib/review-scope.js verify --files-from <list> --config .verified/config.json` prints the
-routing (`source`: `string` | `map` | `none` | `invalid`, `commands`, `uncovered`, `warnings`).
+routing (`source`: `string` | `map` | `none` | `invalid`, `commands` with `command`, `run` and
+`files`, `uncovered`, `warnings`).
+
+### Once per tree: `gate-stamp.js`
+
+`/review` runs the gate as `node hooks/lib/gate-stamp.js verify --files-from <list> --config
+.verified/config.json`. It resolves the routing above and runs each `run` through `/bin/sh`,
+stopping at the first red command (exit: that command's code; 3 when `verify` is absent or invalid,
+and the skill discovers a command and runs it with `gate-stamp.js run -- <command>`).
+
+A command that exits 0 is stamped with the working-tree hash (`checkpoint.js`'s throwaway-index
+tree: tracked and untracked files, `.gitignore` respected). The same command on the same tree
+prints `not re-run` and exits 0. Any edit changes the hash. A command that rewrites the tree (a
+formatter) is not stamped. Stamps are in `$(git rev-parse --git-path verified-gate-stamps.json)`,
+outside the tree, one file per worktree. `--force` runs regardless; `gate-stamp.js check --
+<command>` prints the stamp state as JSON. Why: one keros-platform UI fix ran the same vitest suite
+and Go tests three times on an unchanged tree before review started.
 
 The same command is the pre-commit gate `/install-hooks` installs, and the last step `/plan` names
 before `/review`.
@@ -177,12 +209,12 @@ becomes a test or a guard.
 | Step | What happens | Script and contract |
 |------|--------------|---------------------|
 | 0. Scope | The range: `--since <ref>`, else the working tree against `HEAD` when there is uncommitted work, else `merge-base main HEAD...HEAD`. Changed paths go to a file; changed lines are counted. | `git diff --numstat` |
-| 1. Gate | The verify command(s) for the changed files, run in Bash, real exit code. Red → stop. | `review-scope.js verify --files-from <list> --config .verified/config.json` |
+| 1. Gate | The verify command(s) for the changed files, run in Bash, real exit code, at most once per tree. Red → stop. | `gate-stamp.js verify --files-from <list> --config .verified/config.json` |
 | 2. Panel | Each agent declares `scope:` (globs or `always`), `context_needs:` and optionally `min_changed_lines:`. The resolver selects, orders cheap-first (haiku → sonnet → opus), and names a reason for every skip: `no-matching-file`, `non-executable-only-diff`, `small-diff`, `light-tier`. The light tier (user's `--light`, or the repo's `review.light_max_lines`) keeps one lens per kind of file: correctness for source code, security for the rest. Include-biased: a read failure widens the roster and lands in `warnings`. `security-review` never skips a docs-only diff. | `review-scope.js select --files-from <list> --changed-lines <N> --config .verified/config.json [--light]` → `review-scope/v1` |
 | 3. Briefs | Linter findings become suppression keys (`file:line:rule_id`, never a message) so agents do not re-report what a linter already said. Test files that lost assertions are flagged for `test-review`. The `## Test Types` section is extracted from `TESTING.md` so `test-review` gets the rubric, not the prose. Every agent applies the two review-integrity rules. A brief is additive to the agent's standing rubric, never a substitute. | `findings.js scan <dir>` → `findings/v1` (SARIF-normalized); `test-weakening.js scan <base>`; `taxonomy.js extract TESTING.md` |
 | 4. Dispatch | One message, every selected agent, in parallel. Results read cheap-first. | — |
 | 5. Triage | Every error and warning verified against the code. Pre-existing problems become follow-ups. Report in chat: status, one row per finding with disposition, skipped lenses, resolver warnings, Farley Score. | — |
-| 6. One verification round | Snapshot the tree once, then fix the findings one at a time; re-run the suite and the verify command after each. Re-dispatch only the agents whose findings were fixed, with the fix hunks ±20 lines, asking for `confirmed`, `not-fixed` or `insufficient-context` plus any new error inside the delta. The round ledger matches findings across rounds by signature (agent, file, category, normalized message, line within ±3) and decides: converged, or FAIL with the new errors named. There is no round 3. | `checkpoint.js create --feature review --label fixes`; `finding-signature.js round --round 2 --current … --previous … --fix-diff … --max-rounds 2` → `finding-signature/v1` |
+| 6. One verification round | Snapshot the tree once, then fix the findings one at a time; run the tests that cover each fix, and the step-1 gate once after the last. Re-dispatch only the agents whose findings were fixed, with the fix hunks ±20 lines, asking for `confirmed`, `not-fixed` or `insufficient-context` plus any new error inside the delta. The round ledger matches findings across rounds by signature (agent, file, category, normalized message, line within ±3) and decides: converged, or FAIL with the new errors named. There is no round 3. | `checkpoint.js create --feature review --label fixes`; `finding-signature.js round --round 2 --current … --previous … --fix-diff … --max-rounds 2` → `finding-signature/v1` |
 | 7. Ledger | Automatic: the Stop hook writes one line per finished dispatch from the agent's own report. The model records nothing. | `hooks/ledger-writer.js` → `review-ledger/v2` |
 
 `/review --agent <name>` runs one agent over the same range with the same briefs. `/review` never
@@ -339,6 +371,7 @@ verified-development/
         ├── test-corpus.js (+lang/)   # /test-audit discovery + ranking
         ├── lang-loader.js        # adapter loading, glob matching
         ├── checkpoint.js         # working-tree snapshots under refs/verified/checkpoints/
+        ├── gate-stamp.js         # runs the verify gate at most once per working tree
         └── git-guard.js          # the destructive-git classifier (+ scope shared with ledger-writer)
 ```
 

@@ -2,9 +2,11 @@
 
 `/review` is one panel, one verification round, a report in chat.
 
-1. **Verify gate.** The repo's verify command, run by the main session in Bash, decided by its real
-   exit code. Red stops the review. `review-scope.js verify` routes each changed file to its command
-   when `verify` in `config.json` is a glob map, so an infra change does not run the app's suite.
+1. **Verify gate.** `gate-stamp.js verify --files-from <list> --config .verified/config.json`, run
+   by the main session in Bash and decided by its real exit code. Red stops the review. When
+   `verify` in `config.json` is a glob map, each changed file goes to its command, so an infra
+   change does not run the app's suite; `{files}` lets the test runner pick the tests that import
+   the changed files. A command that already exited 0 on the same working tree is not run again.
 2. **Panel resolution** — `hooks/lib/review-scope.js select --files-from <list> --changed-lines <N>
    --config .verified/config.json [--light]`.
    Each agent declares its own `scope:` (path globs or `always`), `context_needs:`, and optionally

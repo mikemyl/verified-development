@@ -24,7 +24,8 @@
  *   isNonExecutable(file)                      -> boolean
  *   selectLenses(changedFiles, opts)           -> contract (tier full|light)
  *   isSourceCode(file)                         -> boolean
- *   resolveVerify(verifyConfig, changedFiles)  -> { source, commands, uncovered, warnings }
+ *   resolveVerify(verifyConfig, changedFiles)  -> { source, commands:[{command, run, files}], uncovered, warnings }
+ *   expandFiles(command, files)                -> command with {files} / {files:<dir>} filled in
  *   scopeGrowth(panelFiles, fixFiles)          -> { grew, outside }
  *
  * Proportional review (v2.2). The panel is sized by what changed, never by the
@@ -357,7 +358,7 @@ function resolveVerify(verifyConfig, changedFiles) {
   if (verifyConfig === undefined || verifyConfig === null) return out('none', [], files);
   if (typeof verifyConfig === 'string') {
     if (!verifyConfig.trim()) return out('invalid', [], files, ['verify-empty-string']);
-    return out('string', [{ command: verifyConfig, files }], []);
+    return out('string', [withRun(verifyConfig, files)], []);
   }
   if (typeof verifyConfig !== 'object' || Array.isArray(verifyConfig)) {
     return out('invalid', [], files, [`verify-not-string-or-map:${Array.isArray(verifyConfig) ? 'array' : typeof verifyConfig}`]);
@@ -378,8 +379,32 @@ function resolveVerify(verifyConfig, changedFiles) {
   const commands = parsed
     .map(r => r.command)
     .filter((c, i, all) => all.indexOf(c) === i && byCommand.has(c))
-    .map(command => ({ command, files: byCommand.get(command) }));
+    .map(command => withRun(command, byCommand.get(command)));
   return out('map', commands, uncovered);
+}
+
+/** POSIX single-quote a word unless it is plainly safe. */
+function shellQuote(word) {
+  return /^[A-Za-z0-9_./@%+=:,-]+$/.test(word) ? word : `'${word.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * `{files}` in a verify command becomes the files routed to it (repo-relative,
+ * shell-quoted); `{files:<dir>}` makes them relative to <dir>, for a command
+ * that starts with `cd <dir>`. The test runner then picks the tests from its
+ * own import graph (`vitest related --run {files:ui}`, `go test` on the
+ * changed packages): a script makes that choice, not the model. `run` is what
+ * the skill executes; `command` stays the config key for grouping and reports.
+ */
+function expandFiles(command, files) {
+  return command.replace(/\{files(?::([^}]*))?\}/g, (_, dir) => {
+    const base = dir ? path.posix.normalize(dir.trim().replace(/\/+$/, '')) : '';
+    return files.map(f => shellQuote(base ? path.posix.relative(base, f) || '.' : f)).join(' ');
+  });
+}
+
+function withRun(command, files) {
+  return { command, run: expandFiles(command, files), files };
 }
 
 /**
@@ -507,6 +532,7 @@ module.exports = {
   selectLenses,
   isSourceCode,
   resolveVerify,
+  expandFiles,
   scopeGrowth,
   SCHEMA,
   SOURCE_EXTENSIONS,

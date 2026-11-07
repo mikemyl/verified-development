@@ -57,6 +57,7 @@ const LIBS = [
   'checkpoint.js',
   'finding-signature.js',
   'findings.js',
+  'gate-stamp.js',
   'git-guard.js',
   'lang-loader.js',
   'review-ledger.js',

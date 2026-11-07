@@ -395,7 +395,7 @@ module.exports = [
     fn: () => {
       const v = rs.resolveVerify('just verify', MPTCP_STEP);
       assert.equal(v.source, 'string');
-      assert.deepEqual(v.commands, [{ command: 'just verify', files: MPTCP_STEP }]);
+      assert.deepEqual(v.commands, [{ command: 'just verify', run: 'just verify', files: MPTCP_STEP }]);
       assert.deepEqual(v.uncovered, []);
     },
   },
@@ -426,9 +426,37 @@ module.exports = [
     fn: () => {
       const v = rs.resolveVerify({ 'infra/**': 'just infra-check', '**': 'just verify' }, ['infra/a.yml', 'README.md']);
       assert.deepEqual(v.commands, [
-        { command: 'just infra-check', files: ['infra/a.yml'] },
-        { command: 'just verify', files: ['README.md'] },
+        { command: 'just infra-check', run: 'just infra-check', files: ['infra/a.yml'] },
+        { command: 'just verify', run: 'just verify', files: ['README.md'] },
       ]);
+    },
+  },
+  {
+    name: 'v2.4 {files}: the files routed to a command fill its placeholder, shell-quoted; other routes keep theirs',
+    fn: () => {
+      const v = rs.resolveVerify(
+        { 'web/**': 'cd web && vitest related --run {files:web}', 'lib/**': 'lint {files}', '**': 'just verify' },
+        ['web/src/Grid.tsx', 'lib/a b.ts', "lib/o'k.ts", 'go/main.go', 'web/test/x.spec.ts'],
+      );
+      assert.deepEqual(v.commands.map(c => c.run), [
+        'cd web && vitest related --run src/Grid.tsx test/x.spec.ts',
+        "lint 'lib/a b.ts' 'lib/o'\\''k.ts'",
+        'just verify',
+      ]);
+      assert.equal(v.commands[0].command, 'cd web && vitest related --run {files:web}', 'command stays the config key');
+    },
+  },
+  {
+    name: 'v2.4 {files:<dir>}: a file outside <dir> is made relative with ../, a trailing slash is ignored',
+    fn: () => {
+      assert.equal(rs.expandFiles('t {files:a/b/}', ['a/b/c.ts', 'a/x.ts']), 't c.ts ../x.ts');
+      assert.equal(rs.expandFiles('t', ['a.ts']), 't', 'no placeholder → unchanged');
+    },
+  },
+  {
+    name: 'v2.4 {files}: a string verify fills the placeholder with every changed file',
+    fn: () => {
+      assert.equal(rs.resolveVerify('go test {files}', ['a.go']).commands[0].run, 'go test a.go');
     },
   },
   {

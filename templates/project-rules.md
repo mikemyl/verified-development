@@ -6,16 +6,18 @@ real projects; everything else the plugin once did was ceremony around them.
 ## Review agents are required
 
 Run the plugin's review agents on every non-trivial change — anything beyond a typo or a comment.
-Invoke `/review` after the verify command is green and before any commit. Do not ask permission to
+Invoke `/review` before any commit; its first step is the verify gate. Do not ask permission to
 spawn the agents; spawning them is a normal part of doing the work. The agents, not the gates, found
 the defects that would have shipped.
 
 ## Gates are decided by real exit codes
 
-Run the verify command (`just verify`, `make verify`, the `package.json` script) in Bash and read its
-exit code. Never decide a gate from an IDE terminal, a `| tail`, a scoped package run, or an agent's
-self-report. Run the whole suite, not the package you touched. Editor diagnostics are a prompt to
-re-check, never a verdict.
+`/review` runs the verify command in Bash and reads its exit code, through `gate-stamp.js`: the
+command for each changed path comes from `verify` in `.verified/config.json`, and a command that
+already passed on the same working tree is not run again. Do not run the full gate by hand as well;
+while you work, run the tests for what you changed. Never decide a gate from an IDE terminal, a
+`| tail`, a package run you scoped yourself, or an agent's self-report. Only the repo's verify map
+may scope a gate to the changed files. Editor diagnostics are a prompt to re-check, never a verdict.
 
 ## A test must be able to fail for a reason other than "I changed the code I just wrote"
 

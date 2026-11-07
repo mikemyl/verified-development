@@ -132,12 +132,30 @@ module.exports = [
     },
   },
   {
-    name: '/review v2.2: the verify gate is scoped per file through review-scope.js verify',
+    name: '/review v2.4: the verify gate runs through gate-stamp.js — scoped per file, once per tree',
     fn: () => {
       const t = skill('review');
-      assert.match(t, /review-scope\.js verify --files-from/);
-      assert.match(t, /uncovered/);
-      assert.match(t, /Verify: /, 'the report names the commands run and the files with no gate');
+      assert.match(t, /gate-stamp\.js verify --files-from \/tmp\/changed\.txt --config \.verified\/config\.json/);
+      assert.match(t, /\{files:<dir>\}/);
+      assert.match(t, /not run again/);
+      assert.match(t, /no gate for/);
+      assert.match(t, /Verify: <command → exit code \| stamped>/, 'the report names the commands run and the files with no gate');
+      assert.equal(/review-scope\.js verify/.test(t), false, 'one way to run the gate');
+    },
+  },
+  {
+    name: '/review v2.4: the fix round runs the covering tests per fix and the full gate once, after the last fix',
+    fn: () => {
+      const t = skill('review');
+      assert.match(t, /run only the tests that cover the fix/);
+      assert.match(t, /After the\s+last fix, run the step-1 `gate-stamp\.js verify` once more/);
+      assert.equal(/verify command\(s\) for the\s+files you touched after each/.test(t), false);
+    },
+  },
+  {
+    name: '/review v2.4: a red gate on files the change did not touch is reported, not fixed or retried',
+    fn: () => {
+      assert.match(skill('review'), /another session's work in the same checkout/);
     },
   },
   {

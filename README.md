@@ -31,8 +31,9 @@ and three critics stress-test it before you start. That is the whole workflow.
    written to disk.
 2. Build. Scenario tests first, at the boundary their type declares in `TESTING.md`, in the repo's
    DSL. Then the code, in small batches, in the main session. There is no executor agent.
-3. Run the verify command yourself, in Bash, and read its exit code. The command comes from
-   `config.json`, else the `verify` target in a Justfile or Makefile, else `package.json`.
+3. Do not run the full verify gate by hand. `/review` runs it first, in Bash, with the real exit
+   code: the command per changed path comes from `config.json`, else the `verify` target in a
+   Justfile or Makefile, else `package.json`. A command that passed on the same tree is not re-run.
 4. `/review`. With the house rules in place the model runs it on every non-trivial change; type it
    to be sure. You get a report in chat: status PASS, WARN or FAIL, one row per finding with its
    disposition, the lenses that were skipped and why. If a finding is fixed, the fixing agents

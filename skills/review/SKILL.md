@@ -33,22 +33,30 @@ git diff --numstat <range> | awk '{a+=$1; d+=$2} END {print a+d}'   # add `wc -l
 
 ## 1. Verify gate (real exit code)
 
-Resolve which command gates which changed file:
+Run the gate through the stamp. It resolves which command gates which changed file and runs each one:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/review-scope.js verify --files-from /tmp/changed.txt --config .verified/config.json
+node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/gate-stamp.js verify --files-from /tmp/changed.txt --config .verified/config.json
+echo "exit=$?"
 ```
 
-- `source: string` or `map` → run each entry of `commands`. A `map` (`"verify": {"**/*.go":
-  "just verify", "infra/**": "just infra-check"}`) sends each file to its first matching glob, so
-  an infra change does not wait on the application's test suite. Files in `uncovered` have no gate
-  because the repo said so; name them in the report.
-- `source: none` or `invalid` → the `verify` target in a Justfile or Makefile, else the
-  `package.json` script, else `mvn verify` for a `pom.xml`. Report any `warnings`.
+- `verify` in config.json is a string or a glob map (`{"infra/**": "just infra-check", "**": "just
+  verify"}`). Each file goes to its first matching glob, so an infra change does not wait on the
+  application's test suite. `{files}` in a command becomes the files routed to it, and
+  `{files:<dir>}` makes them relative to `<dir>` (`cd ui && vitest related --run {files:ui}`), so
+  the test runner picks the tests from its own import graph. Files with no matching glob have no
+  gate because the repo said so; the script names them (`no gate for …`), and so does the report.
+- A command that already exited 0 on this exact working tree is not run again (`not re-run`). Any
+  edit makes it run. Do not pass `--force` unless the user asks for it.
+- Exit 3 means there is no usable `verify` in config.json. Discover the command: the `verify`
+  target in a Justfile or Makefile, else the `package.json` script, else `mvn verify` for a
+  `pom.xml`. Run it through the stamp: `gate-stamp.js run -- <command>`.
 
-Run each command in Bash and read the real exit code (`${PIPESTATUS[0]}` when piped). Never decide
-this gate from an IDE terminal, a `| tail`, a package run you scoped yourself, or an agent's
-self-report. Red → stop and report; review of broken code is noise.
+Read the real exit code (`${PIPESTATUS[0]}` when piped). Never decide this gate from an IDE
+terminal, a `| tail`, a package run you scoped yourself, or an agent's self-report. Red → stop and
+report; review of broken code is noise. If the red command is about files this change did not
+touch (another session's work in the same checkout), say so in the report and stop. Do not fix that
+work, and do not re-run the gate to see whether it passes.
 
 ## 2. Resolve the panel (deterministic)
 
@@ -119,7 +127,7 @@ with a one-line reason, in the report.
 | Severity | Agent | Location | Issue | Disposition |
 |----------|-------|----------|-------|-------------|
 
-Panel: full | light (<tier_reason>)     Verify: <command → exit code>, …; no gate for <uncovered files>
+Panel: full | light (<tier_reason>)     Verify: <command → exit code | stamped>, …; no gate for <uncovered files>
 Skipped lenses: <name (reason)>, …     Warnings from the resolver: …
 Farley Score: <X.X/10 or n/a> — non-blocking test-quality signal
 Follow-ups (pre-existing, not in this change): …
@@ -133,8 +141,8 @@ If any finding is to be fixed (an error, a warning, or a suggestion you choose t
    `node ${CLAUDE_PLUGIN_ROOT}/hooks/lib/checkpoint.js create --feature review --label fixes`.
    The tree is uncommitted; the `git-guard` hook denies `checkout`/`restore`/`stash`, and
    `checkpoint.js restore <ref> <path>` is the recovery path.
-2. Fix the findings one at a time; re-run the test suite and the step-1 verify command(s) for the
-   files you touched after each.
+2. Fix the findings one at a time; after each, run only the tests that cover the fix. After the
+   last fix, run the step-1 `gate-stamp.js verify` once more.
 3. Re-dispatch ONLY the agents whose findings you fixed, in **verification mode**: send the finding,
    the fix diff hunks ±20 lines (the fix delta, never the full file set), and ask for one of
    `confirmed | not-fixed | insufficient-context`, plus any NEW error inside the fix delta. An
